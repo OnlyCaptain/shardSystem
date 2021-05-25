@@ -1,3 +1,3 @@
 # README
 
-![READMEshardSystem](.\media\READMEshardSystem.png)
+![READMEshardSystem](media/READMEshardSystem.png)

@@ -3,6 +3,7 @@ package pbftSimulator.message;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Logger;
 
 import pbftSimulator.Simulator;
 
@@ -50,10 +51,11 @@ public class Message {
 		this.rcvtime = rcvtime;
 	}
 	
-	public void print(String tag) {
+	public void print(String tag, Logger logger) {
 		if(!Simulator.SHOWDETAILINFO) return;
 		String prefix = "【"+tag+"】";
-		System.out.println(prefix+toString());
+		// System.out.println(prefix+toString());
+		logger.info(prefix+toString());
 	}
 	
 	public static long accumulateLen(Set<Message> set) {

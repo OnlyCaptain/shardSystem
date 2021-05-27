@@ -8,6 +8,15 @@ import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Set;
+import java.util.logging.FileHandler;
+import java.util.logging.Filter;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
+import java.io.File;
+import java.io.IOException;
 
 import pbftSimulator.Client;
 import pbftSimulator.Simulator;
@@ -32,6 +41,8 @@ public class Replica {
 	public static final int STABLE = 1;			//已经收到了f+1个reply
 	public String receiveTag = "Receive";
 	public String sendTag = "Send";
+
+	public String name;
 	public int id; 										//当前节点的id
 	public int v;										//视图编号
 	public int n;										//消息处理序列号
@@ -40,9 +51,11 @@ public class Replica {
 	public int netDlys[];								//与其他节点的网络延迟
 	public int netDlyToClis[];							//与客户端的网络延迟
 	public boolean isTimeOut;							//当前正在处理的请求是否超时（如果超时了不会再发送任何消息）
+	public Logger logger;
+	
 	//消息缓存<type, <msg>>:type消息类型;
 	public Map<Integer, Set<Message>> msgCache;
-	
+	public String curWorkspace = "./";
 	//最新reply的状态集合<c, <c, t, r>>:c客户端编号;t请求消息时间戳;r返回结果
 	public Map<Integer, LastReply> lastReplyMap;		
 	
@@ -62,17 +75,54 @@ public class Replica {
 		this.id = id;
 		this.netDlys = netDlys;
 		this.netDlyToClis = netDlyToClis;
+		this.name = "Replica_".concat(String.valueOf(id));
 		msgCache = new HashMap<>();
 		lastReplyMap = new HashMap<>();
 		checkPoints = new HashMap<>();
 		reqStats = new HashMap<>();
 		checkPoints.put(0, lastReplyMap);
+		
+		// 定义当前Replica的工作目录
+		StringBuffer buf = new StringBuffer("./workspace/current_");
+		curWorkspace = buf.append(String.valueOf(id)).append("/").toString();
+		buildWorkspace();
+		
 		//初始时启动Timer
 		setTimer(lastRepNum + 1, 0);
 	}
 	
+	// 创建当前Replica的工作目录并定义日志文件
+	public void buildWorkspace() {
+		File dir = new File(this.curWorkspace);
+		if (dir.exists()) {
+			// System.out.println("Dir OK");
+		}
+		else if (dir.mkdirs()) {
+	        System.out.println("创建目录" + curWorkspace + "成功！");
+        } else {
+            System.out.println("创建目录" + curWorkspace + "失败！");
+        }
+		logger = Logger.getLogger(this.name);  
+		FileHandler fh;
+		try {
+			// This block configure the logger with handler and formatter  
+			fh = new FileHandler(this.curWorkspace.concat(this.name).concat(".log"));  
+			logger.addHandler(fh);
+			SimpleFormatter formatter = new SimpleFormatter();  
+			fh.setFormatter(formatter);  
+			// logger.setUseParentHandlers(false);
+			// the following statement is used to log any messages  
+			logger.info("Create log file ".concat(this.name));
+			
+		} catch (SecurityException e) {  
+			e.printStackTrace();  
+		} catch (IOException e) {  
+			e.printStackTrace();  
+		}
+	}
+	
 	public void msgProcess(Message msg) {
-		msg.print(receiveTag);
+		msg.print(receiveTag, this.logger);
 		switch(msg.type) {
 			case Message.REQUEST:
 				receiveRequest(msg);
@@ -99,7 +149,7 @@ public class Replica {
 				receiveCheckPoint(msg);
 				break;
 			default:
-				System.out.println("【Error】消息类型错误！");
+				this.logger.info("【Error】消息类型错误！");
 				return;
 		}
 		//收集所有符合条件的prePrepare消息,并进行后续处理
@@ -127,7 +177,7 @@ public class Replica {
 		if(isInMsgCache(cm) || !prepared(mm)) {
 			return;
 		}
-		Simulator.sendMsgToOthers(cm, id, sendTag);
+		Simulator.sendMsgToOthers(cm, id, sendTag, this.logger);
 		addMessageToCache(cm);
 	}
 	
@@ -144,7 +194,7 @@ public class Replica {
 			lastRepNum++;
 			setTimer(lastRepNum+1, time);
 			if(rem != null) {
-				Simulator.sendMsg(rm, sendTag);
+				Simulator.sendMsg(rm, sendTag, this.logger);
 				LastReply llp = lastReplyMap.get(rem.c);
 				if(llp == null) {
 					llp = new LastReply(rem.c, rem.t, "result");
@@ -159,7 +209,7 @@ public class Replica {
 				Message checkptMsg = new CheckPointMsg(v, mm.n, lastReplyMap, id, id, id, time);
 //				System.out.println("send:"+checkptMsg.toString());
 				addMessageToCache(checkptMsg);
-				Simulator.sendMsgToOthers(checkptMsg, id, sendTag);
+				Simulator.sendMsgToOthers(checkptMsg, id, sendTag, this.logger);
 			}
 		}
 	}
@@ -248,7 +298,7 @@ public class Replica {
 		if(reqStats.containsKey(msg) && reqStats.get(msg) == STABLE) {
 			long recTime = msg.rcvtime + netDlyToClis[Client.getCliArrayIndex(c)];
 			Message replyMsg = new ReplyMsg(v, t, c, id, "result", id, c, recTime);
-			Simulator.sendMsg(replyMsg, sendTag);
+			Simulator.sendMsg(replyMsg, sendTag, this.logger);
 			return;
 		}
 		if(!reqStats.containsKey(msg)) {
@@ -265,7 +315,7 @@ public class Replica {
 					PrePrepareMsg ppMsg = (PrePrepareMsg)m;
 					if(ppMsg.v == v && ppMsg.i == id && ppMsg.m.equals(msg)) {
 						m.rcvtime = msg.rcvtime;
-						Simulator.sendMsgToOthers(m, id, sendTag);
+						Simulator.sendMsgToOthers(m, id, sendTag, this.logger);
 						return;
 					}
 				}
@@ -275,7 +325,7 @@ public class Replica {
 				n++;
 				Message prePrepareMsg = new PrePrepareMsg(v, n, reqlyMsg, id, id, id, reqlyMsg.rcvtime);
 				addMessageToCache(prePrepareMsg);
-				Simulator.sendMsgToOthers(prePrepareMsg, id, sendTag);
+				Simulator.sendMsgToOthers(prePrepareMsg, id, sendTag, this.logger);
 			}
 		}
 	}
@@ -300,7 +350,7 @@ public class Replica {
 		Message prepareMsg = new PrepareMsg(msgv, msgn, d, id, id, id, msg.rcvtime);
 		if(isInMsgCache(prepareMsg)) return;
 		addMessageToCache(prepareMsg);
-		Simulator.sendMsgToOthers(prepareMsg, id, sendTag);
+		Simulator.sendMsgToOthers(prepareMsg, id, sendTag, this.logger);
 	}
 	
 	public void receivePrepare(Message msg) {
@@ -342,7 +392,7 @@ public class Replica {
 		Map<Integer, Set<Message>> P = computeP();
 		Message vm = new ViewChangeMsg(v + 1, h, ss, C, P, id, id, id, msg.rcvtime);
 		addMessageToCache(vm);
-		Simulator.sendMsgToOthers(vm, id, sendTag);
+		Simulator.sendMsgToOthers(vm, id, sendTag, this.logger);
 	}
 	
 	public void receiveCheckPoint(Message msg) {
@@ -387,7 +437,7 @@ public class Replica {
 				Map<String, Set<Message>> VONMap = computeVON();
 				Message nvMsg = new NewViewMsg(v, VONMap.get("V"), VONMap.get("O"), VONMap.get("N"), id, id, id, msg.rcvtime);
 				addMessageToCache(nvMsg);
-				Simulator.sendMsgToOthers(nvMsg, id, sendTag);
+				Simulator.sendMsgToOthers(nvMsg, id, sendTag, this.logger);
 				//发送所有不在O内的request消息的prePrepare消息
 				Set<Message> reqSet = msgCache.get(Message.REQUEST);
 				if(reqSet == null) reqSet = new HashSet<>();
@@ -622,7 +672,7 @@ public class Replica {
 	
 	public void setTimer(int n, long time) {
 		Message timeOutMsg = new TimeOutMsg(v, n, id, id, time + Simulator.TIMEOUT);
-		Simulator.sendMsg(timeOutMsg, sendTag);
+		Simulator.sendMsg(timeOutMsg, sendTag, this.logger);
 	}
 
 }

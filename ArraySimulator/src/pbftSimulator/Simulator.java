@@ -5,6 +5,8 @@ import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
 
+import java.util.logging.Logger;
+
 import pbftSimulator.message.Message;
 import pbftSimulator.replica.OfflineReplica;
 import pbftSimulator.replica.Replica;
@@ -12,35 +14,20 @@ import pbftSimulator.replica.Replica;
 public class Simulator {
 	
 	public static final int RN = 7;  						//replicas节点的数量(rn)
-	
 	public static final int FN = 2;							//恶意节点的数量
-	
 	public static final int CN = 3;						//客户端数量
-	
 	public static final int INFLIGHT = 2000; 					//最多同时处理多少请求
-	
 	public static final int REQNUM = 5000;					//请求消息总数量
-	
 	public static final int TIMEOUT = 500;					//节点超时设定(毫秒)
-	
 	public static final int CLITIMEOUT = 800;				//客户端超时设定(毫秒)
-	
 	public static final int BASEDLYBTWRP = 2;				//节点之间的基础网络时延
-	
 	public static final int DLYRNGBTWRP = 1;				//节点间的网络时延扰动范围
-	
 	public static final int BASEDLYBTWRPANDCLI = 10;		//节点与客户端之间的基础网络时延
-	
 	public static final int DLYRNGBTWRPANDCLI = 15;			//节点与客户端之间的网络时延扰动范围
-	
 	public static final int BANDWIDTH = 300000;			//节点间网络的额定带宽(bytes)(超过后时延呈指数级上升)
-	
 	public static final double FACTOR = 1.005;				//超出额定负载后的指数基数
-	
 	public static final int COLLAPSEDELAY = 10000;			//视为系统崩溃的网络时延
-	
-	public static final boolean SHOWDETAILINFO = false;		//是否显示完整的消息交互过程
-	
+	public static final boolean SHOWDETAILINFO = true;		//是否显示完整的消息交互过程
 	//消息优先队列（按消息计划被处理的时间戳排序）
 	public static Queue<Message> msgQue = new PriorityQueue<>(Message.cmp);
 	//正在网络中传播的消息的总大小
@@ -170,27 +157,27 @@ public class Simulator {
 		return byzt;
 	}
 	
-	public static void sendMsg(Message msg, String tag) {
-		msg.print(tag);
+	public static void sendMsg(Message msg, String tag, Logger logger) {
+		msg.print(tag, logger);
 		msgQue.add(msg);
 		inFlyMsgLen += msg.len;
 	}
 	
-	public static void sendMsgToOthers(Message msg, int id, String tag) {
+	public static void sendMsgToOthers(Message msg, int id, String tag, Logger logger) {
 		for(int i = 0; i < RN; i++) {
 			if(i != id) {
 				Message m = msg.copy(i, msg.rcvtime + netDlys[id][i]);
-				sendMsg(m, tag);
+				sendMsg(m, tag, logger);
 			}
 		}
 	}
 	
-	public static void sendMsgToOthers(Set<Message> msgSet, int id, String tag) {
+	public static void sendMsgToOthers(Set<Message> msgSet, int id, String tag, Logger logger) {
 		if(msgSet == null) {
 			return;
 		}
 		for(Message msg : msgSet) {
-			sendMsgToOthers(msg, id, tag);
+			sendMsgToOthers(msg, id, tag, logger);
 		}
 	}
 	

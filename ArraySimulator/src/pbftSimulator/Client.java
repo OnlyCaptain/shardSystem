@@ -8,12 +8,22 @@ import pbftSimulator.message.Message;
 import pbftSimulator.message.ReplyMsg;
 import pbftSimulator.message.RequestMsg;
 
+import java.util.logging.Logger;
+import java.util.logging.FileHandler;
+import java.util.logging.SimpleFormatter;
+import java.io.File;
+import java.io.IOException;
+
 public class Client {
 	
 	public static final int PROCESSING = 0;		//没有收到f+1个reply
 	public static final int STABLE = 1;			//已经收到了f+1个reply
+	
+	public String name;
 	public int id;								//客户端编号
 	public int v;								//视图编号
+	public Logger logger;
+	public String curWorkspace;
 	public Map<Long, Integer> reqStats;			//request请求状态
 	public Map<Long, Message> reqMsgs;			//request消息（删除已经达到stable状态的request消息）
 	public Map<Long, Map<Integer, Message>> repMsgs;	//reply消息（删除已经达到stable状态的reply消息）
@@ -21,16 +31,53 @@ public class Client {
 	public int netDlys[];						//与各节点的基础网络时延
 	public String receiveTag = "CliReceive";
 	public String sendTag = "CliSend";
+
 	public Client(int id, int[] netDlys) {
 		this.id = id;
 		this.netDlys = netDlys;
 		reqStats = new HashMap<>();
 		reqMsgs = new HashMap<>();
 		repMsgs = new HashMap<>();
+
+		// 定义当前Replica的工作目录
+		this.name = "Client_".concat(String.valueOf(id));
+		StringBuffer buf = new StringBuffer("./workspace/client_");
+		curWorkspace = buf.append(String.valueOf(id)).append("/").toString();
+		buildWorkspace();
 	}
 	
+	// 创建当前Replica的工作目录并定义日志文件
+	public void buildWorkspace() {
+		File dir = new File(this.curWorkspace);
+		if (dir.exists()) {
+			// System.out.println("Dir OK");
+		}
+		else if (dir.mkdirs()) {
+	        System.out.println("创建目录" + curWorkspace + "成功！");
+        } else {
+            System.out.println("创建目录" + curWorkspace + "失败！");
+        }
+		logger = Logger.getLogger(this.name);  
+		FileHandler fh;
+		try {
+			// This block configure the logger with handler and formatter  
+			fh = new FileHandler(this.curWorkspace.concat(this.name).concat(".log"));  
+			logger.addHandler(fh);
+			SimpleFormatter formatter = new SimpleFormatter();  
+			fh.setFormatter(formatter);  
+			// logger.setUseParentHandlers(false);
+			// the following statement is used to log any messages  
+			logger.info("Create log file ".concat(this.name));
+			
+		} catch (SecurityException e) {  
+			e.printStackTrace();  
+		} catch (IOException e) {  
+			e.printStackTrace();  
+		}
+	}
+
 	public void msgProcess(Message msg) {
-		msg.print(receiveTag);
+		msg.print(receiveTag, this.logger);
 		switch(msg.type) {
 			case Message.REPLY:
 				receiveReply(msg);
@@ -51,7 +98,7 @@ public class Client {
 		}
 		int priId = v % Simulator.RN;
 		Message requestMsg = new RequestMsg("Message", time, id, id, priId, time + netDlys[priId]);
-		Simulator.sendMsg(requestMsg, sendTag);
+		Simulator.sendMsg(requestMsg, sendTag, this.logger);
 		reqStats.put(time, PROCESSING);
 		reqMsgs.put(time, requestMsg);
 		repMsgs.put(time, new HashMap<>());
@@ -75,7 +122,9 @@ public class Client {
 			reqStats.put(t, STABLE);
 			reqMsgs.remove(t);
 			repMsgs.remove(t);
-			System.out.println("【Stable】客户端"+id+"在"+t
+			// System.out.println("【Stable】客户端"+id+"在"+t
+			// 		+"时间请求的消息已经得到了f+1条reply，进入稳态，共耗时"+(repMsg.rcvtime - t)+"毫秒,此时占用带宽为"+Simulator.inFlyMsgLen+"B");
+			this.logger.info("【Stable】客户端"+id+"在"+t
 					+"时间请求的消息已经得到了f+1条reply，进入稳态，共耗时"+(repMsg.rcvtime - t)+"毫秒,此时占用带宽为"+Simulator.inFlyMsgLen+"B");
 		}
 	}
@@ -90,7 +139,7 @@ public class Client {
 		//否则给所有的节点广播request消息
 		for(int i = 0; i < Simulator.RN; i++) {
 			Message requestMsg = new RequestMsg("Message", t, id, id, i, cliTimeOutMsg.rcvtime + netDlys[i]);
-			Simulator.sendMsg(requestMsg, sendTag);
+			Simulator.sendMsg(requestMsg, sendTag, this.logger);
 		}
 		//发送一条Timeout消息，以便将来检查是否发生超时
 		setTimer(t, cliTimeOutMsg.rcvtime);
@@ -156,6 +205,6 @@ public class Client {
 	
 	public void setTimer(long t, long time) {
 		Message timeoutMsg = new CliTimeOutMsg(t, id, id, time + Simulator.CLITIMEOUT);
-		Simulator.sendMsg(timeoutMsg, "ClientTimeOut");
+		Simulator.sendMsg(timeoutMsg, "ClientTimeOut", this.logger);
 	}
 }

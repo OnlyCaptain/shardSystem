@@ -24,7 +24,8 @@ public class Client {
 	public int v;								//视图编号
 	public Logger logger;
 	public String curWorkspace;
-	public Map<Long, Integer> reqStats;			//request请求状态
+	public Map<Long, Integer> reqStats;			//request 请求状态
+	public Map<Long, Integer> reqTimes;         // request 请求次数
 	public Map<Long, Message> reqMsgs;			//request消息（删除已经达到stable状态的request消息）
 	public Map<Long, Map<Integer, Message>> repMsgs;	//reply消息（删除已经达到stable状态的reply消息）
 	public long accTime;						//累积确认时间
@@ -36,6 +37,7 @@ public class Client {
 		this.id = id;
 		this.netDlys = netDlys;
 		reqStats = new HashMap<>();
+		reqTimes = new HashMap<>();
 		reqMsgs = new HashMap<>();
 		repMsgs = new HashMap<>();
 

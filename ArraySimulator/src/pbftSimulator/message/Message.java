@@ -94,6 +94,14 @@ public class Message {
         String str = "" + type + sndId + rcvId + rcvtime;
         return str.hashCode();
     }
+
+	public boolean ifTimeOut(long time) {
+		// System.out.println(String.valueOf(rcvtime).concat(" ").concat(String.valueOf(time)).concat("=").concat(String.valueOf(Math.abs(rcvtime-time))));
+		// System.out.println(Math.abs(rcvtime-time) > Simulator.TIMEOUT);
+		if (Math.abs(rcvtime-time) >= Simulator.TIMEOUT) 
+			return true;
+		return false;
+	}
     
     public String toString() {
 		String[] typeName = {"Request","PrePrepare","Prepare","Commit","Reply"

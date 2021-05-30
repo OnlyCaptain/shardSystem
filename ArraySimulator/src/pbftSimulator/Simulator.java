@@ -12,6 +12,8 @@ import pbftSimulator.replica.OfflineReplica;
 import pbftSimulator.replica.Replica;
 import pbftSimulator.replica.ByztReplica;
 
+import shardSystem.shardNode;
+
 public class Simulator {
 	
 	public static final int RN = 7;  						//replicas节点的数量(rn)
@@ -54,7 +56,7 @@ public class Simulator {
 			if(byzts[i]) {
 				reps[i] = new ByztReplica(i, netDlys[i], netDlysToClis[i]);
 			}else {
-				reps[i] = new Replica(i, netDlys[i], netDlysToClis[i]);
+				reps[i] = new shardNode(i, netDlys[i], netDlysToClis[i]);
 			}
 		}
 		
@@ -67,30 +69,36 @@ public class Simulator {
 		
 		//初始随机发送INFLIGHT个请求消息
 		Random rand = new Random(555);
-		int requestNums = 0;
+		long requestNums = 0;
 		for(int i = 0; i < Math.min(INFLIGHT, REQNUM); i++) {
 			clis[rand.nextInt(CN)].sendRequest(0);
 			requestNums++;
 		}
 		
 		long timestamp = 0;
-		//消息处理
-//		int ttt = 0;
+		// 消息处理
 		while(!msgQue.isEmpty()) {
+			// System.out.println("size of msgQue".concat(String.valueOf(msgQue.size())));
 			Message msg = msgQue.poll();
 			switch(msg.type) {
-			case Message.REPLY:
-			case Message.CLITIMEOUT:
-				clis[Client.getCliArrayIndex(msg.rcvId)].msgProcess(msg);
-				break;
-			default:
-				reps[msg.rcvId].msgProcess(msg);
+				case Message.REPLY:
+				case Message.CLITIMEOUT:
+					clis[Client.getCliArrayIndex(msg.rcvId)].msgProcess(msg);
+					break;
+				default:
+					// 消息从这里发送到 primary 节点
+					reps[msg.rcvId].msgProcess(msg);
+			}
+			// 添加超时，如果这个Request超过某个时间不达到稳态，判定为共识失败。
+			if (msg.ifTimeOut(timestamp)) {
+				// System.out.println("timeout");
+				continue;
 			}
 			//如果还未达到稳定状态的request消息小于INFLIGHT，随机选择一个客户端发送请求消息
-			if(requestNums - getStableRequestNum(clis) < INFLIGHT && requestNums < REQNUM) {
-				clis[rand.nextInt(CN)].sendRequest(msg.rcvtime);
-				requestNums++;
-			}
+			// if(requestNums - getStableRequestNum(clis) < INFLIGHT && requestNums < REQNUM) {
+			// 	clis[rand.nextInt(CN)].sendRequest(msg.rcvtime);
+			// 	requestNums++;
+			// }
 			inFlyMsgLen -= msg.len;
 			timestamp = msg.rcvtime;
 			if(getNetDelay(inFlyMsgLen, 0) > COLLAPSEDELAY ) {
@@ -110,6 +118,16 @@ public class Simulator {
 		System.out.println("【The end】消息平均确认时间为:"+totalTime/totalStableMsg
 				+"毫秒;消息吞吐量为:"+tps+"tps");
 	}
+
+	/**
+	 * 返回系统时间戳，按秒计
+	 * @return	返回系统时间戳
+	 */
+	public static long getTimeStamp() {
+		return System.currentTimeMillis();
+	}
+
+
 	
 	/**
 	 * 随机初始化replicas节点之间的基础网络传输延迟

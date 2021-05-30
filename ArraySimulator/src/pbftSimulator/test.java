@@ -10,7 +10,7 @@ import java.util.logging.Logger;
 import pbftSimulator.message.Message;
 import pbftSimulator.replica.OfflineReplica;
 import pbftSimulator.replica.Replica;
-import java.util.Arrays;
+import pbftSimulator.replica.ByztReplica;
 
 public class test {
 	
@@ -18,7 +18,7 @@ public class test {
 	public static final int FN = 2;							//恶意节点的数量
 	public static final int CN = 3;						//客户端数量
 	public static final int INFLIGHT = 2000; 					//最多同时处理多少请求
-	public static final int REQNUM = 10;					//请求消息总数量
+	public static final int REQNUM = 1;					//请求消息总数量
 	public static final int TIMEOUT = 500;					//节点超时设定(毫秒)
 	public static final int CLITIMEOUT = 800;				//客户端超时设定(毫秒)
 	public static final int BASEDLYBTWRP = 2;				//节点之间的基础网络时延
@@ -44,7 +44,6 @@ public class test {
 	public static void main(String[] args) {
 		//初始化包含FN个拜占庭意节点的RN个replicas
 		boolean[] byzts = byztDistriInit(RN, FN);
-		// System.out.print(byzts);
 		for (int i = 0; i < RN; i ++) {
 			System.out.print(String.valueOf(byzts[i]).concat(" "));
 		}
@@ -53,9 +52,9 @@ public class test {
 		Replica[] reps = new Replica[RN];
 		for(int i = 0; i < RN; i++) {
 			if(byzts[i]) {
-				reps[i] = new Replica(i, netDlys[i], netDlysToClis[i]);
+				reps[i] = new ByztReplica(i, netDlys[i], netDlysToClis[i]);
 			}else {
-				reps[i] = new Replica(i, netDlys[i], netDlysToClis[i]);
+				reps[i] = new Replica("Replica_", i, netDlys[i], netDlysToClis[i]);
 			}
 		}
 		
@@ -79,7 +78,6 @@ public class test {
 //		int ttt = 0;
 		while(!msgQue.isEmpty()) {
 			Message msg = msgQue.poll();
-			System.out.println(msg.toString());
 			switch(msg.type) {
 			case Message.REPLY:
 			case Message.CLITIMEOUT:
@@ -102,15 +100,15 @@ public class test {
 				break;
 			}
 		}
-		// long totalTime = 0;
-		// long totalStableMsg = 0;
-		// for(int i = 0; i < CN; i++) {
-		// 	totalTime += clis[i].accTime;
-		// 	totalStableMsg += clis[i].stableMsgNum();
-		// }
-		// double tps = getStableRequestNum(clis)/(double)(timestamp/1000);
-		// System.out.println("【The end】消息平均确认时间为:"+totalTime/totalStableMsg
-		// 		+"毫秒;消息吞吐量为:"+tps+"tps");
+		long totalTime = 0;
+		long totalStableMsg = 0;
+		for(int i = 0; i < CN; i++) {
+			totalTime += clis[i].accTime;
+			totalStableMsg += clis[i].stableMsgNum();
+		}
+		double tps = getStableRequestNum(clis)/(double)(timestamp/1000);
+		System.out.println("【The end】消息平均确认时间为:"+totalTime/totalStableMsg
+				+"毫秒;消息吞吐量为:"+tps+"tps");
 	}
 	
 	/**

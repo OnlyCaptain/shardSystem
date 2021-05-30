@@ -6,7 +6,9 @@ public class RequestMsg extends Message {
 	
 	public long t;			
 	
-	public int c;			
+	public int c;	
+	
+	public String m;		
 	
 	//消息结构
 	//<REQUEST, o, t, c>:o表示客户端请求的操作;t表示客户端请求时间戳;c表示客户端id

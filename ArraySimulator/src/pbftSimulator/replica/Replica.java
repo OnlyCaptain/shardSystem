@@ -71,11 +71,11 @@ public class Replica {
 		}
 	};
 	
-	public Replica(int id, int[] netDlys, int[] netDlyToClis) {
+	public Replica(String name, int id, int[] netDlys, int[] netDlyToClis) {
 		this.id = id;
 		this.netDlys = netDlys;
 		this.netDlyToClis = netDlyToClis;
-		this.name = "Replica_".concat(String.valueOf(id));
+		this.name = name.concat(String.valueOf(id));
 		msgCache = new HashMap<>();
 		lastReplyMap = new HashMap<>();
 		checkPoints = new HashMap<>();
@@ -83,8 +83,7 @@ public class Replica {
 		checkPoints.put(0, lastReplyMap);
 		
 		// 定义当前Replica的工作目录
-		StringBuffer buf = new StringBuffer("./workspace/current_");
-		curWorkspace = buf.append(String.valueOf(id)).append("/").toString();
+		curWorkspace = "./workspace/".concat(this.name).concat("/");
 		buildWorkspace();
 		
 		//初始时启动Timer

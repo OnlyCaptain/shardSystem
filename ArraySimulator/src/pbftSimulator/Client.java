@@ -65,7 +65,7 @@ public class Client {
 			logger.addHandler(fh);
 			SimpleFormatter formatter = new SimpleFormatter();  
 			fh.setFormatter(formatter);  
-			// logger.setUseParentHandlers(false);
+			logger.setUseParentHandlers(false);
 			// the following statement is used to log any messages  
 			logger.info("Create log file ".concat(this.name));
 			

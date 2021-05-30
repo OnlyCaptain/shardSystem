@@ -5,9 +5,12 @@ import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
 
+import java.util.logging.Logger;
+
 import pbftSimulator.message.Message;
 import pbftSimulator.replica.OfflineReplica;
 import pbftSimulator.replica.Replica;
+import java.util.Arrays;
 
 public class test {
 	
@@ -15,7 +18,7 @@ public class test {
 	public static final int FN = 2;							//恶意节点的数量
 	public static final int CN = 3;						//客户端数量
 	public static final int INFLIGHT = 2000; 					//最多同时处理多少请求
-	public static final int REQNUM = 5000;					//请求消息总数量
+	public static final int REQNUM = 10;					//请求消息总数量
 	public static final int TIMEOUT = 500;					//节点超时设定(毫秒)
 	public static final int CLITIMEOUT = 800;				//客户端超时设定(毫秒)
 	public static final int BASEDLYBTWRP = 2;				//节点之间的基础网络时延
@@ -40,8 +43,13 @@ public class test {
 	
 	public static void main(String[] args) {
 		//初始化包含FN个拜占庭意节点的RN个replicas
-//		boolean[] byzts = byztDistriInit(RN, FN);
-		boolean[] byzts = {true, false, false, false, false, false, true};
+		boolean[] byzts = byztDistriInit(RN, FN);
+		// System.out.print(byzts);
+		for (int i = 0; i < RN; i ++) {
+			System.out.print(String.valueOf(byzts[i]).concat(" "));
+		}
+		System.out.println();
+		// boolean[] byzts = {true, false, false, false, false, false, true};
 		Replica[] reps = new Replica[RN];
 		for(int i = 0; i < RN; i++) {
 			if(byzts[i]) {
@@ -57,51 +65,52 @@ public class test {
 			//客户端的编号设置为负数
 			clis[i] = new Client(Client.getCliId(i), netDlysToNodes[i]); 
 		}
-//		
-//		//初始随机发送INFLIGHT个请求消息
-//		Random rand = new Random(555);
-//		int requestNums = 0;
-//		for(int i = 0; i < Math.min(INFLIGHT, REQNUM); i++) {
-//			clis[rand.nextInt(CN)].sendRequest(0);
-//			requestNums++;
-//		}
-//		
-//		long timestamp = 0;
-//		//消息处理
-////		int ttt = 0;
-//		while(!msgQue.isEmpty()) {
-//			Message msg = msgQue.poll();
-//			switch(msg.type) {
-//			case Message.REPLY:
-//			case Message.CLITIMEOUT:
-//				clis[Client.getCliArrayIndex(msg.rcvId)].msgProcess(msg);
-//				break;
-//			default:
-//				reps[msg.rcvId].msgProcess(msg);
-//			}
-//			//如果还未达到稳定状态的request消息小于INFLIGHT，随机选择一个客户端发送请求消息
-//			if(requestNums - getStableRequestNum(clis) < INFLIGHT && requestNums < REQNUM) {
-//				clis[rand.nextInt(CN)].sendRequest(msg.rcvtime);
-//				requestNums++;
-//			}
-//			inFlyMsgLen -= msg.len;
-//			timestamp = msg.rcvtime;
-//			if(getNetDelay(inFlyMsgLen, 0) > COLLAPSEDELAY ) {
-//				System.out.println("【Error】网络消息总负载"+inFlyMsgLen
-//						+"B,网络传播时延超过"+COLLAPSEDELAY/1000
-//						+"秒，系统已严重拥堵，不可用！");
-//				break;
-//			}
-//		}
-//		long totalTime = 0;
-//		long totalStableMsg = 0;
-//		for(int i = 0; i < CN; i++) {
-//			totalTime += clis[i].accTime;
-//			totalStableMsg += clis[i].stableMsgNum();
-//		}
-//		double tps = getStableRequestNum(clis)/(double)(timestamp/1000);
-//		System.out.println("【The end】消息平均确认时间为:"+totalTime/totalStableMsg
-//				+"毫秒;消息吞吐量为:"+tps+"tps");
+		
+		//初始随机发送INFLIGHT个请求消息
+		Random rand = new Random(555);
+		int requestNums = 0;
+		for(int i = 0; i < Math.min(INFLIGHT, REQNUM); i++) {
+			clis[rand.nextInt(CN)].sendRequest(0);
+			requestNums++;
+		}
+		
+		long timestamp = 0;
+		//消息处理
+//		int ttt = 0;
+		while(!msgQue.isEmpty()) {
+			Message msg = msgQue.poll();
+			System.out.println(msg.toString());
+			switch(msg.type) {
+			case Message.REPLY:
+			case Message.CLITIMEOUT:
+				clis[Client.getCliArrayIndex(msg.rcvId)].msgProcess(msg);
+				break;
+			default:
+				reps[msg.rcvId].msgProcess(msg);
+			}
+			//如果还未达到稳定状态的request消息小于INFLIGHT，随机选择一个客户端发送请求消息
+			if(requestNums - getStableRequestNum(clis) < INFLIGHT && requestNums < REQNUM) {
+				clis[rand.nextInt(CN)].sendRequest(msg.rcvtime);
+				requestNums++;
+			}
+			inFlyMsgLen -= msg.len;
+			timestamp = msg.rcvtime;
+			if(getNetDelay(inFlyMsgLen, 0) > COLLAPSEDELAY ) {
+				System.out.println("【Error】网络消息总负载"+inFlyMsgLen
+						+"B,网络传播时延超过"+COLLAPSEDELAY/1000
+						+"秒，系统已严重拥堵，不可用！");
+				break;
+			}
+		}
+		// long totalTime = 0;
+		// long totalStableMsg = 0;
+		// for(int i = 0; i < CN; i++) {
+		// 	totalTime += clis[i].accTime;
+		// 	totalStableMsg += clis[i].stableMsgNum();
+		// }
+		// double tps = getStableRequestNum(clis)/(double)(timestamp/1000);
+		// System.out.println("【The end】消息平均确认时间为:"+totalTime/totalStableMsg
+		// 		+"毫秒;消息吞吐量为:"+tps+"tps");
 	}
 	
 	/**
@@ -155,27 +164,27 @@ public class test {
 		return byzt;
 	}
 	
-	public static void sendMsg(Message msg, String tag) {
-		msg.print(tag);
+	public static void sendMsg(Message msg, String tag, Logger logger) {
+		msg.print(tag, logger);
 		msgQue.add(msg);
 		inFlyMsgLen += msg.len;
 	}
 	
-	public static void sendMsgToOthers(Message msg, int id, String tag) {
+	public static void sendMsgToOthers(Message msg, int id, String tag, Logger logger) {
 		for(int i = 0; i < RN; i++) {
 			if(i != id) {
 				Message m = msg.copy(i, msg.rcvtime + netDlys[id][i]);
-				sendMsg(m, tag);
+				sendMsg(m, tag, logger);
 			}
 		}
 	}
 	
-	public static void sendMsgToOthers(Set<Message> msgSet, int id, String tag) {
+	public static void sendMsgToOthers(Set<Message> msgSet, int id, String tag, Logger logger) {
 		if(msgSet == null) {
 			return;
 		}
 		for(Message msg : msgSet) {
-			sendMsgToOthers(msg, id, tag);
+			sendMsgToOthers(msg, id, tag, logger);
 		}
 	}
 	

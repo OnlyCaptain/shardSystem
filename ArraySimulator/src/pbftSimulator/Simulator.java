@@ -10,6 +10,7 @@ import java.util.logging.Logger;
 import pbftSimulator.message.Message;
 import pbftSimulator.replica.OfflineReplica;
 import pbftSimulator.replica.Replica;
+import pbftSimulator.replica.ByztReplica;
 
 public class Simulator {
 	
@@ -17,7 +18,7 @@ public class Simulator {
 	public static final int FN = 2;							//恶意节点的数量
 	public static final int CN = 3;						//客户端数量
 	public static final int INFLIGHT = 2000; 					//最多同时处理多少请求
-	public static final int REQNUM = 5000;					//请求消息总数量
+	public static final int REQNUM = 1;					//请求消息总数量
 	public static final int TIMEOUT = 500;					//节点超时设定(毫秒)
 	public static final int CLITIMEOUT = 800;				//客户端超时设定(毫秒)
 	public static final int BASEDLYBTWRP = 2;				//节点之间的基础网络时延
@@ -42,12 +43,16 @@ public class Simulator {
 	
 	public static void main(String[] args) {
 		//初始化包含FN个拜占庭意节点的RN个replicas
-//		boolean[] byzts = byztDistriInit(RN, FN);
-		boolean[] byzts = {true, false, false, false, false, false, true};
+		boolean[] byzts = byztDistriInit(RN, FN);
+		for (int i = 0; i < RN; i ++) {
+			System.out.print(String.valueOf(byzts[i]).concat(" "));
+		}
+		System.out.println();
+		// boolean[] byzts = {true, false, false, false, false, false, true};
 		Replica[] reps = new Replica[RN];
 		for(int i = 0; i < RN; i++) {
 			if(byzts[i]) {
-				reps[i] = new Replica(i, netDlys[i], netDlysToClis[i]);
+				reps[i] = new ByztReplica(i, netDlys[i], netDlysToClis[i]);
 			}else {
 				reps[i] = new Replica(i, netDlys[i], netDlysToClis[i]);
 			}

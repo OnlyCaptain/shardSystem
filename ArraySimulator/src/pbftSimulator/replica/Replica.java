@@ -110,7 +110,7 @@ public class Replica {
 			logger.addHandler(fh);
 			SimpleFormatter formatter = new SimpleFormatter();  
 			fh.setFormatter(formatter);  
-			// logger.setUseParentHandlers(false);
+			logger.setUseParentHandlers(false);   // 设置日志在不在终端输出
 			// the following statement is used to log any messages  
 			logger.info("Create log file ".concat(this.name));
 			

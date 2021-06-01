@@ -9,7 +9,7 @@ import pbftSimulator.message.Message;
 import pbftSimulator.message.PrePrepareMsg;
 
 
-public class ByztReplica extends Replica{
+public class ByztReplica extends Replica {
 	
 	public static final String BTZTPROCESSTAG = "ByztProcess";
 	
@@ -24,7 +24,7 @@ public class ByztReplica extends Replica{
 		receiveTag = BTZTRECEIVETAG;
 		sendTag = BTZTSENDTAG;
 	}
-
+	
 	public void msgProcess(Message msg) {
 		msg.print(receiveTag, this.logger);
 		// switch(msg.type) {

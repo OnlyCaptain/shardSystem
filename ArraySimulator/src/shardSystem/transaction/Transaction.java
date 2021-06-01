@@ -4,6 +4,7 @@ import pbftSimulator.Utils;
 
 public class Transaction {
 	
+	public String txId; // 待实现，标识交易的唯一性
 	public String sender;
 	public String recipient;
 	public long timestamp;

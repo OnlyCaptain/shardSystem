@@ -8,6 +8,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -81,7 +82,7 @@ public class shardNode extends Replica {
      * Connect to node database
 	 * Create transaction tx;
      */
-    public void createDB() {
+    private void createDB() {
 		Connection conn = connect();
         try {
 			Statement stmt = conn.createStatement();
@@ -109,7 +110,8 @@ public class shardNode extends Replica {
     }
 
 	public void txProcess(Transaction tx) {
-		
+		txMemory(tx);
+		printTx();
 	}
 
 	/**
@@ -132,11 +134,11 @@ public class shardNode extends Replica {
 
 	// 发送跨分片交易的后半段
 	public void sendCrossTx() {
-
+		
 	}
 
 	public void txMemory(Transaction tx) {
-		String sql = "INSERT INTO transactions(sender, recipient, timestamp, value) VALUES(?,?,?,?)";
+		String sql = "INSERT INTO transactions(sender, recipient, value, timestamp) VALUES(?,?,?,?)";
 
 		Connection conn = connect();
         try {
@@ -162,5 +164,32 @@ public class shardNode extends Replica {
             }
         }
 	}
+	
+	public void printTx() {
+		String sql = "select * from transactions";
+
+		Connection conn = connect();
+        try {
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery(sql);
+			System.out.println("Sender"+"\t"+"Recipient"+"\t"+"Value"+"\t"+"timestamp");
+			while (rs.next()) {
+				System.out.println(rs.getString("sender")+"\t"+rs.getString("recipient")+"\t\t"+rs.getDouble("value")+"\t"+rs.getLong("timestamp"));
+			}
+			logger.info("Database print finished ".concat(this.url));
+
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        } finally {
+            try {
+                if (conn != null) {
+                    conn.close();
+                }
+            } catch (SQLException ex) {
+                System.out.println(ex.getMessage());
+            }
+        }
+	}
+	
 
 }

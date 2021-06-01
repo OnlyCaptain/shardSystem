@@ -58,57 +58,57 @@ public class test {
 			}
 		}
 		
-		//初始化CN个客户端
-		Client[] clis = new Client[CN];
-		for(int i = 0; i < CN; i++) {
-			//客户端的编号设置为负数
-			clis[i] = new Client(Client.getCliId(i), netDlysToNodes[i]); 
-		}
+// 		//初始化CN个客户端
+// 		Client[] clis = new Client[CN];
+// 		for(int i = 0; i < CN; i++) {
+// 			//客户端的编号设置为负数
+// 			clis[i] = new Client(Client.getCliId(i), netDlysToNodes[i]); 
+// 		}
 		
-		//初始随机发送INFLIGHT个请求消息
-		Random rand = new Random(555);
-		int requestNums = 0;
-		for(int i = 0; i < Math.min(INFLIGHT, REQNUM); i++) {
-			clis[rand.nextInt(CN)].sendRequest(0);
-			requestNums++;
-		}
+// 		//初始随机发送INFLIGHT个请求消息
+// 		Random rand = new Random(555);
+// 		int requestNums = 0;
+// 		for(int i = 0; i < Math.min(INFLIGHT, REQNUM); i++) {
+// 			clis[rand.nextInt(CN)].sendRequest(0);
+// 			requestNums++;
+// 		}
 		
-		long timestamp = 0;
-		//消息处理
-//		int ttt = 0;
-		while(!msgQue.isEmpty()) {
-			Message msg = msgQue.poll();
-			switch(msg.type) {
-			case Message.REPLY:
-			case Message.CLITIMEOUT:
-				clis[Client.getCliArrayIndex(msg.rcvId)].msgProcess(msg);
-				break;
-			default:
-				reps[msg.rcvId].msgProcess(msg);
-			}
-			//如果还未达到稳定状态的request消息小于INFLIGHT，随机选择一个客户端发送请求消息
-			if(requestNums - getStableRequestNum(clis) < INFLIGHT && requestNums < REQNUM) {
-				clis[rand.nextInt(CN)].sendRequest(msg.rcvtime);
-				requestNums++;
-			}
-			inFlyMsgLen -= msg.len;
-			timestamp = msg.rcvtime;
-			if(getNetDelay(inFlyMsgLen, 0) > COLLAPSEDELAY ) {
-				System.out.println("【Error】网络消息总负载"+inFlyMsgLen
-						+"B,网络传播时延超过"+COLLAPSEDELAY/1000
-						+"秒，系统已严重拥堵，不可用！");
-				break;
-			}
-		}
-		long totalTime = 0;
-		long totalStableMsg = 0;
-		for(int i = 0; i < CN; i++) {
-			totalTime += clis[i].accTime;
-			totalStableMsg += clis[i].stableMsgNum();
-		}
-		double tps = getStableRequestNum(clis)/(double)(timestamp/1000);
-		System.out.println("【The end】消息平均确认时间为:"+totalTime/totalStableMsg
-				+"毫秒;消息吞吐量为:"+tps+"tps");
+// 		long timestamp = 0;
+// 		//消息处理
+// //		int ttt = 0;
+// 		while(!msgQue.isEmpty()) {
+// 			Message msg = msgQue.poll();
+// 			switch(msg.type) {
+// 			case Message.REPLY:
+// 			case Message.CLITIMEOUT:
+// 				clis[Client.getCliArrayIndex(msg.rcvId)].msgProcess(msg);
+// 				break;
+// 			default:
+// 				reps[msg.rcvId].msgProcess(msg);
+// 			}
+// 			//如果还未达到稳定状态的request消息小于INFLIGHT，随机选择一个客户端发送请求消息
+// 			if(requestNums - getStableRequestNum(clis) < INFLIGHT && requestNums < REQNUM) {
+// 				clis[rand.nextInt(CN)].sendRequest(msg.rcvtime);
+// 				requestNums++;
+// 			}
+// 			inFlyMsgLen -= msg.len;
+// 			timestamp = msg.rcvtime;
+// 			if(getNetDelay(inFlyMsgLen, 0) > COLLAPSEDELAY ) {
+// 				System.out.println("【Error】网络消息总负载"+inFlyMsgLen
+// 						+"B,网络传播时延超过"+COLLAPSEDELAY/1000
+// 						+"秒，系统已严重拥堵，不可用！");
+// 				break;
+// 			}
+// 		}
+// 		long totalTime = 0;
+// 		long totalStableMsg = 0;
+// 		for(int i = 0; i < CN; i++) {
+// 			totalTime += clis[i].accTime;
+// 			totalStableMsg += clis[i].stableMsgNum();
+// 		}
+// 		double tps = getStableRequestNum(clis)/(double)(timestamp/1000);
+// 		System.out.println("【The end】消息平均确认时间为:"+totalTime/totalStableMsg
+// 				+"毫秒;消息吞吐量为:"+tps+"tps");
 	}
 	
 	/**

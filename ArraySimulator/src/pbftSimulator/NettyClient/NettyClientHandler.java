@@ -28,6 +28,8 @@ public class NettyClientHandler extends SimpleChannelInboundHandler<BaseMsg> {
     @Override
     protected void messageReceived(ChannelHandlerContext channelHandlerContext, BaseMsg baseMsg) throws Exception {
         MsgType msgType=baseMsg.getType();
+
+//        判断消息类型，并作相应处理
         switch (msgType){
             case LOGIN:{
                 //向服务器发起登录

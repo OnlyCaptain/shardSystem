@@ -124,11 +124,11 @@ public class shardNode extends Replica {
 			logger.warning("this is a invalid transaction. "+tx.toString());
 			return;
 		}
-		if (shardID == queryShardID(tx.getSender())) {
+//		if (shardID == queryShardID(tx.getSender())) {
 			txPending.add(tx);
 			txMemory(tx);
 			printTx();
-		}
+//		}
 		// TODO
 	}
 

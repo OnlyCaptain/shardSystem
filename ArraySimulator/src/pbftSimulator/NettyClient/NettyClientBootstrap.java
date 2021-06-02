@@ -31,8 +31,8 @@ public class NettyClientBootstrap {
 
     /**
      * 构造函数. start()
-     * @param port
-     * @param host
+     * @param port 服务端端口
+     * @param host 服务端地址
      * @throws InterruptedException
      */
     public NettyClientBootstrap(int port, String host) throws InterruptedException {

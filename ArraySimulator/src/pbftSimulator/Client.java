@@ -3,6 +3,8 @@ package pbftSimulator;
 import java.util.HashMap;
 import java.util.Map;
 
+import pbftSimulator.NettyClient.NettyClientBootstrap;
+import pbftSimulator.NettyMessage.Constants;
 import pbftSimulator.message.CliTimeOutMsg;
 import pbftSimulator.message.Message;
 import pbftSimulator.message.ReplyMsg;
@@ -208,5 +210,36 @@ public class Client {
 	public void setTimer(long t, long time) {
 		Message timeoutMsg = new CliTimeOutMsg(t, id, id, time + Simulator.CLITIMEOUT);
 		Simulator.sendMsg(timeoutMsg, "ClientTimeOut", this.logger);
+	}
+
+
+	/**
+	 * 使用socket发送消息
+	 * @param msg 要发送的消息
+	 * @param tag 消息类型
+	 * @param logger 日志
+	 * @param myClientId clientId，用于识别clientId，应具有唯一性
+	 * @param serverPort 服务端端口
+	 * @throws InterruptedException
+	 */
+	public void sendMsg(Message msg, String tag, Logger logger, int myClientId , int serverPort ) throws InterruptedException {
+		//与服务端建立连接
+		String myClientId_str = String.format("%03d",myClientId);
+		Constants.setClientId(myClientId_str);
+		NettyClientBootstrap bootstrap=new NettyClientBootstrap(serverPort,"localhost");
+
+		//打印日志
+		msg.print(tag, logger);
+
+		//发送Msg
+		bootstrap.socketChannel.writeAndFlush(msg);
+
+		//通知server，即将关闭连接.(server需要从map中删除该client）
+		String clo = "";
+		bootstrap.socketChannel.writeAndFlush(clo);
+//		Thread.sleep(100);
+		//关闭连接.
+		bootstrap.socketChannel.close();
+
 	}
 }

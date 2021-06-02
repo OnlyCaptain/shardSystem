@@ -16,7 +16,6 @@ public class NettyServerHandler extends SimpleChannelInboundHandler<BaseMsg> {
     @Override
     protected void messageReceived(ChannelHandlerContext channelHandlerContext, BaseMsg baseMsg) throws Exception {
 
-//        if(MsgType.LOGIN.equals(baseMsg.getType())){
 //        map中没有该client，需要记录其信息
         if(NettyChannelMap.get(baseMsg.getClientId())==null) {
             LoginMsg loginMsg = (LoginMsg) baseMsg;
@@ -31,13 +30,8 @@ public class NettyServerHandler extends SimpleChannelInboundHandler<BaseMsg> {
             System.out.println("client" + loginMsg.getClientId() + " 登录成功");
             
         }
-//        }else{
-//            if(NettyChannelMap.get(baseMsg.getClientId())==null){
-//                    //说明未登录，或者连接断了，服务器向客户端发起登录请求，让客户端重新登录
-//                    LoginMsg loginMsg=new LoginMsg();
-//                    channelHandlerContext.channel().writeAndFlush(loginMsg);
-//            }
-//        }
+
+        //        判断消息类型，并作相应处理
         switch (baseMsg.getType()){
             case PING:{
                 PingMsg pingMsg=(PingMsg)baseMsg;

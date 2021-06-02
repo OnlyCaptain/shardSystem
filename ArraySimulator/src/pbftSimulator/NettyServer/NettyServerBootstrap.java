@@ -17,7 +17,7 @@ public class NettyServerBootstrap {
 
     /**
      * 构造函数. 被调用后运行bind()
-     * @param port
+     * @param port 服务端端口
      * @throws InterruptedException
      */
     public NettyServerBootstrap(int port) throws InterruptedException {

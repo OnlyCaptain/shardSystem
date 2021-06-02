@@ -11,6 +11,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.Queue;
 
 
 /**
@@ -26,11 +28,11 @@ public class shardNode extends Replica {
 
 	public String shardID;    // 节点所属分片 ID
 	public String IP;       // 节点的IP标识符
-	public int Port;       // 节点的端口号
+	public int Port;       // 节点的端口号，作为服务端监听使用的
 	public String name;
-	// public Connection conn;
 	public String url;    // 数据库 url
 	public Map<String, String> addrShard;
+	public Queue<Transaction> txPending;
 
 
 
@@ -45,6 +47,8 @@ public class shardNode extends Replica {
 		Port = 2010;
 		url = "jdbc:sqlite:".concat(this.curWorkspace).concat(this.name).concat("-sqlite.db");
 		createDB();
+
+		txPending = new PriorityQueue<>(Transaction.cmp);
 
 		// 地址映射分片表
 		String[] hex = {"0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"};
@@ -61,7 +65,6 @@ public class shardNode extends Replica {
 				}
 			}
 		}
-		// System.out.println(addrShard.toString());
 	}
 
 	/**
@@ -91,7 +94,9 @@ public class shardNode extends Replica {
 					+ " sender text NOT NULL,\n"
 					+ " recipient text NOT NULL,\n"
 					+ " timestamp integer NOT NULL,\n"
-					+ " value real\n"
+					+ " gasPrice real NOT NULL,\n"
+					+ " accountNonce integer NOT NULL,\n"
+					+ " value real NOT NULL\n"
 					+ " );";
             stmt.execute(sql);
 			logger.info("Connection to SQLite has been established: ".concat(this.url));
@@ -109,13 +114,27 @@ public class shardNode extends Replica {
         }
     }
 
+	/**
+	 * 处理交易
+	 * TODO
+	 * @param tx 交易类
+	 */
 	public void txProcess(Transaction tx) {
-		txMemory(tx);
-		printTx();
+		if (!validateTx(tx)) {
+			logger.warning("this is a invalid transaction. "+tx.toString());
+			return;
+		}
+		if (shardID == queryShardID(tx.getSender())) {
+			txPending.add(tx);
+			txMemory(tx);
+			printTx();
+		}
+		// TODO
 	}
 
 	/**
 	 * 根据地址查询该地址所在的分片。
+	 * TODO
 	 * @param addr 表示查询的地址（账户地址）
 	 * @return	返回对应的分片ID
 	 */
@@ -132,13 +151,19 @@ public class shardNode extends Replica {
 		return result;  // 一开始只有一个分片
 	}
 
-	// 发送跨分片交易的后半段
+	/**
+	 * 发送跨分片交易的后半段
+	 */
 	public void sendCrossTx() {
 		
 	}
 
+	/**
+	 * 插入数据库
+	 * @param tx 交易类
+	 */
 	public void txMemory(Transaction tx) {
-		String sql = "INSERT INTO transactions(sender, recipient, value, timestamp) VALUES(?,?,?,?)";
+		String sql = "INSERT INTO transactions(sender, recipient, value, timestamp, gasPrice, accountNonce) VALUES(?,?,?,?,?,?)";
 
 		Connection conn = connect();
         try {
@@ -148,7 +173,9 @@ public class shardNode extends Replica {
 			pstmt.setString(2, tx.getRecipient());
 			pstmt.setDouble(3, tx.getValue());
 			pstmt.setLong(4, tx.getTimestamp());
-			
+			pstmt.setLong(5, tx.getGasPrice());
+			pstmt.setLong(6, tx.getAccountNonce());
+
             pstmt.executeUpdate();
 			logger.info("Connection to SQLite has been established: ".concat(this.url));
 
@@ -165,6 +192,9 @@ public class shardNode extends Replica {
         }
 	}
 	
+	/**
+	 * 从数据库中输出打印
+	 */
 	public void printTx() {
 		String sql = "select * from transactions";
 
@@ -172,9 +202,14 @@ public class shardNode extends Replica {
         try {
 			Statement stmt = conn.createStatement();
 			ResultSet rs = stmt.executeQuery(sql);
-			System.out.println("Sender"+"\t"+"Recipient"+"\t"+"Value"+"\t"+"timestamp");
+			System.out.println("Sender\t"+"Recipient\t"+"Value\t"+"timestamp\t"+"gasPrice\t"+"accountNonce\t");
 			while (rs.next()) {
-				System.out.println(rs.getString("sender")+"\t"+rs.getString("recipient")+"\t\t"+rs.getDouble("value")+"\t"+rs.getLong("timestamp"));
+				System.out.println(rs.getString("sender")+"\t"
+							+rs.getString("recipient")+"\t\t"
+							+rs.getDouble("value")+"\t"
+							+rs.getLong("timestamp")+"\t\t"
+							+rs.getLong("gasPrice")+"\t\t"
+							+rs.getLong("accountNonce")+"\t\t");
 			}
 			logger.info("Database print finished ".concat(this.url));
 
@@ -190,6 +225,15 @@ public class shardNode extends Replica {
             }
         }
 	}
-	
 
+	/**
+	 * 验证交易是否合法，包括：交易nonce是否大于账户最新nonce，检查余额是否合法
+	 * TODO
+	 * @param tx 交易类
+	 * @return 返回交易是否合法  
+	 * */
+	public boolean validateTx(Transaction tx) {
+		return true;
+	}
+	
 }

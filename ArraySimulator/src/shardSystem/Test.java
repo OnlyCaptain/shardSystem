@@ -48,7 +48,7 @@ public class Test {
 		System.out.println();
 		// boolean[] byzts = {true, false, false, false, false, false, true};
 		shardNode[] reps = new shardNode[RN];
-		Transaction tx1 = new Transaction("0x111", "0x222", 123, null, 0);
+		Transaction tx1 = new Transaction("0x111", "0x222", 123, null, 0, 1, 0);
 
 		reps[0] = new shardNode(0, netDlys[0], netDlysToClis[0]);
 		reps[0].txProcess(tx1);

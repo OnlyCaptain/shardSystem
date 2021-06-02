@@ -14,11 +14,22 @@ import pbftSimulator.NettyMessage.*;
 public class NettyServerBootstrap {
     private int port;
     private SocketChannel socketChannel;
+
+    /**
+     * 构造函数. 被调用后运行bind()
+     * @param port
+     * @throws InterruptedException
+     */
     public NettyServerBootstrap(int port) throws InterruptedException {
         this.port = port;
         bind();
     }
 
+    /**
+     * Server开启的核心代码。
+     * 其中 NettyServerHandler是 Server “接收消息”的代码。
+     * @throws InterruptedException
+     */
     private void bind() throws InterruptedException {
         EventLoopGroup boss=new NioEventLoopGroup();
         EventLoopGroup worker=new NioEventLoopGroup();
@@ -43,28 +54,18 @@ public class NettyServerBootstrap {
         }
     }
 
-    public static class NettyServer_thread extends Thread {
-        private int port;
 
 
-        public NettyServer_thread(int port) {
-            this.port = port;
-        }
-
-        @Override
-        public void run() {
-            try {
-                NettyServerBootstrap bootstrap=new NettyServerBootstrap(port);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-
-
+    /**
+     * Server的测试代码
+     * @param args
+     * @throws InterruptedException
+     */
     public static void main(String []args) throws InterruptedException {
+        //服务端打开连接，传入server的port
         NettyServerBootstrap bootstrap=new NettyServerBootstrap(9999);
+
+        //发一条ask消息（用于验证连接成功）
         while (true){
             SocketChannel channel=(SocketChannel)NettyChannelMap.get("001");
             if(channel!=null){

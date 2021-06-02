@@ -28,11 +28,24 @@ public class NettyClientBootstrap {
     private String host;
     public SocketChannel socketChannel;
     private static final EventExecutorGroup group = new DefaultEventExecutorGroup(20);
+
+    /**
+     * 构造函数. start()
+     * @param port
+     * @param host
+     * @throws InterruptedException
+     */
     public NettyClientBootstrap(int port, String host) throws InterruptedException {
         this.port = port;
         this.host = host;
         start();
     }
+
+    /**
+     * Client 开启的核心代码。
+     * 其中 NettyClientHandler Client “接收消息”的代码。
+     * @throws InterruptedException
+     */
     private void start() throws InterruptedException {
         EventLoopGroup eventLoopGroup=new NioEventLoopGroup();
         Bootstrap bootstrap=new Bootstrap();
@@ -54,17 +67,11 @@ public class NettyClientBootstrap {
             socketChannel = (SocketChannel)future.channel();
             System.out.println("connect server  成功---------");
         }
-
-
-
     }
 
 
 
-
-
-
-    //多线程调用client。暂时用不上。
+    //多线程调用client。
     public static class NettyClient_thread extends Thread {
         private int clientId;
         private String clientId_str ;
@@ -77,17 +84,25 @@ public class NettyClientBootstrap {
             System.out.println(clientId_str);
         }
 
+        /**
+         * 建立与 Server 的连接的代码。
+         */
         @Override
         public void run() {
+            //set clientId.  message会从Constants中获取该Id
             Constants.setClientId(clientId_str);
 //            System.out.println(Constants);
             try {
+                //与 Server 建立连接
                 NettyClientBootstrap bootstrap = new NettyClientBootstrap(serverPort, "localhost");
 
+                //登陆验证。首次登陆时在Server注册 Client的信息
                 LoginMsg loginMsg = new LoginMsg();
-                loginMsg.setPassword("yao");
-                loginMsg.setUserName("robin");
+                loginMsg.setPassword("");
+                loginMsg.setUserName("");
                 bootstrap.socketChannel.writeAndFlush(loginMsg);
+
+//                发送心跳信息。用于验证连接没断开
                 while (true) {
                     TimeUnit.SECONDS.sleep(10);
                     AskMsg askMsg = new AskMsg();
@@ -105,21 +120,21 @@ public class NettyClientBootstrap {
     }
 
 
-
+    /**
+     * Client 的测试代码
+     * @param args
+     * @throws Exception
+     */
     public static void main(String[]args) throws Exception{
-
-        int i = 50;
+        //指定 ClientId 和服务端的 port
+        int clinentId = 50;
         int serverPort = 9999;
-        NettyClient_thread t0 = new NettyClient_thread(i,serverPort);
 
-
-//        NettyClient_thread t1 = new NettyClient_thread(61);
-
+        //使用多线程的方式建立与 Server 的连接
+        NettyClient_thread t0 = new NettyClient_thread(clinentId,serverPort);
 
         t0.start();
 
-//        TimeUnit.SECONDS.sleep(5);
-//        t1.start();
 
     }
 }

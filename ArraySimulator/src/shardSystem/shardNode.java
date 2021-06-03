@@ -173,7 +173,7 @@ public class shardNode extends Replica {
 			pstmt.setString(2, tx.getRecipient());
 			pstmt.setDouble(3, tx.getValue());
 			pstmt.setLong(4, tx.getTimestamp());
-			pstmt.setLong(5, tx.getGasPrice());
+			pstmt.setDouble(5, tx.getGasPrice());
 			pstmt.setLong(6, tx.getAccountNonce());
 
             pstmt.executeUpdate();

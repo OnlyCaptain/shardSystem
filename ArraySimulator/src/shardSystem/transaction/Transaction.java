@@ -14,7 +14,7 @@ public class Transaction {
 	public byte[] data;
 	public String hCode;  // 哈希编码，作为判断交易是否重复的唯一标识符
 	
-	public long gasPrice;
+	public Double gasPrice;
 	public long accountNonce;  
 
 	public static Comparator<Transaction> cmp = new Comparator<Transaction>(){
@@ -24,7 +24,7 @@ public class Transaction {
 		}
 	};
 	
-	public Transaction(String sender, String recipient, double value, byte[] data, long timestamp, long gasPrice, long accountNonce) {
+	public Transaction(String sender, String recipient, double value, byte[] data, long timestamp, Double gasPrice, long accountNonce) {
 		this.sender = sender;
 		this.recipient = recipient;
 		this.value = value;
@@ -55,7 +55,7 @@ public class Transaction {
 
 	public long getTimestamp() { return this.timestamp; }
 
-	public long getGasPrice() { return this.gasPrice; }
+	public Double getGasPrice() { return this.gasPrice; }
 
 	public long getAccountNonce() { return this.accountNonce; }
 

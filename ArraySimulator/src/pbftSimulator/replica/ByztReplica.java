@@ -19,8 +19,8 @@ public class ByztReplica extends Replica {
 
 	public static final String name = "Byztnode_";
 	
-	public ByztReplica(int id, int[] netDlys, int[]netDlysToClis) {
-		super(name, id, netDlys, netDlysToClis);
+	public ByztReplica(int id, String IP, int port, int[] netDlys, int[]netDlysToClis) {
+		super(name, id, IP, port, netDlys, netDlysToClis);
 		receiveTag = BTZTRECEIVETAG;
 		sendTag = BTZTSENDTAG;
 	}

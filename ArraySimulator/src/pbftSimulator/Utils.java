@@ -1,6 +1,8 @@
 package pbftSimulator;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.ServerSocket;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
@@ -63,5 +65,26 @@ public class Utils {
         }
         return sb.toString();
     }
-  
+    
+    public static boolean isPortUsed(int port) {
+        boolean used = false;
+        ServerSocket serverSocket = null;
+        try {
+            // 尝试建立socket
+            serverSocket = new ServerSocket(port);
+            used = false;
+        } catch (IOException e) {
+            System.out.println(">>>>>>>>>>> xxl-job, port[{" + String.valueOf(port) + "}] is in use.");
+            used = true;
+        } finally {
+            if (serverSocket != null) {
+                try {
+                    serverSocket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return used;
+    }
 }

@@ -51,43 +51,34 @@ public class Test {
 		System.out.println();
 		// boolean[] byzts = {true, false, false, false, false, false, true};
 		shardNode[] reps = new shardNode[RN];
-
-<<<<<<< HEAD
-		reps[0] = new shardNode(0, netDlys[0], netDlysToClis[0]);
-		reps[0].txProcess(tx1);
-		reps[0].sendMsg();
-=======
+		
 		//从csv文件中读取Tx数据，并以 Transaction 类的格式进行存储
-		try {
-//			包含10条交易的csv
-			String Filename = "./data/Tx_10.csv";
-//			包含500条交易的csv
-//			String Filename = "./data/Tx_500.csv";
- 			BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream( Filename ), "utf-8"));//GBK
-                 reader.readLine();//显示标题行,没有则注释掉
-//                 System.out.println(reader.readLine());
-			String line = null;
-			while((line=reader.readLine())!=null){
-				String item[] = line.split(",");//CSV格式文件时候的分割符
+// 		try {
+// //			包含10条交易的csv
+// 			String Filename = "./data/Tx_10.csv";
+// //			包含500条交易的csv
+// //			String Filename = "./data/Tx_500.csv";
+//  			BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream( Filename ), "utf-8"));//GBK
+//                  reader.readLine();//显示标题行,没有则注释掉
+// //                 System.out.println(reader.readLine());
+// 			String line = null;
+// 			while((line=reader.readLine())!=null){
+// 				String item[] = line.split(",");//CSV格式文件时候的分割符
 
-				String sender = item[0];
-				String recipient = item[1];
-				double value = Double.parseDouble(item[2]);
-				long timestamp = Long.parseLong(item[3]);
-				Double gasPrice = Double.parseDouble(item[4]);
-				long accountNonce = 0;
-				Transaction tx1 = new Transaction(sender , recipient , value , null, timestamp , gasPrice,  accountNonce );
-				reps[0] = new shardNode(0, netDlys[0], netDlysToClis[0]);
-				reps[0].txProcess(tx1);
+// 				String sender = item[0];
+// 				String recipient = item[1];
+// 				double value = Double.parseDouble(item[2]);
+// 				long timestamp = Long.parseLong(item[3]);
+// 				Double gasPrice = Double.parseDouble(item[4]);
+// 				long accountNonce = 0;
+// 				Transaction tx1 = new Transaction(sender , recipient , value , null, timestamp , gasPrice,  accountNonce );
+// 				reps[0] = new shardNode(0, netDlys[0], netDlysToClis[0]);
+// 				reps[0].txProcess(tx1);
 
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
-
-
->>>>>>> cadc255aa7e6436749b5a009a944e6510d0da881
+// 			}
+// 		} catch (Exception e) {
+// 			e.printStackTrace();
+// 		}
 		// for(int i = 0; i < RN; i++) {
 		// 	if(byzts[i]) {
 		// 		reps[i] = new ByztReplica(i, netDlys[i], netDlysToClis[i]);

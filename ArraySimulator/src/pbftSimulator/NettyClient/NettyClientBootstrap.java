@@ -38,7 +38,11 @@ public class NettyClientBootstrap {
     public NettyClientBootstrap(int port, String host) throws InterruptedException {
         this.port = port;
         this.host = host;
-        start();
+        try {
+            start();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -131,7 +135,7 @@ public class NettyClientBootstrap {
         int serverPort = 9999;
 
         //使用多线程的方式建立与 Server 的连接
-        NettyClient_thread t0 = new NettyClient_thread(clinentId,serverPort);
+        NettyClient_thread t0 = new NettyClient_thread(clinentId, serverPort);
 
         t0.start();
 

@@ -1,5 +1,6 @@
 package pbftSimulator;
 
+import java.util.HashSet;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Random;
@@ -42,6 +43,10 @@ public class Simulator {
 	public static int[][] netDlysToClis = netDlyBtwRpAndCliInit(RN, CN);
 	
 	public static int[][] netDlysToNodes = Utils.flipMatrix(netDlysToClis);
+
+	// 节点IPs and ports
+	public static String[] IPs = netIPsInit(RN);
+	public static int[] ports = netPortsInit(RN);
 	
 	public static void main(String[] args) {
 		//初始化包含FN个拜占庭意节点的RN个replicas
@@ -49,14 +54,19 @@ public class Simulator {
 		for (int i = 0; i < RN; i ++) {
 			System.out.print(String.valueOf(byzts[i]).concat(" "));
 		}
+		System.out.println("sd");
+		for (int i = 0; i < RN; i ++) {
+			System.out.print(String.valueOf(ports[i]).concat(" "));
+		}
 		System.out.println();
+
 		// boolean[] byzts = {true, false, false, false, false, false, true};
 		Replica[] reps = new Replica[RN];
 		for(int i = 0; i < RN; i++) {
 			if(byzts[i]) {
-				reps[i] = new ByztReplica(i, netDlys[i], netDlysToClis[i]);
+				reps[i] = new ByztReplica(i, IPs[i], ports[i], netDlys[i], netDlysToClis[i]);
 			}else {
-				reps[i] = new shardNode(i, netDlys[i], netDlysToClis[i]);
+				reps[i] = new shardNode(i, IPs[i], ports[i], netDlys[i], netDlysToClis[i]);
 			}
 		}
 		
@@ -127,7 +137,38 @@ public class Simulator {
 		return System.currentTimeMillis();
 	}
 
+	/**
+	 * 生成IP数组，后续需要改成从配置文件中读取
+	 * @param n
+	 * @return IP地址数组
+	 */
+	public static String[] netIPsInit(int n) {
+		String[] result = new String[n];
+		for (int i = 0; i < n; i ++) 
+			result[i] = "127.0.0.1";
+		return result;
+	}
 
+	public static int[] netPortsInit(int n) {
+		Set<Integer> set = new HashSet<Integer>();
+		int L=49152, H = 65535, p = 0, i = 0;
+		Random rand = new Random(999);
+		while (i < n) {
+			p = L + rand.nextInt(H-L);
+			if (set.contains(p)) 
+				continue;
+			if (Utils.isPortUsed(p)) 
+				continue;
+			set.add(p);
+			i ++;
+		}
+		Integer[] temp = set.toArray(new Integer[] {});//关键语句
+ 		int[] result = new int[temp.length];
+		for (int j = 0; j < temp.length; j++) {
+			result[j] = temp[j].intValue();
+		}
+		return result;
+	}
 	
 	/**
 	 * 随机初始化replicas节点之间的基础网络传输延迟

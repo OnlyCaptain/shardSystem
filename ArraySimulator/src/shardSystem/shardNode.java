@@ -32,7 +32,7 @@ public class shardNode extends Replica {
 
 	public String shardID;    // 节点所属分片 ID
 	public String IP;       // 节点的IP标识符
-	public int Port;       // 节点的端口号，作为服务端监听使用的
+	public int port;       // 节点的端口号，作为服务端监听使用的
 	public String name;
 	public String url;    // 数据库 url
 	public Map<String, String> addrShard;
@@ -40,18 +40,16 @@ public class shardNode extends Replica {
 
 
 
-	public shardNode(int id, int[] netDlys, int[] netDlyToClis) {
-		super(NAME, id, netDlys, netDlyToClis);
+	public shardNode(int id, String IP, int port, int[] netDlys, int[] netDlyToClis) {
+		super(NAME, id, IP, port, netDlys, netDlyToClis);
+
 		this.name = NAME.concat(String.valueOf(id));
-
 		System.out.println(this.curWorkspace);
-
 		shardID = "0";
-		IP = "127.0.0.1";
-		Port = 2010;
+		this.IP = IP;
+		this.port = port;
 		url = "jdbc:sqlite:".concat(this.curWorkspace).concat(this.name).concat("-sqlite.db");
 		createDB();
-
 		txPending = new PriorityQueue<>(Transaction.cmp);
 
 		// 地址映射分片表
@@ -240,31 +238,5 @@ public class shardNode extends Replica {
 		return true;
 	}
 	
-	public void sendMsg(String IP, long port, Message m, String tag, Logger logger) {
-		JSONObject jsout = new JSONObject();
-		jsout.put("id",111);
-		jsout.put("msg","发送消息");
-		System.out.println(jsout.toString());
-	// public void sendMsg(Message msg, String tag, Logger logger, int myClientId, int serverPort ) throws InterruptedException {
-	// 	//与服务端建立连接
-		
-
-		String myClientId_str = String.format("%03d",myClientId);
-		Constants.setClientId(myClientId_str);
-		NettyClientBootstrap bootstrap=new NettyClientBootstrap(serverPort,"localhost");
-
-		//打印日志
-		msg.print(tag, logger);
-
-		//发送Msg
-		bootstrap.socketChannel.writeAndFlush(msg);
-
-		//通知server，即将关闭连接.(server需要从map中删除该client）
-		String clo = "";
-		bootstrap.socketChannel.writeAndFlush(clo);
-//		Thread.sleep(100);
-		//关闭连接.
-		bootstrap.socketChannel.close();
-
-	}
+	
 }

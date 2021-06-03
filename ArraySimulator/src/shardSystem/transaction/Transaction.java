@@ -24,6 +24,16 @@ public class Transaction {
 			return (int) (t1.gasPrice - t2.gasPrice);
 		}
 	};
+
+	public Transaction() {
+		this.sender = null;
+		this.recipient = null;
+		this.value = 0.0;
+		this.data = null;
+		this.timestamp = 0;
+		this.gasPrice = 0.0;
+		this.accountNonce = 0;
+	}
 	
 	public Transaction(String sender, String recipient, double value, byte[] data, long timestamp, Double gasPrice, long accountNonce) {
 		this.sender = sender;
@@ -92,20 +102,24 @@ public class Transaction {
 	}
 
 	public static Transaction decoder(String jsin) {
-		Message output = new Message(0,0,0);
+		Transaction output = new Transaction();
 		try {
 			JSONObject js = JSONObject.fromObject(jsin);
-			output.rcvId = js.getInt("rcvId");
-			output.rcvtime = js.getLong("rcvtime");
-			output.sndId = js.getInt("sndId");
-			output.len = js.getLong("len");
-			output.type = js.getInt("type");
+			output.txId = js.getLong("txId");
+			output.sender = js.getString("sender");
+			output.recipient = js.getString("recipient");
+			output.timestamp = js.getLong("timestamp");
+			output.value = js.getDouble("value");
+			if (js.getString("data").equals("null")) {
+				output.data = null;
+			}
+			else output.data = js.getString("data").getBytes();
+			output.gasPrice = js.getDouble("gasPrice");
+			output.accountNonce = js.getLong("accountNonce");
 		} catch (Exception e) {
 			System.out.println("json 转换失败"+e.getMessage());
 			return null;
 		} 
 		return output;
 	}
-
-
 }

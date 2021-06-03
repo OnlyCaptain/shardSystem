@@ -15,12 +15,17 @@ import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
+
+import net.sf.json.JSONObject;
+
 import java.io.File;
 import java.io.IOException;
 
 import pbftSimulator.Client;
 import pbftSimulator.Simulator;
 import pbftSimulator.Utils;
+import pbftSimulator.NettyClient.NettyClientBootstrap;
+import pbftSimulator.NettyServer.NettyServerBootstrap;
 import pbftSimulator.message.CheckPointMsg;
 import pbftSimulator.message.CommitMsg;
 import pbftSimulator.message.LastReply;
@@ -44,6 +49,10 @@ public class Replica {
 
 	public String name;
 	public int id; 										//当前节点的id
+
+	public String IP;
+	public int port;
+
 	public int v;										//视图编号
 	public int n;										//消息处理序列号
 	public int lastRepNum;								//最新回复的消息处理序列号
@@ -63,6 +72,8 @@ public class Replica {
 	public Map<Integer, Map<Integer, LastReply>> checkPoints;
 	
 	public Map<Message, Integer> reqStats;			//request请求状态
+
+	public NettyServerBootstrap bootstrap;
 	
 	public static Comparator<PrePrepareMsg> nCmp = new Comparator<PrePrepareMsg>(){
 		@Override
@@ -71,16 +82,21 @@ public class Replica {
 		}
 	};
 	
-	public Replica(String name, int id, int[] netDlys, int[] netDlyToClis) {
+	public Replica(String name, int id, String IP, int port, int[] netDlys, int[] netDlyToClis) {
 		this.id = id;
 		this.netDlys = netDlys;
 		this.netDlyToClis = netDlyToClis;
 		this.name = name.concat(String.valueOf(id));
+		try {
+			this.bootstrap = new NettyServerBootstrap(port);
+		} catch (InterruptedException e) { e.printStackTrace(); }
+
 		msgCache = new HashMap<>();
 		lastReplyMap = new HashMap<>();
 		checkPoints = new HashMap<>();
 		reqStats = new HashMap<>();
 		checkPoints.put(0, lastReplyMap);
+
 		
 		// 定义当前Replica的工作目录
 		curWorkspace = "./workspace/".concat(this.name).concat("/");
@@ -667,6 +683,31 @@ public class Replica {
 		map.put("N", N);
 		n = maxN;
 		return map;
+	}
+
+	/**
+	 * 发送消息
+	 * @param IP
+	 * @param port
+	 * @param m
+	 * @param tag
+	 * @param logger
+	 */
+	public void sendMsg(String sIP, int sport, Message msg, String tag, Logger logger) {
+		String jsbuff = msg.encoder();
+		try {
+			NettyClientBootstrap bootstrap = new NettyClientBootstrap(sport, sIP);
+			msg.print(tag, logger);
+			bootstrap.socketChannel.writeAndFlush(jsbuff);
+			//通知server，即将关闭连接.(server需要从map中删除该client）
+			String clo = "";
+			bootstrap.socketChannel.writeAndFlush(clo);
+			bootstrap.socketChannel.close();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
+
 	}
 	
 	public void setTimer(int n, long time) {

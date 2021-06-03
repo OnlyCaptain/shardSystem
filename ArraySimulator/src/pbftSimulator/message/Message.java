@@ -5,6 +5,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
 
+import net.sf.json.JSON;
+import net.sf.json.JSONObject;
 import pbftSimulator.Simulator;
 
 public class Message {
@@ -109,5 +111,35 @@ public class Message {
 		return "消息类型:"+typeName[type]+";发送者id:"
 				+sndId+";接收者id:"+rcvId+";消息接收时间戳:"+rcvtime+";";
     }
+
+	/**
+	 * 对消息进行编码，用于网络通信
+	 * @return 编码的字符串，格式采用JSON
+	 */
+	public String encoder() {
+		JSONObject jsout = new JSONObject();
+		jsout.put("rcvId", rcvId);
+		jsout.put("rcvtime", rcvtime);
+		jsout.put("sndId", sndId);
+		jsout.put("len", len);
+		jsout.put("type", type);
+		return jsout.toString();
+	}
+
+	public static Message decoder(String jsin) {
+		Message output = new Message(0,0,0);
+		try {
+			JSONObject js = JSONObject.fromObject(jsin);
+			output.rcvId = js.getInt("rcvId");
+			output.rcvtime = js.getLong("rcvtime");
+			output.sndId = js.getInt("sndId");
+			output.len = js.getLong("len");
+			output.type = js.getInt("type");
+		} catch (Exception e) {
+			System.out.println("json 转换失败"+e.getMessage());
+			return null;
+		} 
+		return output;
+	}
 
 }

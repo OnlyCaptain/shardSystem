@@ -2,11 +2,12 @@ package shardSystem.transaction;
 
 import java.util.Comparator;
 
+import net.sf.json.JSONObject;
 import pbftSimulator.Utils;
 
 public class Transaction {
 	
-	public String txId; // 待实现，标识交易的唯一性
+	public Long txId; // 待实现，标识交易的唯一性
 	public String sender;
 	public String recipient;
 	public long timestamp;
@@ -32,7 +33,7 @@ public class Transaction {
 			this.data = data.clone();
 		else this.data = data;
 		this.timestamp = timestamp;
-
+			
 		this.gasPrice = gasPrice;
 		this.accountNonce = accountNonce;
 
@@ -70,4 +71,41 @@ public class Transaction {
 	public String toString() {
 		return sender.concat("-").concat(recipient).concat("-").concat(String.valueOf(value));
 	}
+	/**
+	 * 对消息进行编码，用于网络通信
+	 * @return 编码的字符串，格式采用JSON
+	 */
+	public String encoder() {
+		JSONObject jsout = new JSONObject();
+		jsout.put("txId", txId);
+		jsout.put("sender", sender);
+		jsout.put("recipient", recipient);
+		jsout.put("timestamp", 	timestamp);
+		jsout.put("value", value);
+		if (data == null)
+			jsout.put("data", "null");
+		else 
+			jsout.put("data", data.toString());
+		jsout.put("gasPrice", gasPrice);
+		jsout.put("accountNonce", accountNonce);
+		return jsout.toString();
+	}
+
+	public static Transaction decoder(String jsin) {
+		Message output = new Message(0,0,0);
+		try {
+			JSONObject js = JSONObject.fromObject(jsin);
+			output.rcvId = js.getInt("rcvId");
+			output.rcvtime = js.getLong("rcvtime");
+			output.sndId = js.getInt("sndId");
+			output.len = js.getLong("len");
+			output.type = js.getInt("type");
+		} catch (Exception e) {
+			System.out.println("json 转换失败"+e.getMessage());
+			return null;
+		} 
+		return output;
+	}
+
+
 }

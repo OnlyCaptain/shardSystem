@@ -8,7 +8,7 @@ public class RequestMsg extends Message {
 	
 	public int c;	
 	
-	public String m;		
+	public String m;   // transactions: [JSONObject, JSONObject, ... ]
 	
 	//消息结构
 	//<REQUEST, o, t, c>:o表示客户端请求的操作;t表示客户端请求时间戳;c表示客户端id

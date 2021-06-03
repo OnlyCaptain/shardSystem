@@ -52,6 +52,7 @@ public class Test {
 
 		reps[0] = new shardNode(0, netDlys[0], netDlysToClis[0]);
 		reps[0].txProcess(tx1);
+		reps[0].sendMsg();
 		// for(int i = 0; i < RN; i++) {
 		// 	if(byzts[i]) {
 		// 		reps[i] = new ByztReplica(i, netDlys[i], netDlysToClis[i]);

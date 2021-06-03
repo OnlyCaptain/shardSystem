@@ -222,7 +222,7 @@ public class Client {
 	 * @param serverPort 服务端端口
 	 * @throws InterruptedException
 	 */
-	public void sendMsg(Message msg, String tag, Logger logger, int myClientId , int serverPort ) throws InterruptedException {
+	public void sendMsg(Message msg, String tag, Logger logger, int myClientId, int serverPort ) throws InterruptedException {
 		//与服务端建立连接
 		String myClientId_str = String.format("%03d",myClientId);
 		Constants.setClientId(myClientId_str);

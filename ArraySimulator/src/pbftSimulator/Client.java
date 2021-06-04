@@ -237,9 +237,12 @@ public class Client {
 		//通知server，即将关闭连接.(server需要从map中删除该client）
 		String clo = "";
 		bootstrap.socketChannel.writeAndFlush(clo);
-//		Thread.sleep(100);
+
 		//关闭连接.
-		bootstrap.socketChannel.close();
+		bootstrap.eventLoopGroup.shutdownGracefully();
 
 	}
+
+
+
 }

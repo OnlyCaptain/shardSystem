@@ -689,9 +689,9 @@ public class Replica {
 
 	/**
 	 * 发送消息
-	 * @param IP
-	 * @param port
-	 * @param m
+	 * @param sIP
+	 * @param sport
+	 * @param msg
 	 * @param tag
 	 * @param logger
 	 */
@@ -705,14 +705,34 @@ public class Replica {
 			//通知server，即将关闭连接.(server需要从map中删除该client）
 			String clo = "";
 			bootstrap.socketChannel.writeAndFlush(clo);
-			bootstrap.socketChannel.close();
+//			关闭连接
+			bootstrap.eventLoopGroup.shutdownGracefully();
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
 		
 
 	}
-	
+
+	/**
+	 * 发送消息到所有邻居
+	 * @param msg
+	 * @param id
+	 * @param tag
+	 * @param logger
+	 * @param topologyIp 数组
+	 * @param topologyPort 数组
+	 */
+	public void sendMsgToOthers(Message msg, int id, String tag, Logger logger , String[] topologyIp, int[] topologyPort) {
+
+		for(int i = 0; i < topologyIp.length ; i++) {
+			if(i != id) {
+				sendMsg(topologyIp[i], topologyPort[i], msg, tag, logger);
+			}
+		}
+	}
+
+
 	public void setTimer(int n, long time) {
 		Message timeOutMsg = new TimeOutMsg(v, n, id, id, time + Simulator.TIMEOUT);
 		Simulator.sendMsg(timeOutMsg, sendTag, this.logger);

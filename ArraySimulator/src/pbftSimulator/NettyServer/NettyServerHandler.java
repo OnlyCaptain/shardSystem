@@ -16,6 +16,7 @@ public class NettyServerHandler extends SimpleChannelInboundHandler<String> {
     }
     @Override
     protected void messageReceived(ChannelHandlerContext channelHandlerContext, String jsbuff) throws Exception {
+    	System.out.println("Server end".concat(jsbuff));
         Message baseMsg = Message.decoder(jsbuff);
 //        map中没有该client，需要记录其信息
         if(NettyChannelMap.get(baseMsg.getClientId())==null) {

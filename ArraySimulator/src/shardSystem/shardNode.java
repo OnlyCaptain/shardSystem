@@ -31,8 +31,6 @@ public class shardNode extends Replica {
 	public static String NAME = "shardNode_";
 
 	public String shardID;    // 节点所属分片 ID
-	public String IP;       // 节点的IP标识符
-	public int port;       // 节点的端口号，作为服务端监听使用的
 	public String name;
 	public String url;    // 数据库 url
 	public Map<String, String> addrShard;
@@ -46,8 +44,6 @@ public class shardNode extends Replica {
 		this.name = NAME.concat(String.valueOf(id));
 		System.out.println(this.curWorkspace);
 		shardID = "0";
-		this.IP = IP;
-		this.port = port;
 		url = "jdbc:sqlite:".concat(this.curWorkspace).concat(this.name).concat("-sqlite.db");
 		createDB();
 		txPending = new PriorityQueue<>(Transaction.cmp);

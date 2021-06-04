@@ -46,7 +46,8 @@ public class Simulator {
 
 	// 节点IPs and ports
 	public static String[] IPs = netIPsInit(RN);
-	public static int[] ports = netPortsInit(RN);
+//	public static int[] ports = netPortsInit(RN);
+	public static int[] ports = {64960, 65456, 61444, 51988, 51653, 63367, 60635};
 	
 	public static void main(String[] args) {
 		//初始化包含FN个拜占庭意节点的RN个replicas

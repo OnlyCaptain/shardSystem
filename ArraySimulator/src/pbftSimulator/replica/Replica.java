@@ -51,7 +51,7 @@ public class Replica {
 	public int id; 										//当前节点的id
 
 	public String IP;
-	public int port;
+	public int port;                                    // 作为服务器端口监听
 
 	public int v;										//视图编号
 	public int n;										//消息处理序列号
@@ -86,6 +86,8 @@ public class Replica {
 		this.id = id;
 		this.netDlys = netDlys;
 		this.netDlyToClis = netDlyToClis;
+		this.IP = IP;
+		this.port = port;
 		this.name = name.concat(String.valueOf(id));
 		try {
 			this.bootstrap = new NettyServerBootstrap(port);
@@ -696,6 +698,7 @@ public class Replica {
 	public void sendMsg(String sIP, int sport, Message msg, String tag, Logger logger) {
 		String jsbuff = msg.encoder();
 		try {
+			System.out.println(sIP);
 			NettyClientBootstrap bootstrap = new NettyClientBootstrap(sport, sIP);
 			msg.print(tag, logger);
 			bootstrap.socketChannel.writeAndFlush(jsbuff);

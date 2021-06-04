@@ -27,6 +27,7 @@ public class NettyClientBootstrap {
     private int port;
     private String host;
     public SocketChannel socketChannel;
+    public EventLoopGroup eventLoopGroup;
     private static final EventExecutorGroup group = new DefaultEventExecutorGroup(20);
 
     /**
@@ -51,7 +52,7 @@ public class NettyClientBootstrap {
      * @throws InterruptedException
      */
     private void start() throws InterruptedException {
-        EventLoopGroup eventLoopGroup=new NioEventLoopGroup();
+        eventLoopGroup=new NioEventLoopGroup();
         Bootstrap bootstrap=new Bootstrap();
         bootstrap.channel(NioSocketChannel.class);
         bootstrap.option(ChannelOption.SO_KEEPALIVE,true);

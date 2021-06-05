@@ -9,10 +9,12 @@ import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
 import pbftSimulator.NettyMessage.*;
+import pbftSimulator.replica.Replica;
 
 
 public class NettyServerBootstrap {
     private int port;
+    private Replica replica;
     private SocketChannel socketChannel;
 
     /**
@@ -20,8 +22,10 @@ public class NettyServerBootstrap {
      * @param port 服务端端口
      * @throws InterruptedException
      */
-    public NettyServerBootstrap(int port) throws InterruptedException {
+    public NettyServerBootstrap(int port, Replica replica) throws InterruptedException {
         this.port = port;
+        this.replica = replica;
+        System.out.println("我这里是节点"+this.replica.id+"的nettyBootstrap");
         bind();
     }
 
@@ -45,7 +49,7 @@ public class NettyServerBootstrap {
                 ChannelPipeline p = socketChannel.pipeline();
                 p.addLast(new ObjectEncoder());
                 p.addLast(new ObjectDecoder(ClassResolvers.cacheDisabled(null)));
-                p.addLast(new NettyServerHandler());
+                p.addLast(new NettyServerHandler(this.replica));
             }
         });
         ChannelFuture f= bootstrap.bind(port).sync();

@@ -268,7 +268,7 @@ public class Message {
 		return jsout.toString();
 	}
 
-	public static Message decoder(String jsin) {
+	public static Message decoder(String jsin) throws Exception {
 		Message output = new Message(0,0,0);
 		try {
 			JSONObject js = JSONObject.fromObject(jsin);

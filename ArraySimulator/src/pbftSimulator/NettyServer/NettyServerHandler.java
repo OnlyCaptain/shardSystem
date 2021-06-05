@@ -6,33 +6,60 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.util.ReferenceCountUtil;
 import pbftSimulator.NettyMessage.*;
 import pbftSimulator.message.Message;
+import pbftSimulator.replica.Replica;
 
 import java.net.InetSocketAddress;
 
 public class NettyServerHandler extends SimpleChannelInboundHandler<String> {
-    @Override
+    private Replica replica;
+	
+    public NettyServerHandler() {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+
+    public NettyServerHandler(Replica replica) {
+		super();
+        this.replica = replica;
+        System.out.println("In nettyHandler" + this.replica);
+		// TODO Auto-generated constructor stub
+	}
+    
+	@Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         NettyChannelMap.remove((SocketChannel)ctx.channel());
     }
     @Override
     protected void messageReceived(ChannelHandlerContext channelHandlerContext, String jsbuff) throws Exception {
-    	System.out.println("Server end".concat(jsbuff));
-        Message baseMsg = Message.decoder(jsbuff);
-//        map中没有该client，需要记录其信息
-        if(NettyChannelMap.get(baseMsg.getClientId())==null) {
-            // LoginMsg loginMsg = (LoginMsg) baseMsg;
-
-            NettyChannelMap.add(baseMsg.getClientId(), (SocketChannel) channelHandlerContext.channel());
-
-            InetSocketAddress insocket = (InetSocketAddress) channelHandlerContext.channel().remoteAddress();
-
-            String ip = insocket.getAddress().getHostAddress();
-            int port = insocket.getPort();
-            System.out.println("ip: " + ip + "    port: " + port);
-            System.out.println("client" + baseMsg.getClientId() + " 登录成功");
+    	System.out.println("Server end ".concat(replica.name).concat(replica.IP).concat(jsbuff));  
+        Message baseMsg = null; 
+        try {
+            baseMsg = Message.decoder(jsbuff);
+            replica.msgProcess(baseMsg);
             System.out.println(baseMsg.toString());
+            if(NettyChannelMap.get(baseMsg.getClientId())==null) {
+                // LoginMsg loginMsg = (LoginMsg) baseMsg;
+    
+                NettyChannelMap.add(baseMsg.getClientId(), (SocketChannel) channelHandlerContext.channel());
+    
+                InetSocketAddress insocket = (InetSocketAddress) channelHandlerContext.channel().remoteAddress();
+    
+                String ip = insocket.getAddress().getHostAddress();
+                int port = insocket.getPort();
+                System.out.println("ip: " + ip + "    port: " + port);
+                System.out.println("client" + baseMsg.getClientId() + " 登录成功");
+                System.out.println(baseMsg.toString());
+            }
+    
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("exit.");
+        } finally {
+            ReferenceCountUtil.release(baseMsg);
         }
 
+//        map中没有该client，需要记录其信息
+        
         //        判断消息类型，并作相应处理
         // switch (baseMsg.getType()){
         //     case PING:{
@@ -68,6 +95,6 @@ public class NettyServerHandler extends SimpleChannelInboundHandler<String> {
 
         //     default:break;
         // }
-        ReferenceCountUtil.release(baseMsg);
+        
     }
 }

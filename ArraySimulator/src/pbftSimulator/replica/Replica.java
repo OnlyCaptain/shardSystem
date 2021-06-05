@@ -1,5 +1,7 @@
 package pbftSimulator.replica;
 
+import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -15,7 +17,16 @@ import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
+// import javafx.util
 
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.*;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.serialization.ClassResolvers;
+import io.netty.handler.codec.serialization.ObjectDecoder;
+import io.netty.handler.codec.serialization.ObjectEncoder;
 import net.sf.json.JSONObject;
 
 import java.io.File;
@@ -26,6 +37,7 @@ import pbftSimulator.Simulator;
 import pbftSimulator.Utils;
 import pbftSimulator.NettyClient.NettyClientBootstrap;
 import pbftSimulator.NettyServer.NettyServerBootstrap;
+import pbftSimulator.NettyServer.NettyServerHandler;
 import pbftSimulator.message.CheckPointMsg;
 import pbftSimulator.message.CommitMsg;
 import pbftSimulator.message.LastReply;
@@ -61,6 +73,8 @@ public class Replica {
 	public int netDlyToClis[];							//与客户端的网络延迟
 	public boolean isTimeOut;							//当前正在处理的请求是否超时（如果超时了不会再发送任何消息）
 	public Logger logger;
+
+	public ArrayList<AbstractMap.SimpleEntry<String, Integer> > neighbors;
 	
 	//消息缓存<type, <msg>>:type消息类型;
 	public Map<Integer, Set<Message>> msgCache;
@@ -72,8 +86,6 @@ public class Replica {
 	public Map<Integer, Map<Integer, LastReply>> checkPoints;
 	
 	public Map<Message, Integer> reqStats;			//request请求状态
-
-	public NettyServerBootstrap bootstrap;
 	
 	public static Comparator<PrePrepareMsg> nCmp = new Comparator<PrePrepareMsg>(){
 		@Override
@@ -82,33 +94,70 @@ public class Replica {
 		}
 	};
 	
-	public Replica(String name, int id, String IP, int port, int[] netDlys, int[] netDlyToClis) {
+	public Replica(String name, int id, String IP, int port, int[] netDlys, int[] netDlyToClis, String[] IPs, int[] ports) {
 		this.id = id;
 		this.netDlys = netDlys;
 		this.netDlyToClis = netDlyToClis;
 		this.IP = IP;
 		this.port = port;
 		this.name = name.concat(String.valueOf(id));
-		try {
-			this.bootstrap = new NettyServerBootstrap(port);
-		} catch (InterruptedException e) { e.printStackTrace(); }
-
+		
 		msgCache = new HashMap<>();
 		lastReplyMap = new HashMap<>();
 		checkPoints = new HashMap<>();
 		reqStats = new HashMap<>();
 		checkPoints.put(0, lastReplyMap);
 
+		neighbors = new ArrayList<AbstractMap.SimpleEntry<String, Integer>>();
+
+		for (int i = 0; i < IPs.length; i ++) {
+			if (ports[i] == port)  
+				continue;
+			neighbors.add(new AbstractMap.SimpleEntry<>(IPs[i], ports[i]));
+		}
 		
 		// 定义当前Replica的工作目录
 		curWorkspace = "./workspace/".concat(this.name).concat("/");
 		buildWorkspace();
-		
+		System.out.println(this);
 		//初始时启动Timer
 		setTimer(lastRepNum + 1, 0);
+		try {
+			// this.bootstrap = new NettyServerBootstrap(port, this);
+			bind();
+		} catch (InterruptedException e) { e.printStackTrace(); }
 	}
-	
-	// 创建当前Replica的工作目录并定义日志文件
+
+	/**
+     * Server开启的核心代码。
+     * 其中 NettyServerHandler是 Server “接收消息”的代码。
+     * @throws InterruptedException
+     */
+    private void bind() throws InterruptedException {
+        EventLoopGroup boss=new NioEventLoopGroup();
+        EventLoopGroup worker=new NioEventLoopGroup();
+        ServerBootstrap bootstrap=new ServerBootstrap();
+        bootstrap.group(boss,worker);
+        bootstrap.channel(NioServerSocketChannel.class);
+        bootstrap.option(ChannelOption.SO_BACKLOG, 128);
+        bootstrap.option(ChannelOption.TCP_NODELAY, true);
+        bootstrap.childOption(ChannelOption.SO_KEEPALIVE, true);
+        bootstrap.childHandler(new ChannelInitializer<SocketChannel>() {
+
+			@Override
+            protected void initChannel(SocketChannel socketChannel) throws Exception {
+                ChannelPipeline p = socketChannel.pipeline();
+                p.addLast(new ObjectEncoder());
+                p.addLast(new ObjectDecoder(ClassResolvers.cacheDisabled(null)));
+                p.addLast(new NettyServerHandler(Replica.this));
+            }
+        });
+        ChannelFuture f= bootstrap.bind(port).sync();
+    }
+
+	/**
+	 * 创建当前Replica的工作目录并定义日志文件
+	 */
 	public void buildWorkspace() {
 		File dir = new File(this.curWorkspace);
 		if (dir.exists()) {
@@ -226,7 +275,8 @@ public class Replica {
 				Message checkptMsg = new CheckPointMsg(v, mm.n, lastReplyMap, id, id, id, time);
 //				System.out.println("send:"+checkptMsg.toString());
 				addMessageToCache(checkptMsg);
-				Simulator.sendMsgToOthers(checkptMsg, id, sendTag, this.logger);
+				// Simulator.sendMsgToOthers(checkptMsg, id, sendTag, this.logger);
+				sendMsgToOthers(checkptMsg, sendTag, this.logger);
 			}
 		}
 	}
@@ -316,6 +366,7 @@ public class Replica {
 			long recTime = msg.rcvtime + netDlyToClis[Client.getCliArrayIndex(c)];
 			Message replyMsg = new ReplyMsg(v, t, c, id, "result", id, c, recTime);
 			Simulator.sendMsg(replyMsg, sendTag, this.logger);
+			// sendMsg(this.IP, sport, msg, tag, logger);
 			return;
 		}
 		if(!reqStats.containsKey(msg)) {
@@ -332,7 +383,8 @@ public class Replica {
 					PrePrepareMsg ppMsg = (PrePrepareMsg)m;
 					if(ppMsg.v == v && ppMsg.i == id && ppMsg.m.equals(msg)) {
 						m.rcvtime = msg.rcvtime;
-						Simulator.sendMsgToOthers(m, id, sendTag, this.logger);
+						// Simulator.sendMsgToOthers(m, id, sendTag, this.logger);
+						sendMsgToOthers(m, sendTag, this.logger);
 						return;
 					}
 				}
@@ -342,7 +394,8 @@ public class Replica {
 				n++;
 				Message prePrepareMsg = new PrePrepareMsg(v, n, reqlyMsg, id, id, id, reqlyMsg.rcvtime);
 				addMessageToCache(prePrepareMsg);
-				Simulator.sendMsgToOthers(prePrepareMsg, id, sendTag, this.logger);
+				// Simulator.sendMsgToOthers(prePrepareMsg, id, sendTag, this.logger);
+				sendMsgToOthers(prePrepareMsg, sendTag, logger);
 			}
 		}
 	}
@@ -367,7 +420,8 @@ public class Replica {
 		Message prepareMsg = new PrepareMsg(msgv, msgn, d, id, id, id, msg.rcvtime);
 		if(isInMsgCache(prepareMsg)) return;
 		addMessageToCache(prepareMsg);
-		Simulator.sendMsgToOthers(prepareMsg, id, sendTag, this.logger);
+		// Simulator.sendMsgToOthers(prepareMsg, id, sendTag, this.logger);
+		sendMsgToOthers(prepareMsg, sendTag, this.logger);
 	}
 	
 	public void receivePrepare(Message msg) {
@@ -409,7 +463,8 @@ public class Replica {
 		Map<Integer, Set<Message>> P = computeP();
 		Message vm = new ViewChangeMsg(v + 1, h, ss, C, P, id, id, id, msg.rcvtime);
 		addMessageToCache(vm);
-		Simulator.sendMsgToOthers(vm, id, sendTag, this.logger);
+		// Simulator.sendMsgToOthers(vm, id, sendTag, this.logger);
+		sendMsgToOthers(vm, sendTag, this.logger);
 	}
 	
 	public void receiveCheckPoint(Message msg) {
@@ -454,7 +509,8 @@ public class Replica {
 				Map<String, Set<Message>> VONMap = computeVON();
 				Message nvMsg = new NewViewMsg(v, VONMap.get("V"), VONMap.get("O"), VONMap.get("N"), id, id, id, msg.rcvtime);
 				addMessageToCache(nvMsg);
-				Simulator.sendMsgToOthers(nvMsg, id, sendTag, this.logger);
+				// Simulator.sendMsgToOthers(nvMsg, id, sendTag, this.logger);
+				sendMsgToOthers(nvMsg, sendTag, this.logger);
 				//发送所有不在O内的request消息的prePrepare消息
 				Set<Message> reqSet = msgCache.get(Message.REQUEST);
 				if(reqSet == null) reqSet = new HashSet<>();
@@ -702,9 +758,9 @@ public class Replica {
 			NettyClientBootstrap bootstrap = new NettyClientBootstrap(sport, sIP);
 			msg.print(tag, logger);
 			bootstrap.socketChannel.writeAndFlush(jsbuff);
-			//通知server，即将关闭连接.(server需要从map中删除该client）
-			String clo = "";
-			bootstrap.socketChannel.writeAndFlush(clo);
+			// //通知server，即将关闭连接.(server需要从map中删除该client）
+			// String clo = "";
+			// bootstrap.socketChannel.writeAndFlush(clo);
 //			关闭连接
 			bootstrap.eventLoopGroup.shutdownGracefully();
 		} catch (InterruptedException e) {
@@ -715,20 +771,14 @@ public class Replica {
 	}
 
 	/**
-	 * 发送消息到所有邻居
+	 * 发消息给其他节点
 	 * @param msg
-	 * @param id
 	 * @param tag
 	 * @param logger
-	 * @param topologyIp 数组
-	 * @param topologyPort 数组
 	 */
-	public void sendMsgToOthers(Message msg, int id, String tag, Logger logger , String[] topologyIp, int[] topologyPort) {
-
-		for(int i = 0; i < topologyIp.length ; i++) {
-			if(i != id) {
-				sendMsg(topologyIp[i], topologyPort[i], msg, tag, logger);
-			}
+	public void sendMsgToOthers(Message msg, String tag, Logger logger) {
+		for (int i = 0; i < neighbors.size(); i ++) {
+			sendMsg(neighbors.get(i).getKey(), neighbors.get(i).getValue(), msg, tag, logger);
 		}
 	}
 

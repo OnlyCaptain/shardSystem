@@ -48,6 +48,10 @@ public class Simulator {
 	public static String[] IPs = netIPsInit(RN);
 //	public static int[] ports = netPortsInit(RN);
 	public static int[] ports = {64960, 65456, 61444, 51988, 51653, 63367, 60635};
+
+	public static String[] clientIPs = netIPsInit(CN);
+//	public static int[] clientPorts = netPortsInit(CN);
+	public static int[] clientPorts = {58052, 65528, 59547};
 	
 	public static void main(String[] args) {
 		//初始化包含FN个拜占庭意节点的RN个replicas
@@ -56,8 +60,8 @@ public class Simulator {
 			System.out.print(String.valueOf(byzts[i]).concat(" "));
 		}
 		System.out.println("");
-		for (int i = 0; i < RN; i ++) {
-			System.out.print(String.valueOf(ports[i]).concat(" "));
+		for (int i = 0; i < CN; i ++) {
+			System.out.print(String.valueOf(clientPorts[i]).concat(" "));
 		}
 		System.out.println();
 
@@ -77,7 +81,7 @@ public class Simulator {
 		Client[] clis = new Client[CN];
 		for(int i = 0; i < CN; i++) {
 			//客户端的编号设置为负数
-			clis[i] = new Client(Client.getCliId(i), netDlysToNodes[i]); 
+			clis[i] = new Client(Client.getCliId(i), clientIPs[i], clientPorts[i], netDlysToNodes[i], IPs, ports); 
 		}
 		
 		//初始随机发送INFLIGHT个请求消息
@@ -87,10 +91,10 @@ public class Simulator {
 			clis[rand.nextInt(CN)].sendRequest(0);
 			requestNums++;
 		}
-		if (msgQue.isEmpty()) 
-			System.out.println("Error!");
-		Message testMsg = msgQue.poll();
-		reps[0].sendMsg(reps[1].IP, reps[1].port, testMsg, "Testing", reps[0].logger);
+//		if (msgQue.isEmpty()) 
+//			System.out.println("Error!");
+//		Message testMsg = msgQue.poll();
+//		reps[0].sendMsg(reps[1].IP, reps[1].port, testMsg, "Testing", reps[0].logger);
 		
 //		long timestamp = 0;
 //		// 消息处理
@@ -159,7 +163,7 @@ public class Simulator {
 	public static int[] netPortsInit(int n) {
 		Set<Integer> set = new HashSet<Integer>();
 		int L=49152, H = 65535, p = 0, i = 0;
-		Random rand = new Random(999);
+		Random rand = new Random(n);
 		while (i < n) {
 			p = L + rand.nextInt(H-L);
 			if (set.contains(p)) 

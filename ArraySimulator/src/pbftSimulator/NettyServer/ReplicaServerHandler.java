@@ -7,6 +7,7 @@ import io.netty.util.ReferenceCountUtil;
 import net.sf.json.JSONObject;
 import pbftSimulator.NettyMessage.*;
 import pbftSimulator.message.Message;
+import pbftSimulator.message.PrePrepareMsg;
 import pbftSimulator.message.RequestMsg;
 import pbftSimulator.replica.Replica;
 
@@ -33,44 +34,49 @@ public class ReplicaServerHandler extends SimpleChannelInboundHandler<String> {
     }
     @Override
     protected void messageReceived(ChannelHandlerContext channelHandlerContext, String jsbuff) throws Exception {
-    	System.out.println("Server end ".concat(replica.name).concat(replica.IP).concat(jsbuff));  
+    	// System.out.println("Server end ".concat(replica.name).concat(replica.IP).concat(jsbuff));  
         Message baseMsg = null; 
         try {
             JSONObject js = JSONObject.fromObject(jsbuff);
             int type = js.getInt("type");
             switch (type) {
                 case Message.REQUEST:
+                    System.out.println(replica.name+" receive Request");
                     baseMsg = new RequestMsg();
                     baseMsg = baseMsg.decoder(jsbuff);
                     break;
-                // case Message.PREPREPARE:
-                //     break;
-                // case Message.PREPARE:
-                //     break;
-                // case Message.COMMIT:
-                //     break;
-                // case Message.VIEWCHANGE:
-                //     break;
-                // case Message.NEWVIEW:
-                //     break;
-                // case Message.TIMEOUT:
-                //     break;
-                // case Message.CHECKPOINT:
-                //     break;
-                // default:
-                //     this.logger.info("【Error】消息类型错误！");
-                //     return;
+                case Message.PREPREPARE:
+                    System.out.println(replica.name+" receive PrePrepare");
+                    // baseMsg = new PrePrepareMsg();
+                    // baseMsg = baseMsg.decoder(jsbuff);
+                    break;
+                case Message.PREPARE:
+                    System.out.println(replica.name+" receive Prepare");
+                    // baseMsg = new PrepareMsg();
+                    // baseMsg = baseMsg.decoder(jsbuff);
+                    break;
+                case Message.COMMIT:
+                    System.out.println(replica.name+" receive commit");
+
+                    break;
+                case Message.VIEWCHANGE:
+                    break;
+                case Message.NEWVIEW:
+                    break;
+                case Message.TIMEOUT:
+                    break;
+                case Message.CHECKPOINT:
+                    break;
+                default:
+//                    this.logger.info("【Error】消息类型错误！");
+                    return;
             }
-            baseMsg = baseMsg.decoder(jsbuff);
-            replica.msgProcess(baseMsg);
+            // baseMsg = baseMsg.decoder(jsbuff);
             System.out.println(baseMsg.toString());
+            replica.msgProcess(baseMsg);
             if(NettyChannelMap.get(baseMsg.getClientId())==null) {
-                // LoginMsg loginMsg = (LoginMsg) baseMsg;
-    
-                NettyChannelMap.add(baseMsg.getClientId(), (SocketChannel) channelHandlerContext.channel());
-    
+                NettyChannelMap.add(baseMsg.getClientId(), (SocketChannel) channelHandlerContext.channel());    
                 InetSocketAddress insocket = (InetSocketAddress) channelHandlerContext.channel().remoteAddress();
-    
                 String ip = insocket.getAddress().getHostAddress();
                 int port = insocket.getPort();
                 System.out.println("ip: " + ip + "    port: " + port);

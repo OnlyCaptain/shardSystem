@@ -1,10 +1,13 @@
 package pbftSimulator;
 
+import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
 import pbftSimulator.NettyClient.NettyClientBootstrap;
 import pbftSimulator.NettyMessage.Constants;
+import pbftSimulator.NettyServer.ClientServerHandler;
 import pbftSimulator.message.CliTimeOutMsg;
 import pbftSimulator.message.Message;
 import pbftSimulator.message.ReplyMsg;
@@ -13,6 +16,20 @@ import pbftSimulator.message.RequestMsg;
 import java.util.logging.Logger;
 import java.util.logging.FileHandler;
 import java.util.logging.SimpleFormatter;
+
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.serialization.ClassResolvers;
+import io.netty.handler.codec.serialization.ObjectDecoder;
+import io.netty.handler.codec.serialization.ObjectEncoder;
+
 import java.io.File;
 import java.io.IOException;
 
@@ -24,6 +41,8 @@ public class Client {
 	public String name;
 	public int id;								//客户端编号
 	public int v;								//视图编号
+	public String IP;
+	public int port;
 	public Logger logger;
 	public String curWorkspace;
 	public Map<Long, Integer> reqStats;			//request 请求状态
@@ -34,20 +53,33 @@ public class Client {
 	public int netDlys[];						//与各节点的基础网络时延
 	public String receiveTag = "CliReceive";
 	public String sendTag = "CliSend";
+	public ArrayList<AbstractMap.SimpleEntry<String, Integer> > replicaAddrs;
 
-	public Client(int id, int[] netDlys) {
+	public Client(int id, String IP, int port, int[] netDlys, String[] replicaIPs, int[] replicaPorts) {
 		this.id = id;
 		this.netDlys = netDlys;
+		this.IP = IP;
+		this.port = port;
 		reqStats = new HashMap<>();
 		reqTimes = new HashMap<>();
 		reqMsgs = new HashMap<>();
 		repMsgs = new HashMap<>();
+		replicaAddrs = new ArrayList<AbstractMap.SimpleEntry<String, Integer>>();
+
+		for (int i = 0; i < replicaIPs.length; i ++) {
+			replicaAddrs.add(new AbstractMap.SimpleEntry<>(replicaIPs[i], replicaPorts[i]));
+		}
 
 		// 定义当前Replica的工作目录
 		this.name = "Client_".concat(String.valueOf(id));
 		StringBuffer buf = new StringBuffer("./workspace/client_");
 		curWorkspace = buf.append(String.valueOf(id)).append("/").toString();
 		buildWorkspace();
+
+		try {
+			// this.bootstrap = new NettyServerBootstrap(port, this);
+			bind();
+		} catch (InterruptedException e) { e.printStackTrace(); }
 	}
 	
 	// 创建当前Replica的工作目录并定义日志文件
@@ -80,6 +112,37 @@ public class Client {
 		}
 	}
 
+	/**
+     * Server开启的核心代码。
+     * 其中 NettyServerHandler是 Server “接收消息”的代码。
+     * @throws InterruptedException
+     */
+    private void bind() throws InterruptedException {
+        EventLoopGroup boss=new NioEventLoopGroup();
+        EventLoopGroup worker=new NioEventLoopGroup();
+        ServerBootstrap bootstrap=new ServerBootstrap();
+        bootstrap.group(boss,worker);
+        bootstrap.channel(NioServerSocketChannel.class);
+        bootstrap.option(ChannelOption.SO_BACKLOG, 128);
+        bootstrap.option(ChannelOption.TCP_NODELAY, true);
+        bootstrap.childOption(ChannelOption.SO_KEEPALIVE, true);
+        bootstrap.childHandler(new ChannelInitializer<SocketChannel>() {
+
+			@Override
+            protected void initChannel(SocketChannel socketChannel) throws Exception {
+                ChannelPipeline p = socketChannel.pipeline();
+                p.addLast(new ObjectEncoder());
+                p.addLast(new ObjectDecoder(ClassResolvers.cacheDisabled(null)));
+                p.addLast(new ClientServerHandler(Client.this));
+            }
+        });
+        ChannelFuture f= bootstrap.bind(this.port).sync();
+		if(f.isSuccess()){
+            System.out.println("server start---------------");
+        }
+    }
+
+
 	public void msgProcess(Message msg) {
 		msg.print(receiveTag, this.logger);
 		switch(msg.type) {
@@ -102,7 +165,8 @@ public class Client {
 		}
 		int priId = v % Simulator.RN;
 		Message requestMsg = new RequestMsg("Message", "null", time, id, id, priId, time + netDlys[priId]);
-		Simulator.sendMsg(requestMsg, sendTag, this.logger);
+		// Simulator.sendMsg(requestMsg, sendTag, this.logger);
+		sendMsg(replicaAddrs.get(priId).getKey(), replicaAddrs.get(priId).getValue(), requestMsg, sendTag, this.logger);
 		reqStats.put(time, PROCESSING);
 		reqMsgs.put(time, requestMsg);
 		repMsgs.put(time, new HashMap<>());
@@ -142,8 +206,9 @@ public class Client {
 		}
 		//否则给所有的节点广播request消息
 		for(int i = 0; i < Simulator.RN; i++) {
-			Message requestMsg = new RequestMsg("Message", t, id, id, i, cliTimeOutMsg.rcvtime + netDlys[i]);
-			Simulator.sendMsg(requestMsg, sendTag, this.logger);
+			Message requestMsg = new RequestMsg("Message", "null", t, id, id, i, cliTimeOutMsg.rcvtime + netDlys[i]);
+			sendMsg(replicaAddrs.get(i).getKey(), replicaAddrs.get(i).getValue(), requestMsg, sendTag, this.logger);
+			// Simulator.sendMsg(requestMsg, sendTag, this.logger);
 		}
 		//发送一条Timeout消息，以便将来检查是否发生超时
 		setTimer(t, cliTimeOutMsg.rcvtime);
@@ -209,40 +274,32 @@ public class Client {
 	
 	public void setTimer(long t, long time) {
 		Message timeoutMsg = new CliTimeOutMsg(t, id, id, time + Simulator.CLITIMEOUT);
-		Simulator.sendMsg(timeoutMsg, "ClientTimeOut", this.logger);
+		// Simulator.sendMsg(timeoutMsg, "ClientTimeOut", this.logger);
+		this.logger.info("Timeout. + "+timeoutMsg.toString());
 	}
 
 
 	/**
-	 * 使用socket发送消息
-	 * @param msg 要发送的消息
-	 * @param tag 消息类型
-	 * @param logger 日志
-	 * @param myClientId clientId，用于识别clientId，应具有唯一性
-	 * @param serverPort 服务端端口
-	 * @throws InterruptedException
+	 * 发送消息
+	 * @param sIP
+	 * @param sport
+	 * @param msg
+	 * @param tag
+	 * @param logger
 	 */
-	public void sendMsg(Message msg, String tag, Logger logger, int myClientId, int serverPort ) throws InterruptedException {
-		//与服务端建立连接
-		String myClientId_str = String.format("%03d",myClientId);
-		Constants.setClientId(myClientId_str);
-		NettyClientBootstrap bootstrap=new NettyClientBootstrap(serverPort,"localhost");
-
-		//打印日志
-		msg.print(tag, logger);
-
-		//发送Msg
-		bootstrap.socketChannel.writeAndFlush(msg);
-
-		//通知server，即将关闭连接.(server需要从map中删除该client）
-		String clo = "";
-		bootstrap.socketChannel.writeAndFlush(clo);
-
-		//关闭连接.
-		bootstrap.eventLoopGroup.shutdownGracefully();
-
+	public void sendMsg(String sIP, int sport, Message msg, String tag, Logger logger) {
+		String jsbuff = msg.encoder();
+		try {
+			System.out.println(sIP);
+			NettyClientBootstrap bootstrap = new NettyClientBootstrap(sport, sIP);
+			msg.print(tag, logger);
+			bootstrap.socketChannel.writeAndFlush(jsbuff);
+			// 关闭连接
+			bootstrap.eventLoopGroup.shutdownGracefully();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 	}
-
 
 
 }

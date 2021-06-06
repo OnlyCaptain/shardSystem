@@ -5,6 +5,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.ReferenceCountUtil;
 import net.sf.json.JSONObject;
+import pbftSimulator.Client;
 import pbftSimulator.NettyMessage.*;
 import pbftSimulator.message.Message;
 import pbftSimulator.message.RequestMsg;
@@ -13,17 +14,18 @@ import pbftSimulator.replica.Replica;
 import java.net.InetSocketAddress;
 
 public class ClientServerHandler extends SimpleChannelInboundHandler<String> {
-    private Replica replica;
+    private Client client;
 	
     public ClientServerHandler() {
 		super();
+        this.client = null;
 		// TODO Auto-generated constructor stub
 	}
 
-    public ClientServerHandler(Replica replica) {
+    public ClientServerHandler(Client client) {
 		super();
-        this.replica = replica;
-        System.out.println("In nettyHandler" + this.replica);
+        this.client = client;
+        System.out.println("In ClientServerHandler: " + this.client);
 		// TODO Auto-generated constructor stub
 	}
     
@@ -33,15 +35,15 @@ public class ClientServerHandler extends SimpleChannelInboundHandler<String> {
     }
     @Override
     protected void messageReceived(ChannelHandlerContext channelHandlerContext, String jsbuff) throws Exception {
-    	System.out.println("Server end ".concat(replica.name).concat(replica.IP).concat(jsbuff));  
+    	System.out.println("Server end ".concat(client.name).concat(client.IP).concat(jsbuff));  
         Message baseMsg = null; 
         try {
             JSONObject js = JSONObject.fromObject(jsbuff);
             int type = js.getInt("type");
             switch (type) {
                 case Message.REQUEST:
-//                    baseMsg = new RequestMsg();
-//                    baseMsg = baseMsg.decoder(jsbuff);
+                   baseMsg = new RequestMsg();
+                   baseMsg = baseMsg.decoder(jsbuff);
                     break;
                 // case Message.PREPREPARE:
                 //     break;
@@ -61,8 +63,7 @@ public class ClientServerHandler extends SimpleChannelInboundHandler<String> {
                 //     this.logger.info("【Error】消息类型错误！");
                 //     return;
             }
-            baseMsg = baseMsg.decoder(jsbuff);
-            replica.msgProcess(baseMsg);
+            client.msgProcess(baseMsg);
             System.out.println(baseMsg.toString());
             if(NettyChannelMap.get(baseMsg.getClientId())==null) {
                 // LoginMsg loginMsg = (LoginMsg) baseMsg;

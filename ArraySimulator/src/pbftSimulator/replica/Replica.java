@@ -153,6 +153,9 @@ public class Replica {
             }
         });
         ChannelFuture f= bootstrap.bind(port).sync();
+		if(f.isSuccess()){
+            System.out.println("server start---------------");
+        }
     }
 
 	/**

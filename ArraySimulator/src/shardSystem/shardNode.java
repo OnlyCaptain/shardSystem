@@ -38,8 +38,8 @@ public class shardNode extends Replica {
 
 
 
-	public shardNode(int id, String IP, int port, int[] netDlys, int[] netDlyToClis) {
-		super(NAME, id, IP, port, netDlys, netDlyToClis);
+	public shardNode(int id, String IP, int port, int[] netDlys, int[] netDlyToClis, String[] IPs, int[] ports) {
+		super(NAME, id, IP, port, netDlys, netDlyToClis, IPs, ports);
 
 		this.name = NAME.concat(String.valueOf(id));
 		System.out.println(this.curWorkspace);

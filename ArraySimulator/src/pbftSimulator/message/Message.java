@@ -54,6 +54,13 @@ public class Message {
 		this.rcvtime = rcvtime;
 		this.clientId = String.format("%03d", sndId);
 	}
+
+	public Message() {
+		this.sndId = 0;
+		this.rcvId = 0;
+		this.rcvtime = 0;
+		this.clientId = String.format("%03d", sndId);
+	}
 	
 	public void print(String tag, Logger logger) {
 		if(!Simulator.SHOWDETAILINFO) return;
@@ -268,7 +275,7 @@ public class Message {
 		return jsout.toString();
 	}
 
-	public static Message decoder(String jsin) throws Exception {
+	public Message decoder(String jsin) throws Exception {
 		Message output = new Message(0,0,0);
 		try {
 			JSONObject js = JSONObject.fromObject(jsin);

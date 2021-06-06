@@ -49,7 +49,7 @@ public class NettyServerBootstrap {
                 ChannelPipeline p = socketChannel.pipeline();
                 p.addLast(new ObjectEncoder());
                 p.addLast(new ObjectDecoder(ClassResolvers.cacheDisabled(null)));
-                p.addLast(new NettyServerHandler(this.replica));
+                p.addLast(new ReplicaServerHandler(this.replica));
             }
         });
         ChannelFuture f= bootstrap.bind(port).sync();

@@ -68,7 +68,7 @@ public class test {
 //				reps[i] = new ByztReplica(i, IPs[i], ports[i], netDlys[i], netDlysToClis[i]);
 //			}else {
 				System.out.println(IPs[i]);
-				reps[i] = new shardNode(i, IPs[i], ports[i], netDlys[i], netDlysToClis[i]);
+				reps[i] = new shardNode(i, IPs[i], ports[i], netDlys[i], netDlysToClis[i], IPs, ports);
 				System.out.println(reps[i].IP);
 //				}
 		}
@@ -87,7 +87,9 @@ public class test {
 			clis[rand.nextInt(CN)].sendRequest(0);
 			requestNums++;
 		}
-		Message testMsg = new Message(0,0,0);
+		if (msgQue.isEmpty()) 
+			System.out.println("Error!");
+		Message testMsg = msgQue.poll();
 		reps[0].sendMsg(reps[1].IP, reps[1].port, testMsg, "Testing", reps[0].logger);
 		
 //		long timestamp = 0;

@@ -55,7 +55,7 @@ public class Simulator {
 		for (int i = 0; i < RN; i ++) {
 			System.out.print(String.valueOf(byzts[i]).concat(" "));
 		}
-		System.out.println("sd");
+		System.out.println("");
 		for (int i = 0; i < RN; i ++) {
 			System.out.print(String.valueOf(ports[i]).concat(" "));
 		}
@@ -64,11 +64,13 @@ public class Simulator {
 		// boolean[] byzts = {true, false, false, false, false, false, true};
 		Replica[] reps = new Replica[RN];
 		for(int i = 0; i < RN; i++) {
-			if(byzts[i]) {
-				reps[i] = new ByztReplica(i, IPs[i], ports[i], netDlys[i], netDlysToClis[i]);
-			}else {
-				reps[i] = new shardNode(i, IPs[i], ports[i], netDlys[i], netDlysToClis[i]);
-			}
+//			if(byzts[i]) {
+//				reps[i] = new ByztReplica(i, IPs[i], ports[i], netDlys[i], netDlysToClis[i]);
+//			}else {
+				System.out.println(IPs[i]);
+				reps[i] = new shardNode(i, IPs[i], ports[i], netDlys[i], netDlysToClis[i], IPs, ports);
+				System.out.println(reps[i].IP);
+//				}
 		}
 		
 		//初始化CN个客户端
@@ -85,49 +87,53 @@ public class Simulator {
 			clis[rand.nextInt(CN)].sendRequest(0);
 			requestNums++;
 		}
+		if (msgQue.isEmpty()) 
+			System.out.println("Error!");
+		Message testMsg = msgQue.poll();
+		reps[0].sendMsg(reps[1].IP, reps[1].port, testMsg, "Testing", reps[0].logger);
 		
-		long timestamp = 0;
-		// 消息处理
-		while(!msgQue.isEmpty()) {
-			// System.out.println("size of msgQue".concat(String.valueOf(msgQue.size())));
-			Message msg = msgQue.poll();
-			switch(msg.type) {
-				case Message.REPLY:
-				case Message.CLITIMEOUT:
-					clis[Client.getCliArrayIndex(msg.rcvId)].msgProcess(msg);
-					break;
-				default:
-					// 消息从这里发送到 primary 节点
-					reps[msg.rcvId].msgProcess(msg);
-			}
-			// 添加超时，如果这个Request超过某个时间不达到稳态，判定为共识失败。
-			if (msg.ifTimeOut(timestamp)) {
-				// System.out.println("timeout");
-				continue;
-			}
-			//如果还未达到稳定状态的request消息小于INFLIGHT，随机选择一个客户端发送请求消息
-			// if(requestNums - getStableRequestNum(clis) < INFLIGHT && requestNums < REQNUM) {
-			// 	clis[rand.nextInt(CN)].sendRequest(msg.rcvtime);
-			// 	requestNums++;
-			// }
-			inFlyMsgLen -= msg.len;
-			timestamp = msg.rcvtime;
-			if(getNetDelay(inFlyMsgLen, 0) > COLLAPSEDELAY ) {
-				System.out.println("【Error】网络消息总负载"+inFlyMsgLen
-						+"B,网络传播时延超过"+COLLAPSEDELAY/1000
-						+"秒，系统已严重拥堵，不可用！");
-				break;
-			}
-		}
-		long totalTime = 0;
-		long totalStableMsg = 0;
-		for(int i = 0; i < CN; i++) {
-			totalTime += clis[i].accTime;
-			totalStableMsg += clis[i].stableMsgNum();
-		}
-		double tps = getStableRequestNum(clis)/(double)(timestamp/1000);
-		System.out.println("【The end】消息平均确认时间为:"+totalTime/totalStableMsg
-				+"毫秒;消息吞吐量为:"+tps+"tps");
+//		long timestamp = 0;
+//		// 消息处理
+//		while(!msgQue.isEmpty()) {
+//			// System.out.println("size of msgQue".concat(String.valueOf(msgQue.size())));
+//			Message msg = msgQue.poll();
+//			switch(msg.type) {
+//				case Message.REPLY:
+//				case Message.CLITIMEOUT:
+//					clis[Client.getCliArrayIndex(msg.rcvId)].msgProcess(msg);
+//					break;
+//				default:
+//					// 消息从这里发送到 primary 节点
+//					reps[msg.rcvId].msgProcess(msg);
+//			}
+//			// 添加超时，如果这个Request超过某个时间不达到稳态，判定为共识失败。
+//			if (msg.ifTimeOut(timestamp)) {
+//				// System.out.println("timeout");
+//				continue;
+//			}
+//			//如果还未达到稳定状态的request消息小于INFLIGHT，随机选择一个客户端发送请求消息
+//			// if(requestNums - getStableRequestNum(clis) < INFLIGHT && requestNums < REQNUM) {
+//			// 	clis[rand.nextInt(CN)].sendRequest(msg.rcvtime);
+//			// 	requestNums++;
+//			// }
+//			inFlyMsgLen -= msg.len;
+//			timestamp = msg.rcvtime;
+//			if(getNetDelay(inFlyMsgLen, 0) > COLLAPSEDELAY ) {
+//				System.out.println("【Error】网络消息总负载"+inFlyMsgLen
+//						+"B,网络传播时延超过"+COLLAPSEDELAY/1000
+//						+"秒，系统已严重拥堵，不可用！");
+//				break;
+//			}
+//		}
+//		long totalTime = 0;
+//		long totalStableMsg = 0;
+//		for(int i = 0; i < CN; i++) {
+//			totalTime += clis[i].accTime;
+//			totalStableMsg += clis[i].stableMsgNum();
+//		}
+//		double tps = getStableRequestNum(clis)/(double)(timestamp/1000);
+//		System.out.println("【The end】消息平均确认时间为:"+totalTime/totalStableMsg
+//				+"毫秒;消息吞吐量为:"+tps+"tps");
 	}
 
 	/**

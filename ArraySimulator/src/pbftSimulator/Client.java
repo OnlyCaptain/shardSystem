@@ -101,7 +101,7 @@ public class Client {
 			time++;
 		}
 		int priId = v % Simulator.RN;
-		Message requestMsg = new RequestMsg("Message", time, id, id, priId, time + netDlys[priId]);
+		Message requestMsg = new RequestMsg("Message", "null", time, id, id, priId, time + netDlys[priId]);
 		Simulator.sendMsg(requestMsg, sendTag, this.logger);
 		reqStats.put(time, PROCESSING);
 		reqMsgs.put(time, requestMsg);

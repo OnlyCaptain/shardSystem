@@ -37,7 +37,7 @@ import pbftSimulator.Simulator;
 import pbftSimulator.Utils;
 import pbftSimulator.NettyClient.NettyClientBootstrap;
 import pbftSimulator.NettyServer.NettyServerBootstrap;
-import pbftSimulator.NettyServer.NettyServerHandler;
+import pbftSimulator.NettyServer.ReplicaServerHandler;
 import pbftSimulator.message.CheckPointMsg;
 import pbftSimulator.message.CommitMsg;
 import pbftSimulator.message.LastReply;
@@ -149,7 +149,7 @@ public class Replica {
                 ChannelPipeline p = socketChannel.pipeline();
                 p.addLast(new ObjectEncoder());
                 p.addLast(new ObjectDecoder(ClassResolvers.cacheDisabled(null)));
-                p.addLast(new NettyServerHandler(Replica.this));
+                p.addLast(new ReplicaServerHandler(Replica.this));
             }
         });
         ChannelFuture f= bootstrap.bind(port).sync();

@@ -4,21 +4,23 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.ReferenceCountUtil;
+import net.sf.json.JSONObject;
 import pbftSimulator.NettyMessage.*;
 import pbftSimulator.message.Message;
+import pbftSimulator.message.RequestMsg;
 import pbftSimulator.replica.Replica;
 
 import java.net.InetSocketAddress;
 
-public class NettyServerHandler extends SimpleChannelInboundHandler<String> {
+public class ReplicaServerHandler extends SimpleChannelInboundHandler<String> {
     private Replica replica;
 	
-    public NettyServerHandler() {
+    public ReplicaServerHandler() {
 		super();
 		// TODO Auto-generated constructor stub
 	}
 
-    public NettyServerHandler(Replica replica) {
+    public ReplicaServerHandler(Replica replica) {
 		super();
         this.replica = replica;
         System.out.println("In nettyHandler" + this.replica);
@@ -34,7 +36,32 @@ public class NettyServerHandler extends SimpleChannelInboundHandler<String> {
     	System.out.println("Server end ".concat(replica.name).concat(replica.IP).concat(jsbuff));  
         Message baseMsg = null; 
         try {
-            baseMsg = Message.decoder(jsbuff);
+            JSONObject js = JSONObject.fromObject(jsbuff);
+            int type = js.getInt("type");
+            switch (type) {
+                case Message.REQUEST:
+                    baseMsg = new RequestMsg();
+                    baseMsg = baseMsg.decoder(jsbuff);
+                    break;
+                // case Message.PREPREPARE:
+                //     break;
+                // case Message.PREPARE:
+                //     break;
+                // case Message.COMMIT:
+                //     break;
+                // case Message.VIEWCHANGE:
+                //     break;
+                // case Message.NEWVIEW:
+                //     break;
+                // case Message.TIMEOUT:
+                //     break;
+                // case Message.CHECKPOINT:
+                //     break;
+                // default:
+                //     this.logger.info("【Error】消息类型错误！");
+                //     return;
+            }
+            baseMsg = baseMsg.decoder(jsbuff);
             replica.msgProcess(baseMsg);
             System.out.println(baseMsg.toString());
             if(NettyChannelMap.get(baseMsg.getClientId())==null) {

@@ -25,7 +25,7 @@ public class ClientServerHandler extends SimpleChannelInboundHandler<String> {
     public ClientServerHandler(Client client) {
 		super();
         this.client = client;
-        System.out.println("In ClientServerHandler: " + this.client);
+        // System.out.println("In ClientServerHandler: " + this.client);
 		// TODO Auto-generated constructor stub
 	}
     
@@ -35,7 +35,7 @@ public class ClientServerHandler extends SimpleChannelInboundHandler<String> {
     }
     @Override
     protected void messageReceived(ChannelHandlerContext channelHandlerContext, String jsbuff) throws Exception {
-    	System.out.println("Server end ".concat(client.name).concat(client.IP).concat(jsbuff));  
+    	// System.out.println("Server end ".concat(client.name).concat(client.IP).concat(jsbuff));  
         Message baseMsg = null; 
         try {
             JSONObject js = JSONObject.fromObject(jsbuff);

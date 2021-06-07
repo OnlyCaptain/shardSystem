@@ -24,7 +24,7 @@ public class ReplicaServerHandler extends SimpleChannelInboundHandler<String> {
     public ReplicaServerHandler(Replica replica) {
 		super();
         this.replica = replica;
-        System.out.println("In nettyHandler" + this.replica);
+        // System.out.println("In nettyHandler" + this.replica);
 		// TODO Auto-generated constructor stub
 	}
     
@@ -47,8 +47,8 @@ public class ReplicaServerHandler extends SimpleChannelInboundHandler<String> {
                     break;
                 case Message.PREPREPARE:
                     System.out.println(replica.name+" receive PrePrepare");
-                    // baseMsg = new PrePrepareMsg();
-                    // baseMsg = baseMsg.decoder(jsbuff);
+                    baseMsg = new PrePrepareMsg();
+                    baseMsg = baseMsg.decoder(jsbuff);
                     break;
                 case Message.PREPARE:
                     System.out.println(replica.name+" receive Prepare");
@@ -72,7 +72,8 @@ public class ReplicaServerHandler extends SimpleChannelInboundHandler<String> {
                     return;
             }
             // baseMsg = baseMsg.decoder(jsbuff);
-            System.out.println(baseMsg.toString());
+            this.replica.logger.info(jsbuff);
+            this.replica.logger.info(baseMsg.encoder());
             replica.msgProcess(baseMsg);
             if(NettyChannelMap.get(baseMsg.getClientId())==null) {
                 NettyChannelMap.add(baseMsg.getClientId(), (SocketChannel) channelHandlerContext.channel());    

@@ -13,6 +13,10 @@ public class PrePrepareMsg extends Message {
 	public int i;
 
 	public PrePrepareMsg() {
+		v = 0;
+		n = 0;
+		m = new Message();
+		i = 0;
 	}
 
 	//消息结构
@@ -66,7 +70,9 @@ public class PrePrepareMsg extends Message {
 		jsout.put("type", type);
 		jsout.put("v", v);
 		jsout.put("n", n);
-		jsout.put("m", m);
+		if (m == null)
+			jsout.put("m", "null");
+		else jsout.put("m", m.encoder());
 		jsout.put("i", i);
 		return jsout.toString();
 	}
@@ -84,10 +90,16 @@ public class PrePrepareMsg extends Message {
 			output.v = js.getInt("v");
 			output.n = js.getInt("n");
 
-			RequestMsg requestMsg = new RequestMsg();
-			String r = js.getString("m");
-			requestMsg = requestMsg.decoder(r);
-			output.m = requestMsg;
+			output.m = new RequestMsg();
+			String r = js.getJSONObject("m").toString();
+			System.out.println("in Preprepare"+r);
+			if (r.equals("null")) {
+				System.out.println("Error in preprepareMsg.decoder()");
+				output.m = new RequestMsg();
+			}
+			else {
+				output.m = output.m.decoder(r);
+			} 
 
 			output.i = js.getInt("i");
 		} catch (Exception e) {

@@ -119,7 +119,7 @@ public class Replica {
 		// 定义当前Replica的工作目录
 		curWorkspace = "./workspace/".concat(this.name).concat("/");
 		buildWorkspace();
-		System.out.println(this);
+		// System.out.println(this);
 		//初始时启动Timer
 		setTimer(lastRepNum + 1, 0);
 		try {
@@ -395,7 +395,9 @@ public class Replica {
 			//否则如果不会超过水位就生成新的prePrepare消息并广播,同时启动timeout
 			if(inWater(n + 1)) {
 				n++;
+				this.logger.info("before constructing: "+reqlyMsg.encoder());
 				Message prePrepareMsg = new PrePrepareMsg(v, n, reqlyMsg, id, id, id, reqlyMsg.rcvtime);
+				this.logger.info("after constructing: "+ prePrepareMsg.encoder());
 				addMessageToCache(prePrepareMsg);
 				// Simulator.sendMsgToOthers(prePrepareMsg, id, sendTag, this.logger);
 				sendMsgToOthers(prePrepareMsg, sendTag, logger);
@@ -583,7 +585,8 @@ public class Replica {
 			msgSet = new HashSet<>();
 			msgCache.put(m.type, msgSet);
 		}
-		msgSet.add(m);
+		// msgSet.add(m);
+		msgCache.get(m.type).add(m);
 	}
 	
 	/**
@@ -756,6 +759,7 @@ public class Replica {
 	 */
 	public void sendMsg(String sIP, int sport, Message msg, String tag, Logger logger) {
 		String jsbuff = msg.encoder();
+		// System.out.println("after encoding" + jsbuff);
 		try {
 			System.out.println(sIP);
 			NettyClientBootstrap bootstrap = new NettyClientBootstrap(sport, sIP);

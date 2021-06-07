@@ -28,7 +28,7 @@ public class RequestMsg extends Message {
 		super(0, 0, 0);
 		this.type = REQUEST;
 		this.len = REQMSGLEN;
-		this.o = "";
+		this.o = "Message";
 		this.t = 0;
 		this.c = 0;
 	}

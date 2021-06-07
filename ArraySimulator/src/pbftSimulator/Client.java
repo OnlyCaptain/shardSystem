@@ -138,7 +138,7 @@ public class Client {
         });
         ChannelFuture f= bootstrap.bind(this.port).sync();
 		if(f.isSuccess()){
-            System.out.println("server start---------------");
+            System.out.println("Client server start---------------");
         }
     }
 

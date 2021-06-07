@@ -92,7 +92,7 @@ public class PrePrepareMsg extends Message {
 
 			output.m = new RequestMsg();
 			String r = js.getJSONObject("m").toString();
-			System.out.println("in Preprepare"+r);
+			// System.out.println("in Preprepare"+r);
 			if (r.equals("null")) {
 				System.out.println("Error in preprepareMsg.decoder()");
 				output.m = new RequestMsg();

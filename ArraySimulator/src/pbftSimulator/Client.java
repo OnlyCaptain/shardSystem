@@ -53,7 +53,7 @@ public class Client {
 	public int netDlys[];						//与各节点的基础网络时延
 	public String receiveTag = "CliReceive";
 	public String sendTag = "CliSend";
-	public ArrayList<AbstractMap.SimpleEntry<String, Integer> > replicaAddrs;
+	public ArrayList<PairAddress> replicaAddrs;
 
 	public Client(int id, String IP, int port, int[] netDlys, String[] replicaIPs, int[] replicaPorts) {
 		this.id = id;
@@ -64,10 +64,10 @@ public class Client {
 		reqTimes = new HashMap<>();
 		reqMsgs = new HashMap<>();
 		repMsgs = new HashMap<>();
-		replicaAddrs = new ArrayList<AbstractMap.SimpleEntry<String, Integer>>();
+		replicaAddrs = new ArrayList<PairAddress>();
 
 		for (int i = 0; i < replicaIPs.length; i ++) {
-			replicaAddrs.add(new AbstractMap.SimpleEntry<>(replicaIPs[i], replicaPorts[i]));
+			replicaAddrs.add(new PairAddress(replicaIPs[i], replicaPorts[i], i));
 		}
 
 		// 定义当前Replica的工作目录
@@ -166,7 +166,7 @@ public class Client {
 		int priId = v % Simulator.RN;
 		Message requestMsg = new RequestMsg("Message", "null", time, id, id, priId, time + netDlys[priId]);
 		// Simulator.sendMsg(requestMsg, sendTag, this.logger);
-		sendMsg(replicaAddrs.get(priId).getKey(), replicaAddrs.get(priId).getValue(), requestMsg, sendTag, this.logger);
+		sendMsg(replicaAddrs.get(priId).getIP(), replicaAddrs.get(priId).getPort(), requestMsg, sendTag, this.logger);
 		reqStats.put(time, PROCESSING);
 		reqMsgs.put(time, requestMsg);
 		repMsgs.put(time, new HashMap<>());
@@ -207,7 +207,7 @@ public class Client {
 		//否则给所有的节点广播request消息
 		for(int i = 0; i < Simulator.RN; i++) {
 			Message requestMsg = new RequestMsg("Message", "null", t, id, id, i, cliTimeOutMsg.rcvtime + netDlys[i]);
-			sendMsg(replicaAddrs.get(i).getKey(), replicaAddrs.get(i).getValue(), requestMsg, sendTag, this.logger);
+			sendMsg(replicaAddrs.get(i).getIP(), replicaAddrs.get(i).getPort(), requestMsg, sendTag, this.logger);
 			// Simulator.sendMsg(requestMsg, sendTag, this.logger);
 		}
 		//发送一条Timeout消息，以便将来检查是否发生超时
@@ -291,7 +291,7 @@ public class Client {
 		String jsbuff = msg.encoder();
 		try {
 			System.out.println(sIP);
-			NettyClientBootstrap bootstrap = new NettyClientBootstrap(sport, sIP);
+			NettyClientBootstrap bootstrap = new NettyClientBootstrap(sport, sIP, this.logger);
 			msg.print(tag, logger);
 			bootstrap.socketChannel.writeAndFlush(jsbuff);
 			// 关闭连接

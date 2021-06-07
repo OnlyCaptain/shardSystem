@@ -33,6 +33,7 @@ import java.io.File;
 import java.io.IOException;
 
 import pbftSimulator.Client;
+import pbftSimulator.PairAddress;
 import pbftSimulator.Simulator;
 import pbftSimulator.Utils;
 import pbftSimulator.NettyClient.NettyClientBootstrap;
@@ -74,7 +75,7 @@ public class Replica {
 	public boolean isTimeOut;							//当前正在处理的请求是否超时（如果超时了不会再发送任何消息）
 	public Logger logger;
 
-	public ArrayList<AbstractMap.SimpleEntry<String, Integer> > neighbors;
+	public ArrayList<PairAddress> neighbors;
 	
 	//消息缓存<type, <msg>>:type消息类型;
 	public Map<Integer, Set<Message>> msgCache;
@@ -108,12 +109,12 @@ public class Replica {
 		reqStats = new HashMap<>();
 		checkPoints.put(0, lastReplyMap);
 
-		neighbors = new ArrayList<AbstractMap.SimpleEntry<String, Integer>>();
+		neighbors = new ArrayList<PairAddress>();
 
 		for (int i = 0; i < IPs.length; i ++) {
 			if (ports[i] == port)  
 				continue;
-			neighbors.add(new AbstractMap.SimpleEntry<>(IPs[i], ports[i]));
+			neighbors.add(new PairAddress(IPs[i], ports[i], i));
 		}
 		
 		// 定义当前Replica的工作目录
@@ -190,7 +191,7 @@ public class Replica {
 		}
 	}
 	
-	public void msgProcess(Message msg) {
+	public synchronized void msgProcess(Message msg) {
 		msg.print(receiveTag, this.logger);
 		switch(msg.type) {
 			case Message.REQUEST:
@@ -206,6 +207,7 @@ public class Replica {
 				receiveCommit(msg);
 				break;
 			case Message.VIEWCHANGE:
+				System.out.println("NO in view change");
 				receiveViewChange(msg);
 				break;
 			case Message.NEWVIEW:
@@ -229,7 +231,7 @@ public class Replica {
 			PrePrepareMsg mm = (PrePrepareMsg)m;
 			if(mm.v >= v && mm.n >= lastRepNum + 1) {
 				sendCommit(m, msg.rcvtime);
-				executeQ.add(mm);			
+				executeQ.add(mm);
 			}
 		}
 		while(!executeQ.isEmpty()) {
@@ -243,10 +245,16 @@ public class Replica {
 		PrePrepareMsg mm = (PrePrepareMsg)msg;
 		String d = Utils.getMD5Digest(mm.mString());
 		CommitMsg cm = new CommitMsg(mm.v, mm.n, d, id, id, id, time);
+		// this.logger.info("is InMsgCache: "+isInMsgCache(cm));
+		if (msgCache.get(cm.type) == null)
+			this.logger.info("msgSet commit.size = 0");
+		else this.logger.info("msgSet commit.size = "+msgCache.get(cm.type).size());
 		if(isInMsgCache(cm) || !prepared(mm)) {
 			return;
 		}
-		Simulator.sendMsgToOthers(cm, id, sendTag, this.logger);
+		// System.out.println(d);
+		// Simulator.sendMsgToOthers(cm, id, sendTag, this.logger);
+		sendMsgToOthers(cm, sendTag, this.logger);
 		addMessageToCache(cm);
 	}
 	
@@ -295,6 +303,7 @@ public class Replica {
 				cnt++;
 			}
 		}
+		this.logger.info("cnt is "+cnt+" and d is "+m.mString());
 		if(cnt >= 2 * Utils.getMaxTorelentNumber(Simulator.RN)) {
 			return true;
 		}
@@ -585,8 +594,8 @@ public class Replica {
 			msgSet = new HashSet<>();
 			msgCache.put(m.type, msgSet);
 		}
-		// msgSet.add(m);
-		msgCache.get(m.type).add(m);
+		msgSet.add(m);
+		// msgCache.get(m.type).add(m);
 	}
 	
 	/**
@@ -761,8 +770,7 @@ public class Replica {
 		String jsbuff = msg.encoder();
 		// System.out.println("after encoding" + jsbuff);
 		try {
-			System.out.println(sIP);
-			NettyClientBootstrap bootstrap = new NettyClientBootstrap(sport, sIP);
+			NettyClientBootstrap bootstrap = new NettyClientBootstrap(sport, sIP, this.logger);
 			msg.print(tag, logger);
 			bootstrap.socketChannel.writeAndFlush(jsbuff);
 			// //通知server，即将关闭连接.(server需要从map中删除该client）
@@ -784,8 +792,11 @@ public class Replica {
 	 * @param logger
 	 */
 	public void sendMsgToOthers(Message msg, String tag, Logger logger) {
+		// Message m = msg;
+		// 注意，这里 neighbors 已经不包括本节点的IP跟port
 		for (int i = 0; i < neighbors.size(); i ++) {
-			sendMsg(neighbors.get(i).getKey(), neighbors.get(i).getValue(), msg, tag, logger);
+			msg.setRcvId(neighbors.get(i).getId());
+			sendMsg(neighbors.get(i).getIP(), neighbors.get(i).getPort(), msg, tag, logger);
 		}
 	}
 

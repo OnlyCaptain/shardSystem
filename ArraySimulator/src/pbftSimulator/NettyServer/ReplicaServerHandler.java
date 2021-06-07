@@ -6,8 +6,10 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.util.ReferenceCountUtil;
 import net.sf.json.JSONObject;
 import pbftSimulator.NettyMessage.*;
+import pbftSimulator.message.CommitMsg;
 import pbftSimulator.message.Message;
 import pbftSimulator.message.PrePrepareMsg;
+import pbftSimulator.message.PrepareMsg;
 import pbftSimulator.message.RequestMsg;
 import pbftSimulator.replica.Replica;
 
@@ -52,12 +54,13 @@ public class ReplicaServerHandler extends SimpleChannelInboundHandler<String> {
                     break;
                 case Message.PREPARE:
                     System.out.println(replica.name+" receive Prepare");
-                    // baseMsg = new PrepareMsg();
-                    // baseMsg = baseMsg.decoder(jsbuff);
+                    baseMsg = new PrepareMsg();
+                    baseMsg = baseMsg.decoder(jsbuff);
                     break;
                 case Message.COMMIT:
                     System.out.println(replica.name+" receive commit");
-
+                    baseMsg = new CommitMsg();
+                    baseMsg = baseMsg.decoder(jsbuff);
                     break;
                 case Message.VIEWCHANGE:
                     break;
@@ -72,17 +75,17 @@ public class ReplicaServerHandler extends SimpleChannelInboundHandler<String> {
                     return;
             }
             // baseMsg = baseMsg.decoder(jsbuff);
-            this.replica.logger.info(jsbuff);
-            this.replica.logger.info(baseMsg.encoder());
+            // this.replica.logger.info(jsbuff);
+            // this.replica.logger.info(baseMsg.encoder());
             replica.msgProcess(baseMsg);
             if(NettyChannelMap.get(baseMsg.getClientId())==null) {
                 NettyChannelMap.add(baseMsg.getClientId(), (SocketChannel) channelHandlerContext.channel());    
                 InetSocketAddress insocket = (InetSocketAddress) channelHandlerContext.channel().remoteAddress();
                 String ip = insocket.getAddress().getHostAddress();
                 int port = insocket.getPort();
-                System.out.println("ip: " + ip + "    port: " + port);
-                System.out.println("client" + baseMsg.getClientId() + " 登录成功");
-                System.out.println(baseMsg.toString());
+                // System.out.println("ip: " + ip + "    port: " + port);
+                // System.out.println("client" + baseMsg.getClientId() + " 登录成功");
+                // System.out.println(baseMsg.toString());
             }
     
         } catch (Exception e) {

@@ -71,9 +71,7 @@ public class Simulator {
 //			if(byzts[i]) {
 //				reps[i] = new ByztReplica(i, IPs[i], ports[i], netDlys[i], netDlysToClis[i]);
 //			}else {
-				System.out.println(IPs[i]);
 				reps[i] = new shardNode(i, IPs[i], ports[i], netDlys[i], netDlysToClis[i], IPs, ports);
-				System.out.println(reps[i].IP);
 //				}
 		}
 		

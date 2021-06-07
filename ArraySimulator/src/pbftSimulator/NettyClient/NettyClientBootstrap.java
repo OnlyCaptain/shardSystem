@@ -20,10 +20,13 @@ import pbftSimulator.NettyMessage.AskParams;
 import pbftSimulator.NettyMessage.Constants;
 import pbftSimulator.NettyMessage.LoginMsg;
 
+
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
 
 
 public class NettyClientBootstrap {
+    private Logger logger;
     private int port;
     private String host;
     public SocketChannel socketChannel;
@@ -36,9 +39,10 @@ public class NettyClientBootstrap {
      * @param host 服务端地址
      * @throws InterruptedException
      */
-    public NettyClientBootstrap(int port, String host) throws InterruptedException {
+    public NettyClientBootstrap(int port, String host, Logger logger) throws InterruptedException {
         this.port = port;
         this.host = host;
+        this.logger = logger;
         try {
             start();
         } catch (InterruptedException e) {
@@ -70,7 +74,7 @@ public class NettyClientBootstrap {
         ChannelFuture future =bootstrap.connect(host,port).sync();
         if (future.isSuccess()) {
             socketChannel = (SocketChannel)future.channel();
-            System.out.println("connect server  成功---------");
+            logger.info("connect server  成功---------");
         }
     }
 
@@ -99,7 +103,7 @@ public class NettyClientBootstrap {
 //            System.out.println(Constants);
             try {
                 //与 Server 建立连接
-                NettyClientBootstrap bootstrap = new NettyClientBootstrap(serverPort, "localhost");
+                NettyClientBootstrap bootstrap = new NettyClientBootstrap(serverPort, "localhost", null);
 
                 //登陆验证。首次登陆时在Server注册 Client的信息
                 LoginMsg loginMsg = new LoginMsg();

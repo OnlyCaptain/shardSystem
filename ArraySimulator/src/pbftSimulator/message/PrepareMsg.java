@@ -1,6 +1,7 @@
 package pbftSimulator.message;
 
 import net.sf.json.JSONObject;
+import pbftSimulator.Utils;
 
 public class PrepareMsg extends Message {
 	
@@ -8,7 +9,7 @@ public class PrepareMsg extends Message {
 	
 	public int n;			
 	
-	public String d;	
+	public String d;
 	
 	public int i;
 
@@ -18,8 +19,9 @@ public class PrepareMsg extends Message {
 		this.len = PREMSGLEN;
 		this.v = 0;
 		this.n = 0;
-		this.d = "";
 		this.i = 0;
+		// this.d = Utils.getMD5Digest(this.toString());
+		this.d = "";
 	}
 
 	//消息结构

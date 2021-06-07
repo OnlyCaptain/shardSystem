@@ -13,7 +13,13 @@ public class PrepareMsg extends Message {
 	public int i;
 
 	public PrepareMsg() {
-
+		super(0,0,0);
+		this.type = PREPARE;
+		this.len = PREMSGLEN;
+		this.v = 0;
+		this.n = 0;
+		this.d = "";
+		this.i = 0;
 	}
 
 	//消息结构

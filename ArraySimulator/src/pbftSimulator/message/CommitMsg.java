@@ -13,6 +13,13 @@ public class CommitMsg extends Message {
 	public int i;
 
 	public CommitMsg() {
+		super(0,0,0);
+		this.type = COMMIT;
+		this.len = COMMSGLEN;
+		this.v = 0;
+		this.n = 0;
+		this.d = "";
+		this.i = 0;
 	}
 
 	//消息结构

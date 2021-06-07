@@ -9,6 +9,11 @@ public class TimeOutMsg extends Message {
 	public int n;
 
 	public TimeOutMsg() {
+		super(0,0,0);
+		this.type = TIMEOUT;
+		this.len = TIMMSGLEN;
+		this.v = 0;
+		this.n = 0;
 	}
 
 	//消息结构

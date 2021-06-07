@@ -15,6 +15,11 @@ public class ReplyMsg extends Message {
 	public String r;
 
 	public ReplyMsg() {
+		v = 0;
+		t = 0;
+		c = 0;
+		i = 0;
+		r = "";
 	}
 
 	//消息结构

@@ -8,6 +8,10 @@ public class CliTimeOutMsg extends Message {
 	public long t;
 
 	public CliTimeOutMsg() {
+		super(0,0,0);
+		this.type = CLITIMEOUT;
+		this.len = CLTMSGLEN;
+		this.t = 0;
 	}
 
 	//<CLITIMEOUT, t>: t表示request请求时间戳

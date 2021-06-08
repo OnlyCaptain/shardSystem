@@ -22,7 +22,7 @@ import pbftSimulator.NettyMessage.LoginMsg;
 
 
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Logger;
+import org.apache.log4j.Logger;
 
 
 public class NettyClientBootstrap {
@@ -90,7 +90,6 @@ public class NettyClientBootstrap {
             this.clientId = clientId;
             this.clientId_str = String.format("%03d",clientId);
             this.serverPort = serverPort;
-            System.out.println(clientId_str);
         }
 
         /**

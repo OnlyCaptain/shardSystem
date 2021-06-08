@@ -6,7 +6,8 @@ import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
 
-import java.util.logging.Logger;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 
 import pbftSimulator.message.Message;
 import pbftSimulator.replica.OfflineReplica;
@@ -21,7 +22,7 @@ public class Simulator {
 	public static final int FN = 2;							//恶意节点的数量
 	public static final int CN = 3;						//客户端数量
 	public static final int INFLIGHT = 2000; 					//最多同时处理多少请求
-	public static final int REQNUM = 1;					//请求消息总数量
+	public static final int REQNUM = 2;					//请求消息总数量
 	public static final int TIMEOUT = 500;					//节点超时设定(毫秒)
 	public static final int CLITIMEOUT = 800;				//客户端超时设定(毫秒)
 	public static final int BASEDLYBTWRP = 2;				//节点之间的基础网络时延
@@ -32,6 +33,9 @@ public class Simulator {
 	public static final double FACTOR = 1.005;				//超出额定负载后的指数基数
 	public static final int COLLAPSEDELAY = 10000;			//视为系统崩溃的网络时延
 	public static final boolean SHOWDETAILINFO = true;		//是否显示完整的消息交互过程
+
+	public static final Level LOGLEVEL = Level.INFO;
+
 	//消息优先队列（按消息计划被处理的时间戳排序）
 	public static Queue<Message> msgQue = new PriorityQueue<>(Message.cmp);
 	//正在网络中传播的消息的总大小
@@ -56,14 +60,14 @@ public class Simulator {
 	public static void main(String[] args) {
 		//初始化包含FN个拜占庭意节点的RN个replicas
 		boolean[] byzts = byztDistriInit(RN, FN);
-		for (int i = 0; i < RN; i ++) {
-			System.out.print(String.valueOf(byzts[i]).concat(" "));
-		}
-		System.out.println("");
-		for (int i = 0; i < CN; i ++) {
-			System.out.print(String.valueOf(clientPorts[i]).concat(" "));
-		}
-		System.out.println();
+		// for (int i = 0; i < RN; i ++) {
+		// 	System.out.print(String.valueOf(byzts[i]).concat(" "));
+		// }
+		// System.out.println("");
+		// for (int i = 0; i < CN; i ++) {
+		// 	System.out.print(String.valueOf(clientPorts[i]).concat(" "));
+		// }
+		// System.out.println();
 
 		// boolean[] byzts = {true, false, false, false, false, false, true};
 		Replica[] reps = new Replica[RN];
@@ -71,7 +75,7 @@ public class Simulator {
 //			if(byzts[i]) {
 //				reps[i] = new ByztReplica(i, IPs[i], ports[i], netDlys[i], netDlysToClis[i]);
 //			}else {
-				reps[i] = new shardNode(i, IPs[i], ports[i], netDlys[i], netDlysToClis[i], IPs, ports);
+				reps[i] = new shardNode(i, IPs[i], ports[i], netDlys[i], netDlysToClis[i], IPs, ports, clientIPs, clientPorts);
 //				}
 		}
 		

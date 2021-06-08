@@ -13,9 +13,10 @@ import pbftSimulator.message.Message;
 import pbftSimulator.message.ReplyMsg;
 import pbftSimulator.message.RequestMsg;
 
-import java.util.logging.Logger;
-import java.util.logging.FileHandler;
-import java.util.logging.SimpleFormatter;
+import org.apache.log4j.FileAppender;
+import org.apache.log4j.Layout;
+import org.apache.log4j.Logger;
+import org.apache.log4j.PatternLayout;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
@@ -82,7 +83,9 @@ public class Client {
 		} catch (InterruptedException e) { e.printStackTrace(); }
 	}
 	
-	// 创建当前Replica的工作目录并定义日志文件
+	/**
+	 * 创建当前Replica的工作目录并定义日志文件
+	 */
 	public void buildWorkspace() {
 		File dir = new File(this.curWorkspace);
 		if (dir.exists()) {
@@ -93,16 +96,17 @@ public class Client {
         } else {
             System.out.println("创建目录" + curWorkspace + "失败！");
         }
-		logger = Logger.getLogger(this.name);  
-		FileHandler fh;
+		// logger = Logger.getLogger(this.name);  
+		logger = Logger.getLogger(this.name);
+		logger.removeAllAppenders(); 
 		try {
-			// This block configure the logger with handler and formatter  
-			fh = new FileHandler(this.curWorkspace.concat(this.name).concat(".log"));  
-			logger.addHandler(fh);
-			SimpleFormatter formatter = new SimpleFormatter();  
-			fh.setFormatter(formatter);  
-			logger.setUseParentHandlers(false);
-			// the following statement is used to log any messages  
+			Layout layout = new PatternLayout("%-d{yyyy-MM-dd HH:mm:ss} [ %l:%r ms ] %n[%p] %m%n");
+			FileAppender appender = new FileAppender(layout, this.curWorkspace.concat(this.name).concat(".log"));
+			appender.setAppend(false);
+			logger.setLevel(Simulator.LOGLEVEL);
+			logger.setAdditivity(false); 
+			appender.activateOptions(); 
+			logger.addAppender(appender);
 			logger.info("Create log file ".concat(this.name));
 			
 		} catch (SecurityException e) {  
@@ -143,7 +147,7 @@ public class Client {
     }
 
 
-	public void msgProcess(Message msg) {
+	public synchronized void msgProcess(Message msg) {
 		msg.print(receiveTag, this.logger);
 		switch(msg.type) {
 			case Message.REPLY:
@@ -190,10 +194,8 @@ public class Client {
 			reqStats.put(t, STABLE);
 			reqMsgs.remove(t);
 			repMsgs.remove(t);
-			// System.out.println("【Stable】客户端"+id+"在"+t
-			// 		+"时间请求的消息已经得到了f+1条reply，进入稳态，共耗时"+(repMsg.rcvtime - t)+"毫秒,此时占用带宽为"+Simulator.inFlyMsgLen+"B");
 			this.logger.info("【Stable】客户端"+id+"在"+t
-					+"时间请求的消息已经得到了f+1条reply，进入稳态，共耗时"+(repMsg.rcvtime - t)+"毫秒,此时占用带宽为"+Simulator.inFlyMsgLen+"B");
+					+"时间请求的消息已经得到了f+1 = " + Utils.getMaxTorelentNumber(Simulator.RN) + " 条reply，进入稳态，共耗时"+(repMsg.rcvtime - t)+"毫秒,此时占用带宽为"+Simulator.inFlyMsgLen+"B");
 		}
 	}
 	
@@ -237,7 +239,7 @@ public class Client {
 		Map<Integer, Message> rMap = repMsgs.get(msg.t);
 		int cnt = 0;
 		for(Integer i : rMap.keySet()) {
-			if(((ReplyMsg)rMap.get(i)).v == msg.v && ((ReplyMsg)rMap.get(i)).r == msg.r) {
+			if(((ReplyMsg)rMap.get(i)).v == msg.v && ((ReplyMsg)rMap.get(i)).r.equals(msg.r)) {
 				cnt++;
 			}
 		}
@@ -275,7 +277,7 @@ public class Client {
 	public void setTimer(long t, long time) {
 		Message timeoutMsg = new CliTimeOutMsg(t, id, id, time + Simulator.CLITIMEOUT);
 		// Simulator.sendMsg(timeoutMsg, "ClientTimeOut", this.logger);
-		this.logger.info("Timeout. + "+timeoutMsg.toString());
+		this.logger.warn("Timeout. + "+timeoutMsg.toString());
 	}
 
 
@@ -290,7 +292,6 @@ public class Client {
 	public void sendMsg(String sIP, int sport, Message msg, String tag, Logger logger) {
 		String jsbuff = msg.encoder();
 		try {
-			System.out.println(sIP);
 			NettyClientBootstrap bootstrap = new NettyClientBootstrap(sport, sIP, this.logger);
 			msg.print(tag, logger);
 			bootstrap.socketChannel.writeAndFlush(jsbuff);

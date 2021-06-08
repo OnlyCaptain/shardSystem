@@ -6,7 +6,12 @@ import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
 
-import java.util.logging.Logger;
+import org.apache.log4j.Appender;
+import org.apache.log4j.FileAppender;
+import org.apache.log4j.Layout;
+import org.apache.log4j.Logger;
+import org.apache.log4j.PatternLayout;
+import org.apache.log4j.SimpleLayout;
 
 import pbftSimulator.message.Message;
 import pbftSimulator.replica.OfflineReplica;
@@ -48,16 +53,20 @@ public class test {
 	public static String[] IPs = netIPsInit(RN);
 //	public static int[] ports = netPortsInit(RN);
 	public static int[] ports = {64960, 65456, 61444, 51988, 51653, 63367, 60635};
+
+	public static String[] clientIPs = netIPsInit(CN);
+//	public static int[] clientPorts = netPortsInit(CN);
+	public static int[] clientPorts = {58052, 65528, 59547};
 	
-	public static void main(String[] args) {
+	public static void main(String[] args) throws Exception {
 		//初始化包含FN个拜占庭意节点的RN个replicas
 		boolean[] byzts = byztDistriInit(RN, FN);
 		for (int i = 0; i < RN; i ++) {
 			System.out.print(String.valueOf(byzts[i]).concat(" "));
 		}
 		System.out.println("");
-		for (int i = 0; i < RN; i ++) {
-			System.out.print(String.valueOf(ports[i]).concat(" "));
+		for (int i = 0; i < CN; i ++) {
+			System.out.print(String.valueOf(clientPorts[i]).concat(" "));
 		}
 		System.out.println();
 
@@ -67,30 +76,37 @@ public class test {
 //			if(byzts[i]) {
 //				reps[i] = new ByztReplica(i, IPs[i], ports[i], netDlys[i], netDlysToClis[i]);
 //			}else {
-				System.out.println(IPs[i]);
-				reps[i] = new shardNode(i, IPs[i], ports[i], netDlys[i], netDlysToClis[i], IPs, ports);
-				System.out.println(reps[i].IP);
+				reps[i] = new shardNode(i, IPs[i], ports[i], netDlys[i], netDlysToClis[i], IPs, ports, clientIPs, clientPorts);
 //				}
 		}
 		
 		//初始化CN个客户端
-		Client[] clis = new Client[CN];
-		for(int i = 0; i < CN; i++) {
-			//客户端的编号设置为负数
-			clis[i] = new Client(Client.getCliId(i), netDlysToNodes[i]); 
-		}
+//		Client[] clis = new Client[CN];
+//		for(int i = 0; i < CN; i++) {
+//			//客户端的编号设置为负数
+//			clis[i] = new Client(Client.getCliId(i), clientIPs[i], clientPorts[i], netDlysToNodes[i], IPs, ports); 
+//		}
 		
-		//初始随机发送INFLIGHT个请求消息
-		Random rand = new Random(555);
-		long requestNums = 0;
-		for(int i = 0; i < Math.min(INFLIGHT, REQNUM); i++) {
-			clis[rand.nextInt(CN)].sendRequest(0);
-			requestNums++;
-		}
-		if (msgQue.isEmpty()) 
-			System.out.println("Error!");
-		Message testMsg = msgQue.poll();
-		reps[0].sendMsg(reps[1].IP, reps[1].port, testMsg, "Testing", reps[0].logger);
+		Logger logger = Logger.getLogger(test.class);
+		 Layout layout = new PatternLayout("%-d{yyyy-MM-dd HH:mm:ss} [ %l:%r ms ] %n[%p] %m%n");
+//		Layout layout = new SimpleLayout();
+		FileAppender appender = new FileAppender(layout, "./a.log");
+		appender.setAppend(false);
+		appender.activateOptions(); 
+		logger.addAppender(appender);
+		logger.debug("this is debug");
+		logger.info("this is info");
+		// //初始随机发送INFLIGHT个请求消息
+		// Random rand = new Random(555);
+		// long requestNums = 0;
+		// for(int i = 0; i < Math.min(INFLIGHT, REQNUM); i++) {
+		// 	clis[rand.nextInt(CN)].sendRequest(0);
+		// 	requestNums++;
+		// }
+//		if (msgQue.isEmpty()) 
+//			System.out.println("Error!");
+//		Message testMsg = msgQue.poll();
+//		reps[0].sendMsg(reps[1].IP, reps[1].port, testMsg, "Testing", reps[0].logger);
 		
 //		long timestamp = 0;
 //		// 消息处理
@@ -159,7 +175,7 @@ public class test {
 	public static int[] netPortsInit(int n) {
 		Set<Integer> set = new HashSet<Integer>();
 		int L=49152, H = 65535, p = 0, i = 0;
-		Random rand = new Random(999);
+		Random rand = new Random(n);
 		while (i < n) {
 			p = L + rand.nextInt(H-L);
 			if (set.contains(p)) 

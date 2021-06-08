@@ -3,7 +3,7 @@ package pbftSimulator.message;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Logger;
+import org.apache.log4j.Logger;
 
 import net.sf.json.JSON;
 import net.sf.json.JSONObject;
@@ -247,8 +247,6 @@ public class Message {
     }
 
 	public boolean ifTimeOut(long time) {
-		// System.out.println(String.valueOf(rcvtime).concat(" ").concat(String.valueOf(time)).concat("=").concat(String.valueOf(Math.abs(rcvtime-time))));
-		// System.out.println(Math.abs(rcvtime-time) > Simulator.TIMEOUT);
 		if (Math.abs(rcvtime-time) >= Simulator.TIMEOUT) 
 			return true;
 		return false;

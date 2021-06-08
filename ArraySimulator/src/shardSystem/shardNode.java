@@ -14,7 +14,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
-import java.util.logging.Logger;
+import org.apache.log4j.Logger;
 
 import net.sf.json.JSONObject;
 
@@ -38,8 +38,8 @@ public class shardNode extends Replica {
 
 
 
-	public shardNode(int id, String IP, int port, int[] netDlys, int[] netDlyToClis, String[] IPs, int[] ports) {
-		super(NAME, id, IP, port, netDlys, netDlyToClis, IPs, ports);
+	public shardNode(int id, String IP, int port, int[] netDlys, int[] netDlyToClis, String[] IPs, int[] ports, String[] cIPs, int[] cports) {
+		super(NAME, id, IP, port, netDlys, netDlyToClis, IPs, ports, cIPs, cports);
 
 		this.name = NAME.concat(String.valueOf(id));
 		System.out.println(this.curWorkspace);
@@ -119,7 +119,7 @@ public class shardNode extends Replica {
 	 */
 	public void txProcess(Transaction tx) {
 		if (!validateTx(tx)) {
-			logger.warning("this is a invalid transaction. "+tx.toString());
+			logger.warn("this is a invalid transaction. "+tx.toString());
 			return;
 		}
 //		if (shardID == queryShardID(tx.getSender())) {

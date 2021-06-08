@@ -8,10 +8,14 @@ import net.sf.json.JSONObject;
 import pbftSimulator.Client;
 import pbftSimulator.NettyMessage.*;
 import pbftSimulator.message.Message;
+import pbftSimulator.message.ReplyMsg;
 import pbftSimulator.message.RequestMsg;
+import pbftSimulator.message.TimeOutMsg;
 import pbftSimulator.replica.Replica;
 
 import java.net.InetSocketAddress;
+
+import javax.management.relation.RelationException;
 
 public class ClientServerHandler extends SimpleChannelInboundHandler<String> {
     private Client client;
@@ -25,7 +29,6 @@ public class ClientServerHandler extends SimpleChannelInboundHandler<String> {
     public ClientServerHandler(Client client) {
 		super();
         this.client = client;
-        // System.out.println("In ClientServerHandler: " + this.client);
 		// TODO Auto-generated constructor stub
 	}
     
@@ -35,36 +38,26 @@ public class ClientServerHandler extends SimpleChannelInboundHandler<String> {
     }
     @Override
     protected void messageReceived(ChannelHandlerContext channelHandlerContext, String jsbuff) throws Exception {
-    	// System.out.println("Server end ".concat(client.name).concat(client.IP).concat(jsbuff));  
         Message baseMsg = null; 
         try {
             JSONObject js = JSONObject.fromObject(jsbuff);
             int type = js.getInt("type");
+            // this.client.logger.info("客户端收到："+jsbuff);
             switch (type) {
-                case Message.REQUEST:
-                   baseMsg = new RequestMsg();
-                   baseMsg = baseMsg.decoder(jsbuff);
+                case Message.REPLY:
+                    this.client.logger.debug(this.client.name+" receive Reply");
+                    baseMsg = new ReplyMsg();
+                    baseMsg = baseMsg.decoder(jsbuff);
                     break;
-                // case Message.PREPREPARE:
-                //     break;
-                // case Message.PREPARE:
-                //     break;
-                // case Message.COMMIT:
-                //     break;
-                // case Message.VIEWCHANGE:
-                //     break;
-                // case Message.NEWVIEW:
-                //     break;
-                // case Message.TIMEOUT:
-                //     break;
-                // case Message.CHECKPOINT:
-                //     break;
-                // default:
-                //     this.logger.info("【Error】消息类型错误！");
-                //     return;
+                case Message.CLITIMEOUT:
+                    this.client.logger.debug(this.client.name+" receive Timeout");
+                    baseMsg = new TimeOutMsg();
+                    baseMsg = baseMsg.decoder(jsbuff);
+                    break;
+                default:
+                    this.client.logger.debug("【Error】消息类型错误！");
             }
             client.msgProcess(baseMsg);
-            System.out.println(baseMsg.toString());
             if(NettyChannelMap.get(baseMsg.getClientId())==null) {
                 // LoginMsg loginMsg = (LoginMsg) baseMsg;
     
@@ -74,9 +67,6 @@ public class ClientServerHandler extends SimpleChannelInboundHandler<String> {
     
                 String ip = insocket.getAddress().getHostAddress();
                 int port = insocket.getPort();
-                System.out.println("ip: " + ip + "    port: " + port);
-                System.out.println("client" + baseMsg.getClientId() + " 登录成功");
-                System.out.println(baseMsg.toString());
             }
     
         } catch (Exception e) {

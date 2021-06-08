@@ -26,7 +26,6 @@ public class ReplicaServerHandler extends SimpleChannelInboundHandler<String> {
     public ReplicaServerHandler(Replica replica) {
 		super();
         this.replica = replica;
-        // System.out.println("In nettyHandler" + this.replica);
 		// TODO Auto-generated constructor stub
 	}
     
@@ -36,29 +35,28 @@ public class ReplicaServerHandler extends SimpleChannelInboundHandler<String> {
     }
     @Override
     protected void messageReceived(ChannelHandlerContext channelHandlerContext, String jsbuff) throws Exception {
-    	// System.out.println("Server end ".concat(replica.name).concat(replica.IP).concat(jsbuff));  
         Message baseMsg = null; 
         try {
             JSONObject js = JSONObject.fromObject(jsbuff);
             int type = js.getInt("type");
             switch (type) {
                 case Message.REQUEST:
-                    System.out.println(replica.name+" receive Request");
+                    this.replica.logger.debug(replica.name+" receive Request");
                     baseMsg = new RequestMsg();
                     baseMsg = baseMsg.decoder(jsbuff);
                     break;
                 case Message.PREPREPARE:
-                    System.out.println(replica.name+" receive PrePrepare");
+                    this.replica.logger.debug(replica.name+" receive PrePrepare");
                     baseMsg = new PrePrepareMsg();
                     baseMsg = baseMsg.decoder(jsbuff);
                     break;
                 case Message.PREPARE:
-                    System.out.println(replica.name+" receive Prepare");
+                    this.replica.logger.debug(replica.name+" receive Prepare");
                     baseMsg = new PrepareMsg();
                     baseMsg = baseMsg.decoder(jsbuff);
                     break;
                 case Message.COMMIT:
-                    System.out.println(replica.name+" receive commit");
+                    this.replica.logger.debug(replica.name+" receive commit");
                     baseMsg = new CommitMsg();
                     baseMsg = baseMsg.decoder(jsbuff);
                     break;
@@ -83,9 +81,6 @@ public class ReplicaServerHandler extends SimpleChannelInboundHandler<String> {
                 InetSocketAddress insocket = (InetSocketAddress) channelHandlerContext.channel().remoteAddress();
                 String ip = insocket.getAddress().getHostAddress();
                 int port = insocket.getPort();
-                // System.out.println("ip: " + ip + "    port: " + port);
-                // System.out.println("client" + baseMsg.getClientId() + " 登录成功");
-                // System.out.println(baseMsg.toString());
             }
     
         } catch (Exception e) {

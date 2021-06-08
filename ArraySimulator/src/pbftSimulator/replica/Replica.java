@@ -10,14 +10,12 @@ import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Set;
-import java.util.logging.FileHandler;
-import java.util.logging.Filter;
-import java.util.logging.Handler;
-import java.util.logging.Level;
-import java.util.logging.LogRecord;
-import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
-// import javafx.util
+
+import org.apache.log4j.FileAppender;
+import org.apache.log4j.Layout;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.apache.log4j.PatternLayout;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
@@ -76,6 +74,7 @@ public class Replica {
 	public Logger logger;
 
 	public ArrayList<PairAddress> neighbors;
+	public ArrayList<PairAddress> clients;
 	
 	//消息缓存<type, <msg>>:type消息类型;
 	public Map<Integer, Set<Message>> msgCache;
@@ -95,7 +94,7 @@ public class Replica {
 		}
 	};
 	
-	public Replica(String name, int id, String IP, int port, int[] netDlys, int[] netDlyToClis, String[] IPs, int[] ports) {
+	public Replica(String name, int id, String IP, int port, int[] netDlys, int[] netDlyToClis, String[] IPs, int[] ports, String[] cIPs, int[] cports) {
 		this.id = id;
 		this.netDlys = netDlys;
 		this.netDlyToClis = netDlyToClis;
@@ -110,11 +109,16 @@ public class Replica {
 		checkPoints.put(0, lastReplyMap);
 
 		neighbors = new ArrayList<PairAddress>();
+		clients = new ArrayList<PairAddress>();
 
 		for (int i = 0; i < IPs.length; i ++) {
 			if (ports[i] == port)  
 				continue;
 			neighbors.add(new PairAddress(IPs[i], ports[i], i));
+		}
+
+		for (int i = 0; i < cIPs.length; i ++) {
+			clients.add(new PairAddress(cIPs[i], cports[i], Client.getCliId(-1)));
 		}
 		
 		// 定义当前Replica的工作目录
@@ -172,16 +176,17 @@ public class Replica {
         } else {
             System.out.println("创建目录" + curWorkspace + "失败！");
         }
-		logger = Logger.getLogger(this.name);  
-		FileHandler fh;
+		// logger = Logger.getLogger(this.name);  
+		logger = Logger.getLogger(this.name);
+		logger.removeAllAppenders(); 
 		try {
-			// This block configure the logger with handler and formatter  
-			fh = new FileHandler(this.curWorkspace.concat(this.name).concat(".log"));  
-			logger.addHandler(fh);
-			SimpleFormatter formatter = new SimpleFormatter();  
-			fh.setFormatter(formatter);  
-			logger.setUseParentHandlers(false);   // 设置日志在不在终端输出
-			// the following statement is used to log any messages  
+			Layout layout = new PatternLayout("%-d{yyyy-MM-dd HH:mm:ss} [ %l:%r ms ] %n[%p] %m%n");
+			FileAppender appender = new FileAppender(layout, this.curWorkspace.concat(this.name).concat(".log"));
+			appender.setAppend(false);
+			logger.setLevel(Simulator.LOGLEVEL);
+			logger.setAdditivity(false); 
+			appender.activateOptions(); 
+			logger.addAppender(appender);
 			logger.info("Create log file ".concat(this.name));
 			
 		} catch (SecurityException e) {  
@@ -207,7 +212,6 @@ public class Replica {
 				receiveCommit(msg);
 				break;
 			case Message.VIEWCHANGE:
-				System.out.println("NO in view change");
 				receiveViewChange(msg);
 				break;
 			case Message.NEWVIEW:
@@ -220,7 +224,7 @@ public class Replica {
 				receiveCheckPoint(msg);
 				break;
 			default:
-				this.logger.info("【Error】消息类型错误！");
+				this.logger.error("【Error】消息类型错误！");
 				return;
 		}
 		//收集所有符合条件的prePrepare消息,并进行后续处理
@@ -247,8 +251,8 @@ public class Replica {
 		CommitMsg cm = new CommitMsg(mm.v, mm.n, d, id, id, id, time);
 		// this.logger.info("is InMsgCache: "+isInMsgCache(cm));
 		if (msgCache.get(cm.type) == null)
-			this.logger.info("msgSet commit.size = 0");
-		else this.logger.info("msgSet commit.size = "+msgCache.get(cm.type).size());
+			this.logger.debug("msgSet commit.size = 0");
+		else this.logger.debug("msgSet commit.size = "+msgCache.get(cm.type).size());
 		if(isInMsgCache(cm) || !prepared(mm)) {
 			return;
 		}
@@ -271,7 +275,8 @@ public class Replica {
 			lastRepNum++;
 			setTimer(lastRepNum+1, time);
 			if(rem != null) {
-				Simulator.sendMsg(rm, sendTag, this.logger);
+				// Simulator.sendMsg(rm, sendTag, this.logger);
+				sendMsg(clients.get(Client.getCliId(rem.c)).getIP(), clients.get(Client.getCliId(rem.c)).getPort(), rm, sendTag, this.logger);
 				LastReply llp = lastReplyMap.get(rem.c);
 				if(llp == null) {
 					llp = new LastReply(rem.c, rem.t, "result");
@@ -284,7 +289,6 @@ public class Replica {
 			//周期性发送checkpoint消息
 			if(mm.n % K == 0) {
 				Message checkptMsg = new CheckPointMsg(v, mm.n, lastReplyMap, id, id, id, time);
-//				System.out.println("send:"+checkptMsg.toString());
 				addMessageToCache(checkptMsg);
 				// Simulator.sendMsgToOthers(checkptMsg, id, sendTag, this.logger);
 				sendMsgToOthers(checkptMsg, sendTag, this.logger);
@@ -303,7 +307,7 @@ public class Replica {
 				cnt++;
 			}
 		}
-		this.logger.info("cnt is "+cnt+" and d is "+m.mString());
+		this.logger.debug("cnt is "+cnt+" and d is "+m.mString());
 		if(cnt >= 2 * Utils.getMaxTorelentNumber(Simulator.RN)) {
 			return true;
 		}
@@ -365,7 +369,6 @@ public class Replica {
 		deleteCache(maxN);
 		deleteCheckPts(maxN);
 		h = maxN;
-//		System.out.println(id+"[水位]"+h+"-"+(h+L));
 	}
 	
 	public void receiveRequest(Message msg) {
@@ -404,9 +407,9 @@ public class Replica {
 			//否则如果不会超过水位就生成新的prePrepare消息并广播,同时启动timeout
 			if(inWater(n + 1)) {
 				n++;
-				this.logger.info("before constructing: "+reqlyMsg.encoder());
+				this.logger.debug("before constructing: "+reqlyMsg.encoder());
 				Message prePrepareMsg = new PrePrepareMsg(v, n, reqlyMsg, id, id, id, reqlyMsg.rcvtime);
-				this.logger.info("after constructing: "+ prePrepareMsg.encoder());
+				this.logger.debug("after constructing: "+ prePrepareMsg.encoder());
 				addMessageToCache(prePrepareMsg);
 				// Simulator.sendMsgToOthers(prePrepareMsg, id, sendTag, this.logger);
 				sendMsgToOthers(prePrepareMsg, sendTag, logger);

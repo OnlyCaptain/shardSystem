@@ -276,7 +276,7 @@ public class test {
 		}
 	}
 	
-	public static int getStableRequestNum(Client[] clis) {
+	public static int getStableRequestNum(PBFTSealer[] clis) {
 		int num = 0;
 		for(int i = 0; i < clis.length; i++) {
 			num += clis[i].stableMsgNum();

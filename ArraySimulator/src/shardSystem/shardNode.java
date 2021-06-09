@@ -1,6 +1,12 @@
 package shardSystem;
 
+import pbftSimulator.PBFTSealer;
+import pbftSimulator.message.CheckPointMsg;
+import pbftSimulator.message.LastReply;
 import pbftSimulator.message.Message;
+import pbftSimulator.message.PrePrepareMsg;
+import pbftSimulator.message.ReplyMsg;
+import pbftSimulator.message.RequestMsg;
 import pbftSimulator.replica.Replica;
 import shardSystem.transaction.Transaction;
 
@@ -234,5 +240,44 @@ public class shardNode extends Replica {
 		return true;
 	}
 	
+	public void execute(Message msg, long time) {
+		PrePrepareMsg mm = (PrePrepareMsg)msg;
+		RequestMsg rem = null;
+		ReplyMsg rm = null;
+		if(mm.m != null) {
+			rem = (RequestMsg)(mm.m);
+			this.logger.info("再次确认request的消息结构："+rem.m.get(0));
+
+			rm = new ReplyMsg(mm.v, rem.t, rem.c, id, "result", id, rem.c, time + netDlyToClis[PBFTSealer.getCliArrayIndex(rem.c)]);
+		}
+		
+		if((rem == null || !isInMsgCache(rm)) && mm.n == lastRepNum + 1 && commited(mm)) {
+			lastRepNum++;
+			setTimer(lastRepNum+1, time);
+			if(rem != null) {
+				// Simulator.sendMsg(rm, sendTag, this.logger);
+				// executeTx();
+				// 处理交易
+				sendMsg(clients.get(PBFTSealer.getCliId(rem.c)).getIP(), clients.get(PBFTSealer.getCliId(rem.c)).getPort(), rm, sendTag, this.logger);
+				LastReply llp = lastReplyMap.get(rem.c);
+				if(llp == null) {
+					llp = new LastReply(rem.c, rem.t, "result");
+					lastReplyMap.put(rem.c, llp);
+				}
+				llp.t = rem.t;
+				reqStats.put(rem, STABLE);
+				
+			}
+			//周期性发送checkpoint消息
+			if(mm.n % K == 0) {
+				Message checkptMsg = new CheckPointMsg(v, mm.n, lastReplyMap, id, id, id, time);
+				addMessageToCache(checkptMsg);
+				// Simulator.sendMsgToOthers(checkptMsg, id, sendTag, this.logger);
+				sendMsgToOthers(checkptMsg, sendTag, this.logger);
+			}
+		}
+	}
+
+
 	
 }

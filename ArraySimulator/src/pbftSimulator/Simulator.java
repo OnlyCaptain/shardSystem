@@ -1,5 +1,8 @@
 package pbftSimulator;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.PriorityQueue;
 import java.util.Queue;
@@ -15,14 +18,15 @@ import pbftSimulator.replica.Replica;
 import pbftSimulator.replica.ByztReplica;
 
 import shardSystem.shardNode;
+import shardSystem.transaction.Transaction;
 
 public class Simulator {
 	
 	public static final int RN = 7;  						//replicas节点的数量(rn)
 	public static final int FN = 2;							//恶意节点的数量
-	public static final int CN = 3;						//客户端数量
+	public static final int CN = 1;						//客户端数量
 	public static final int INFLIGHT = 2000; 					//最多同时处理多少请求
-	public static final int REQNUM = 2;					//请求消息总数量
+	public static final int REQNUM = 1;					//请求消息总数量
 	public static final int TIMEOUT = 500;					//节点超时设定(毫秒)
 	public static final int CLITIMEOUT = 800;				//客户端超时设定(毫秒)
 	public static final int BASEDLYBTWRP = 2;				//节点之间的基础网络时延
@@ -34,7 +38,8 @@ public class Simulator {
 	public static final int COLLAPSEDELAY = 10000;			//视为系统崩溃的网络时延
 	public static final boolean SHOWDETAILINFO = true;		//是否显示完整的消息交互过程
 
-	public static final Level LOGLEVEL = Level.INFO;
+	public static final Level LOGLEVEL = Level.DEBUG;
+	public static final int REQTXSIZE = 50;
 
 	//消息优先队列（按消息计划被处理的时间戳排序）
 	public static Queue<Message> msgQue = new PriorityQueue<>(Message.cmp);
@@ -79,18 +84,23 @@ public class Simulator {
 //				}
 		}
 		
-		//初始化CN个客户端
-		Client[] clis = new Client[CN];
+		//初始化CN个
+		PBFTSealer[] clis = new PBFTSealer[CN];
 		for(int i = 0; i < CN; i++) {
 			//客户端的编号设置为负数
-			clis[i] = new Client(Client.getCliId(i), clientIPs[i], clientPorts[i], netDlysToNodes[i], IPs, ports); 
+			clis[i] = new PBFTSealer(PBFTSealer.getCliId(i), clientIPs[i], clientPorts[i], netDlysToNodes[i], IPs, ports); 
 		}
 		
 		//初始随机发送INFLIGHT个请求消息
 		Random rand = new Random(555);
 		long requestNums = 0;
+		ArrayList<Transaction> txs = getTxsFromFile("../data/Tx_500.csv");
+		int start = 0;
+		
 		for(int i = 0; i < Math.min(INFLIGHT, REQNUM); i++) {
-			clis[rand.nextInt(CN)].sendRequest(0);
+			ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(start, start+50));
+			clis[rand.nextInt(CN)].sendRequest(tx1, 0);
+			start += 50;
 			requestNums++;
 		}
 //		if (msgQue.isEmpty()) 
@@ -148,6 +158,26 @@ public class Simulator {
 	 */
 	public static long getTimeStamp() {
 		return System.currentTimeMillis();
+	}
+
+	public static ArrayList<Transaction> getTxsFromFile(String filepath) {
+		ArrayList<Transaction> result = new ArrayList<Transaction>();
+		try {
+			BufferedReader reader = new BufferedReader(new FileReader(filepath));//换成你的文件名
+			reader.readLine();//第一行信息，为标题信息，不用，如果需要，注释掉
+			String line = null; 
+			while((line=reader.readLine())!=null){ 
+				String item[] = line.split(",");//CSV格式文件为逗号分隔符文件，这里根据逗号切分
+				// String last = item[item.length-1];//这就是你要的数据了
+				result.add(new Transaction(item[0], item[1], Double.parseDouble(item[2]), null, Long.parseLong(item[3]), Double.parseDouble(item[4]), 0));
+				//int value = Integer.parseInt(last);//如果是数值，可以转化为数值
+				// System.out.println(last); 
+			}
+			reader.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return result;
 	}
 
 	/**
@@ -266,7 +296,7 @@ public class Simulator {
 		}
 	}
 	
-	public static int getStableRequestNum(Client[] clis) {
+	public static int getStableRequestNum(PBFTSealer[] clis) {
 		int num = 0;
 		for(int i = 0; i < clis.length; i++) {
 			num += clis[i].stableMsgNum();

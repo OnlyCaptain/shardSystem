@@ -1,5 +1,6 @@
 package pbftSimulator.message;
 
+import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 
 public class RequestMsg extends Message {
@@ -10,11 +11,12 @@ public class RequestMsg extends Message {
 	
 	public int c;	
 	
-	public String m;   // transactions: [JSONObject, JSONObject, ... ]
+	// public String m;   // transactions: [JSONObject, JSONObject, ... ]
+	public JSONArray m;   // transactions: [JSONObject, JSONObject, ... ]
 	
 	//消息结构
 	//<REQUEST, o, t, c>:o表示客户端请求的操作;t表示客户端请求时间戳;c表示客户端id
-	public RequestMsg(String o, String m, long t, int c, int sndId, int rcvId, long rcvtime) {
+	public RequestMsg(String o, JSONArray m, long t, int c, int sndId, int rcvId, long rcvtime) {
 		super(sndId, rcvId, rcvtime);
 		this.type = REQUEST;
 		this.len = REQMSGLEN;
@@ -76,7 +78,8 @@ public class RequestMsg extends Message {
 			output.rcvtime = js.getLong("rcvtime");
 			output.sndId = js.getInt("sndId");
 			output.o = js.getString("o");
-			output.m = js.getString("m");
+			output.m = js.getJSONArray("m");
+			// System.out.println(output.m);
 			output.t = js.getLong("t");
 			output.c = js.getInt("c");
 			output.len = js.getLong("len");

@@ -30,7 +30,7 @@ import net.sf.json.JSONObject;
 import java.io.File;
 import java.io.IOException;
 
-import pbftSimulator.Client;
+import pbftSimulator.PBFTSealer;
 import pbftSimulator.PairAddress;
 import pbftSimulator.Simulator;
 import pbftSimulator.Utils;
@@ -118,7 +118,7 @@ public class Replica {
 		}
 
 		for (int i = 0; i < cIPs.length; i ++) {
-			clients.add(new PairAddress(cIPs[i], cports[i], Client.getCliId(-1)));
+			clients.add(new PairAddress(cIPs[i], cports[i], PBFTSealer.getCliId(-1)));
 		}
 		
 		// 定义当前Replica的工作目录
@@ -268,7 +268,7 @@ public class Replica {
 		ReplyMsg rm = null;
 		if(mm.m != null) {
 			rem = (RequestMsg)(mm.m);
-			rm = new ReplyMsg(mm.v, rem.t, rem.c, id, "result", id, rem.c, time + netDlyToClis[Client.getCliArrayIndex(rem.c)]);
+			rm = new ReplyMsg(mm.v, rem.t, rem.c, id, "result", id, rem.c, time + netDlyToClis[PBFTSealer.getCliArrayIndex(rem.c)]);
 		}
 		
 		if((rem == null || !isInMsgCache(rm)) && mm.n == lastRepNum + 1 && commited(mm)) {
@@ -276,7 +276,7 @@ public class Replica {
 			setTimer(lastRepNum+1, time);
 			if(rem != null) {
 				// Simulator.sendMsg(rm, sendTag, this.logger);
-				sendMsg(clients.get(Client.getCliId(rem.c)).getIP(), clients.get(Client.getCliId(rem.c)).getPort(), rm, sendTag, this.logger);
+				sendMsg(clients.get(PBFTSealer.getCliId(rem.c)).getIP(), clients.get(PBFTSealer.getCliId(rem.c)).getPort(), rm, sendTag, this.logger);
 				LastReply llp = lastReplyMap.get(rem.c);
 				if(llp == null) {
 					llp = new LastReply(rem.c, rem.t, "result");
@@ -378,7 +378,7 @@ public class Replica {
 		long t = reqlyMsg.t;
 		//如果这条请求已经reply过了，那么就再回复一次reply
 		if(reqStats.containsKey(msg) && reqStats.get(msg) == STABLE) {
-			long recTime = msg.rcvtime + netDlyToClis[Client.getCliArrayIndex(c)];
+			long recTime = msg.rcvtime + netDlyToClis[PBFTSealer.getCliArrayIndex(c)];
 			Message replyMsg = new ReplyMsg(v, t, c, id, "result", id, c, recTime);
 			Simulator.sendMsg(replyMsg, sendTag, this.logger);
 			// sendMsg(this.IP, sport, msg, tag, logger);
@@ -579,7 +579,7 @@ public class Replica {
 	 * 将消息存到缓存中
 	 * @param m
 	 */
-	private boolean isInMsgCache(Message m) {
+	protected boolean isInMsgCache(Message m) {
 		Set<Message> msgSet = msgCache.get(m.type);
 		if(msgSet == null) {
 			return false;
@@ -591,7 +591,7 @@ public class Replica {
 	 * 将消息存到缓存中
 	 * @param m
 	 */
-	private void addMessageToCache(Message m) {
+	protected void addMessageToCache(Message m) {
 		Set<Message> msgSet = msgCache.get(m.type);
 		if(msgSet == null) {
 			msgSet = new HashSet<>();

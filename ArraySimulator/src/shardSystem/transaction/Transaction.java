@@ -79,7 +79,7 @@ public class Transaction {
 	public void setTimeStamp(long t) { this.timestamp = t; }
 
 	public String toString() {
-		return sender.concat("-").concat(recipient).concat("-").concat(String.valueOf(value));
+		return encoder();
 	}
 	/**
 	 * 对消息进行编码，用于网络通信
@@ -122,4 +122,5 @@ public class Transaction {
 		} 
 		return output;
 	}
+
 }

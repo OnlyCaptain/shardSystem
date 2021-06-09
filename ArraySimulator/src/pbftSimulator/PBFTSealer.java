@@ -12,6 +12,7 @@ import pbftSimulator.message.CliTimeOutMsg;
 import pbftSimulator.message.Message;
 import pbftSimulator.message.ReplyMsg;
 import pbftSimulator.message.RequestMsg;
+import shardSystem.transaction.Transaction;
 
 import org.apache.log4j.FileAppender;
 import org.apache.log4j.Layout;
@@ -30,11 +31,12 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
+import net.sf.json.JSONArray;
 
 import java.io.File;
 import java.io.IOException;
 
-public class Client {
+public class PBFTSealer {
 	
 	public static final int PROCESSING = 0;		//没有收到f+1个reply
 	public static final int STABLE = 1;			//已经收到了f+1个reply
@@ -56,7 +58,7 @@ public class Client {
 	public String sendTag = "CliSend";
 	public ArrayList<PairAddress> replicaAddrs;
 
-	public Client(int id, String IP, int port, int[] netDlys, String[] replicaIPs, int[] replicaPorts) {
+	public PBFTSealer(int id, String IP, int port, int[] netDlys, String[] replicaIPs, int[] replicaPorts) {
 		this.id = id;
 		this.netDlys = netDlys;
 		this.IP = IP;
@@ -137,7 +139,7 @@ public class Client {
                 ChannelPipeline p = socketChannel.pipeline();
                 p.addLast(new ObjectEncoder());
                 p.addLast(new ObjectDecoder(ClassResolvers.cacheDisabled(null)));
-                p.addLast(new ClientServerHandler(Client.this));
+                p.addLast(new ClientServerHandler(PBFTSealer.this));
             }
         });
         ChannelFuture f= bootstrap.bind(this.port).sync();
@@ -162,13 +164,30 @@ public class Client {
 		
 	}
 	
-	public void sendRequest(long time) {
+	public void sendRequest(ArrayList<Transaction> txs, long time) {
 		//避免时间重复
 		while(reqStats.containsKey(time)) {
 			time++;
 		}
 		int priId = v % Simulator.RN;
-		Message requestMsg = new RequestMsg("Message", "null", time, id, id, priId, time + netDlys[priId]);
+		JSONArray txStr = new JSONArray();
+		for (int i = 0; i < txs.size(); i ++) {
+			txStr.add(txs.get(i));
+		}
+		// String txStr = "[";
+		// for (int i = 0; i < txs.size(); i ++) {
+		// 	txStr += txs.get(i).encoder();
+		// 	txStr += ",";
+		// }
+		// txStr += "]";
+		// System.out.println(txStr);
+		// JSONArray jaArry = JSONArray.fromObject(txStr);
+		// System.out.println(jaArry);
+		
+
+		// Message requestMsg = new RequestMsg("Message", txStr, time, id, id, priId, time + netDlys[priId]);
+		Message requestMsg = new RequestMsg("Message", txStr, time, id, id, priId, time + netDlys[priId]);
+
 		// Simulator.sendMsg(requestMsg, sendTag, this.logger);
 		sendMsg(replicaAddrs.get(priId).getIP(), replicaAddrs.get(priId).getPort(), requestMsg, sendTag, this.logger);
 		reqStats.put(time, PROCESSING);

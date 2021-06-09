@@ -5,7 +5,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.ReferenceCountUtil;
 import net.sf.json.JSONObject;
-import pbftSimulator.Client;
+import pbftSimulator.PBFTSealer;
 import pbftSimulator.NettyMessage.*;
 import pbftSimulator.message.Message;
 import pbftSimulator.message.ReplyMsg;
@@ -18,7 +18,7 @@ import java.net.InetSocketAddress;
 import javax.management.relation.RelationException;
 
 public class ClientServerHandler extends SimpleChannelInboundHandler<String> {
-    private Client client;
+    private PBFTSealer client;
 	
     public ClientServerHandler() {
 		super();
@@ -26,7 +26,7 @@ public class ClientServerHandler extends SimpleChannelInboundHandler<String> {
 		// TODO Auto-generated constructor stub
 	}
 
-    public ClientServerHandler(Client client) {
+    public ClientServerHandler(PBFTSealer client) {
 		super();
         this.client = client;
 		// TODO Auto-generated constructor stub

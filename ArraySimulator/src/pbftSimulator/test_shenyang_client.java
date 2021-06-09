@@ -1,6 +1,6 @@
 package pbftSimulator;
 
-import pbftSimulator.Client;
+import pbftSimulator.PBFTSealer;
 import pbftSimulator.NettyServer.NettyServerBootstrap;
 import pbftSimulator.Utils;
 import pbftSimulator.message.Message;
@@ -65,10 +65,10 @@ public class test_shenyang_client {
 		
 
 		//初始化CN个客户端
-		Client[] clis = new Client[CN];
+		PBFTSealer[] clis = new PBFTSealer[CN];
 		for(int i = 0; i < CN; i++) {
 			//客户端的编号设置为负数
-			clis[i] = new Client(Client.getCliId(i), netDlysToNodes[i]); 
+			clis[i] = new PBFTSealer(PBFTSealer.getCliId(i), netDlysToNodes[i]); 
 		}
 
 
@@ -208,7 +208,7 @@ public class test_shenyang_client {
 		}
 	}
 	
-	public static int getStableRequestNum(Client[] clis) {
+	public static int getStableRequestNum(PBFTSealer[] clis) {
 		int num = 0;
 		for(int i = 0; i < clis.length; i++) {
 			num += clis[i].stableMsgNum();

@@ -97,7 +97,7 @@ public class test {
 		connectionFactory = new ActiveMQConnectionFactory(
 				ActiveMQConnection.DEFAULT_USER, //即admin
 				ActiveMQConnection.DEFAULT_PASSWORD,//即admin
-				"tcp://192.168.80.3:61616");//61616是在activemq.xml中定义的用来通信的端口，而8186是jetty的访问端口
+				"tcp://localhost:61616");//61616是在activemq.xml中定义的用来通信的端口，而8186是jetty的访问端口
 		
 		try {
 			//构造工厂得到连接对象

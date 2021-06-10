@@ -1,0 +1,68 @@
+{
+	"name": "shardSystem",
+    "dataPath": "../data/",
+
+	"consensus_protocol": "PBFT",
+	
+	"pbftNodes": [
+		{	
+			"id": 0,
+            "IP": "127.0.0.1",
+            "port": 64960
+		},
+        {	
+			"id": 0,
+            "IP": "127.0.0.1",
+            "port": 65456
+		},
+        {	
+			"id": 0,
+            "IP": "127.0.0.1",
+            "port": 61444
+		},
+        {	
+			"id": 0,
+            "IP": "127.0.0.1",
+            "port": 51988
+		},
+        {	
+			"id": 0,
+            "IP": "127.0.0.1",
+            "port": 51653
+		},
+        {	
+			"id": 0,
+            "IP": "127.0.0.1",
+            "port": 63367
+		},
+        {	
+			"id": 0,
+            "IP": "127.0.0.1",
+            "port": 60635
+		}
+	],
+    
+    "pbftSealer": [
+        {
+            "id": 0,
+            "IP": "127.0.0.1",
+            "port": 58052
+        }
+    ],
+
+    "activeMQ": {
+        "IP": "localhost",
+        "user": "admin",
+        "password": "admin",
+        "port": 61616
+    },
+
+	"shards": [
+		{
+            "members": [1,2,3,4,5,6,7]
+        },
+        {
+            "members": [8,9,10,11,12,13]
+        }
+	]
+}

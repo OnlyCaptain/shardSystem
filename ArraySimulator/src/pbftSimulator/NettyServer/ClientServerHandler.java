@@ -5,6 +5,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.ReferenceCountUtil;
 import net.sf.json.JSONObject;
+import pbftSimulator.MQ.MqSender;
 import pbftSimulator.PBFTSealer;
 import pbftSimulator.NettyMessage.*;
 import pbftSimulator.message.Message;
@@ -54,6 +55,19 @@ public class ClientServerHandler extends SimpleChannelInboundHandler<String> {
                     this.client.logger.debug(this.client.name+" receive Timeout");
                     baseMsg = new TimeOutMsg();
                     baseMsg = baseMsg.decoder(jsbuff);
+                    break;
+                case Message.Transaction:
+                    //将收到的Tx放入消息队列
+                    MqSender mqSender = new MqSender();
+                    mqSender.sendMessage(mqSender.session, mqSender.producer, jsbuff);
+
+                    //关闭Sender
+                    try {
+                        if (null != mqSender.connection)
+                            mqSender.connection.close();
+                    } catch (Throwable ignore) {
+                    }
+
                     break;
                 default:
                     this.client.logger.debug("【Error】消息类型错误！");

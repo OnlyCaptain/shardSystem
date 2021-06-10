@@ -34,6 +34,26 @@ public class Transaction {
 		this.gasPrice = 0.0;
 		this.accountNonce = 0;
 	}
+
+	public Transaction(String jsbuff) {
+		try {
+			JSONObject js = JSONObject.fromObject(jsbuff);
+			// txId = js.getLong("txId");
+			sender = js.getString("sender");
+			recipient = js.getString("recipient");
+			timestamp = js.getLong("timestamp");
+			value = js.getDouble("value");
+			if (!js.has("data") || js.getString("data").equals("null")) {
+				data = null;
+			}
+			else data = js.getString("data").getBytes();
+			gasPrice = js.getDouble("gasPrice");
+			accountNonce = js.getLong("accountNonce");
+		} catch (Exception e) {
+			System.out.println("json 转换失败"+e.getMessage());
+			System.out.println(jsbuff);
+		} 
+	}
 	
 	public Transaction(String sender, String recipient, double value, byte[] data, long timestamp, Double gasPrice, long accountNonce) {
 		this.sender = sender;
@@ -81,13 +101,18 @@ public class Transaction {
 	public String toString() {
 		return encoder();
 	}
+
+	public String getDigest() {
+		return Utils.getMD5Digest(this.encoder());
+	}
+
 	/**
 	 * 对消息进行编码，用于网络通信
 	 * @return 编码的字符串，格式采用JSON
 	 */
 	public String encoder() {
 		JSONObject jsout = new JSONObject();
-		jsout.put("txId", txId);
+		// jsout.put("txId", txId);
 		jsout.put("sender", sender);
 		jsout.put("recipient", recipient);
 		jsout.put("timestamp", 	timestamp);
@@ -105,7 +130,7 @@ public class Transaction {
 		Transaction output = new Transaction();
 		try {
 			JSONObject js = JSONObject.fromObject(jsin);
-			output.txId = js.getLong("txId");
+			// output.txId = js.getLong("txId");
 			output.sender = js.getString("sender");
 			output.recipient = js.getString("recipient");
 			output.timestamp = js.getLong("timestamp");

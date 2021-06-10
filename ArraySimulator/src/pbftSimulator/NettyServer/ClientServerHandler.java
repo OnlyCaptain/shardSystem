@@ -38,6 +38,7 @@ public class ClientServerHandler extends SimpleChannelInboundHandler<String> {
     }
     @Override
     protected void messageReceived(ChannelHandlerContext channelHandlerContext, String jsbuff) throws Exception {
+        
         Message baseMsg = null; 
         try {
             JSONObject js = JSONObject.fromObject(jsbuff);

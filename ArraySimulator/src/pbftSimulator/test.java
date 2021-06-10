@@ -19,6 +19,18 @@ import pbftSimulator.replica.Replica;
 import pbftSimulator.replica.ByztReplica;
 
 import shardSystem.shardNode;
+// import java.rmi.activation.Activatable;
+import org.apache.activemq.ActiveMQConnection;
+import org.apache.activemq.ActiveMQConnectionFactory;
+
+
+import javax.jms.Connection;
+import javax.jms.ConnectionFactory;
+import javax.jms.DeliveryMode;
+import javax.jms.Destination;
+import javax.jms.MessageProducer;
+import javax.jms.Session;
+import javax.jms.TextMessage;
 
 public class test {
 	
@@ -69,33 +81,79 @@ public class test {
 			System.out.print(String.valueOf(clientPorts[i]).concat(" "));
 		}
 		System.out.println();
+	
+
+
+		ConnectionFactory connectionFactory;
+		//Connection JMS客户端到JMS provider的连接
+		Connection connection = null;
+		//Session 一个发送或者接收消息的线程
+		Session session;
+		//Destination 消息发送目的地，消息发送给谁接收
+		Destination destination;
+		//MessageProducer 消息发送者
+		MessageProducer messageProducer;
+		//构造ConnectionFactory 实例对象，此处采用ActiveMQ的实现jar
+		connectionFactory = new ActiveMQConnectionFactory(
+				ActiveMQConnection.DEFAULT_USER, //即admin
+				ActiveMQConnection.DEFAULT_PASSWORD,//即admin
+				"tcp://192.168.80.3:61616");//61616是在activemq.xml中定义的用来通信的端口，而8186是jetty的访问端口
+		
+		try {
+			//构造工厂得到连接对象
+			connection = connectionFactory.createConnection();
+			//启动
+			connection.start();
+			//获取操作连接
+			session = connection.createSession(Boolean.TRUE, Session.AUTO_ACKNOWLEDGE);
+			//创建一个Queue，名称为SongLiGuo_FirstQueue(创建queue)
+                        destination = session.createQueue("FirstQueue");
+			//得到消息生产者【发送者】
+			messageProducer = session.createProducer(destination);
+			//设置不持久化，根据实际情况而定
+			messageProducer.setDeliveryMode(DeliveryMode.NON_PERSISTENT);
+			//构造消息，此处写死，项目就是参数或者方法获取
+			// sendMessage(session, messageProducer);
+			System.out.println("消息队列创建成功");
+			session.commit();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}finally {
+			try {
+				if(null != connection){
+					connection.close();
+				}
+			} catch (Throwable ignore) {
+			}
+		}
+
 
 		// boolean[] byzts = {true, false, false, false, false, false, true};
-		Replica[] reps = new Replica[RN];
-		for(int i = 0; i < RN; i++) {
-//			if(byzts[i]) {
-//				reps[i] = new ByztReplica(i, IPs[i], ports[i], netDlys[i], netDlysToClis[i]);
-//			}else {
-				reps[i] = new shardNode(i, IPs[i], ports[i], netDlys[i], netDlysToClis[i], IPs, ports, clientIPs, clientPorts);
-//				}
-		}
-		
-		//初始化CN个客户端
-//		Client[] clis = new Client[CN];
-//		for(int i = 0; i < CN; i++) {
-//			//客户端的编号设置为负数
-//			clis[i] = new Client(Client.getCliId(i), clientIPs[i], clientPorts[i], netDlysToNodes[i], IPs, ports); 
+//		Replica[] reps = new Replica[RN];
+//		for(int i = 0; i < RN; i++) {
+////			if(byzts[i]) {
+////				reps[i] = new ByztReplica(i, IPs[i], ports[i], netDlys[i], netDlysToClis[i]);
+////			}else {
+//				reps[i] = new shardNode(i, IPs[i], ports[i], netDlys[i], netDlysToClis[i], IPs, ports, clientIPs, clientPorts);
+////				}
 //		}
-		
-		Logger logger = Logger.getLogger(test.class);
-		 Layout layout = new PatternLayout("%-d{yyyy-MM-dd HH:mm:ss} [ %l:%r ms ] %n[%p] %m%n");
-//		Layout layout = new SimpleLayout();
-		FileAppender appender = new FileAppender(layout, "./a.log");
-		appender.setAppend(false);
-		appender.activateOptions(); 
-		logger.addAppender(appender);
-		logger.debug("this is debug");
-		logger.info("this is info");
+//		
+//		//初始化CN个客户端
+////		Client[] clis = new Client[CN];
+////		for(int i = 0; i < CN; i++) {
+////			//客户端的编号设置为负数
+////			clis[i] = new Client(Client.getCliId(i), clientIPs[i], clientPorts[i], netDlysToNodes[i], IPs, ports); 
+////		}
+//		
+//		Logger logger = Logger.getLogger(test.class);
+//		 Layout layout = new PatternLayout("%-d{yyyy-MM-dd HH:mm:ss} [ %l:%r ms ] %n[%p] %m%n");
+////		Layout layout = new SimpleLayout();
+//		FileAppender appender = new FileAppender(layout, "./a.log");
+//		appender.setAppend(false);
+//		appender.activateOptions(); 
+//		logger.addAppender(appender);
+//		logger.debug("this is debug");
+//		logger.info("this is info");
 		// //初始随机发送INFLIGHT个请求消息
 		// Random rand = new Random(555);
 		// long requestNums = 0;

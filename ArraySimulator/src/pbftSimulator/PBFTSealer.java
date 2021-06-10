@@ -227,7 +227,7 @@ public class PBFTSealer {
 		}
 		//否则给所有的节点广播request消息
 		for(int i = 0; i < Simulator.RN; i++) {
-			Message requestMsg = new RequestMsg("Message", "null", t, id, id, i, cliTimeOutMsg.rcvtime + netDlys[i]);
+			Message requestMsg = new RequestMsg("Message", null, t, id, id, i, cliTimeOutMsg.rcvtime + netDlys[i]);
 			sendMsg(replicaAddrs.get(i).getIP(), replicaAddrs.get(i).getPort(), requestMsg, sendTag, this.logger);
 			// Simulator.sendMsg(requestMsg, sendTag, this.logger);
 		}

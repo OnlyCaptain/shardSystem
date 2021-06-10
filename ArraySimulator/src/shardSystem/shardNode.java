@@ -16,12 +16,15 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import org.apache.log4j.Logger;
 
+import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 
 
@@ -94,7 +97,8 @@ public class shardNode extends Replica {
         try {
 			Statement stmt = conn.createStatement();
 			String sql = "CREATE TABLE IF NOT EXISTS transactions (\n" 
-					+ " id integer PRIMARY KEY AUTOINCREMENT,\n" 
+					// + " id integer PRIMARY KEY AUTOINCREMENT,\n" 
+					+ " digest text PRIMARY KEY NOT NULL,\n"
 					+ " sender text NOT NULL,\n"
 					+ " recipient text NOT NULL,\n"
 					+ " timestamp integer NOT NULL,\n"
@@ -106,8 +110,9 @@ public class shardNode extends Replica {
 			logger.info("Connection to SQLite has been established: ".concat(this.url));
 
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            this.logger.error("创建数据库出错"+e.getMessage());
         } finally {
+			logger.info("创建数据库完成");
             try {
                 if (conn != null) {
                     conn.close();
@@ -119,21 +124,82 @@ public class shardNode extends Replica {
     }
 
 	/**
+	 * 判断交易是否被执行过，true说明有，false说明没有
+	 * @param tx
+	 * @return
+	 */
+	public boolean isExecuted(Transaction tx) {
+		boolean executedFlag = false;
+		String sql = "SELECT * FROM transactions where digest = ?";
+
+		Connection conn = connect();
+        try {
+			PreparedStatement pstmt = conn.prepareStatement(sql);
+			// Statement stmt = conn.createStatement();
+			pstmt.setString(1, tx.getDigest());
+            // 
+			ResultSet rs = pstmt.executeQuery();
+			while (rs.next()) {
+				executedFlag = true;
+				this.logger.info("这个交易已经被执行过："+rs.getString("sender")
+							+rs.getString("recipient")
+							+rs.getDouble("value")
+							+rs.getLong("timestamp")
+							+rs.getLong("gasPrice")
+							+rs.getLong("accountNonce")
+							);
+			}
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        } finally {
+            try {
+                if (conn != null) {
+                    conn.close();
+                }
+            } catch (SQLException ex) {
+                System.out.println(ex.getMessage());
+            }
+        }
+		return executedFlag;
+	}
+
+	/**
 	 * 处理交易
 	 * TODO
-	 * @param tx 交易类
+	 * @param txs 交易类的数组
 	 */
-	public void txProcess(Transaction tx) {
-		if (!validateTx(tx)) {
-			logger.warn("this is a invalid transaction. "+tx.toString());
-			return;
+	public void txProcess(ArrayList<Transaction> txs) {
+		for (int i = 0; i < txs.size(); i ++) {
+			Transaction tx = txs.get(i);
+			if (!validateTx(tx)) {
+				logger.warn("this is a invalid transaction. "+tx.toString());
+				continue;
+			}
+			if (isExecuted(tx)) {
+				// logger.warn("")
+				continue;
+			}
+			// txPending.add(tx);
+			// 这里可能需要判断是哪个地方的交易，然后再转发 relay Transaction。
+			// 考虑到 Primary 的存在，可以把转发部分交给Primary。
+			if (isPrimary()) {
+				// if (queryShardID(tx.recipient))
+				sendCrossTx();
+			}
+
+
+			// 以下是存交易
+			Connection conn = connect();
+			txMemory(conn, tx);
+			try {
+				if (conn != null) {
+					conn.close();
+				}
+			} catch (SQLException ex) {
+				System.out.println(ex.getMessage());
+			}
 		}
-//		if (shardID == queryShardID(tx.getSender())) {
-			txPending.add(tx);
-			txMemory(tx);
-			printTx();
-//		}
-		// TODO
+		printTx();
 	}
 
 	/**
@@ -166,10 +232,9 @@ public class shardNode extends Replica {
 	 * 插入数据库
 	 * @param tx 交易类
 	 */
-	public void txMemory(Transaction tx) {
-		String sql = "INSERT INTO transactions(sender, recipient, value, timestamp, gasPrice, accountNonce) VALUES(?,?,?,?,?,?)";
-
-		Connection conn = connect();
+	public void txMemory(Connection conn, Transaction tx) {
+		String sql = "INSERT INTO transactions(sender, recipient, value, timestamp, gasPrice, accountNonce, digest) VALUES(?,?,?,?,?,?,?)";
+		// Connection conn = connect();
         try {
 			PreparedStatement pstmt = conn.prepareStatement(sql);
 			// Statement stmt = conn.createStatement();
@@ -179,20 +244,13 @@ public class shardNode extends Replica {
 			pstmt.setLong(4, tx.getTimestamp());
 			pstmt.setDouble(5, tx.getGasPrice());
 			pstmt.setLong(6, tx.getAccountNonce());
+			pstmt.setString(7, tx.getDigest());
 
             pstmt.executeUpdate();
 			logger.info("Connection to SQLite has been established: ".concat(this.url));
 
         } catch (SQLException e) {
             System.out.println(e.getMessage());
-        } finally {
-            try {
-                if (conn != null) {
-                    conn.close();
-                }
-            } catch (SQLException ex) {
-                System.out.println(ex.getMessage());
-            }
         }
 	}
 	
@@ -239,6 +297,7 @@ public class shardNode extends Replica {
 	public boolean validateTx(Transaction tx) {
 		return true;
 	}
+
 	
 	public void execute(Message msg, long time) {
 		PrePrepareMsg mm = (PrePrepareMsg)msg;
@@ -246,8 +305,6 @@ public class shardNode extends Replica {
 		ReplyMsg rm = null;
 		if(mm.m != null) {
 			rem = (RequestMsg)(mm.m);
-			this.logger.info("再次确认request的消息结构："+rem.m.get(0));
-
 			rm = new ReplyMsg(mm.v, rem.t, rem.c, id, "result", id, rem.c, time + netDlyToClis[PBFTSealer.getCliArrayIndex(rem.c)]);
 		}
 		
@@ -256,7 +313,13 @@ public class shardNode extends Replica {
 			setTimer(lastRepNum+1, time);
 			if(rem != null) {
 				// Simulator.sendMsg(rm, sendTag, this.logger);
+				this.logger.info("再次确认request的消息结构："+rem.m.get(0));
 				// executeTx();
+				ArrayList<Transaction> txs = new ArrayList<>();
+				for (int i = 0; i < rem.m.size(); i ++) {
+					txs.add(new Transaction(rem.m.get(i).toString()));
+				}
+				txProcess(txs);
 				// 处理交易
 				sendMsg(clients.get(PBFTSealer.getCliId(rem.c)).getIP(), clients.get(PBFTSealer.getCliId(rem.c)).getPort(), rm, sendTag, this.logger);
 				LastReply llp = lastReplyMap.get(rem.c);

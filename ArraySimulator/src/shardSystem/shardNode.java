@@ -199,7 +199,7 @@ public class shardNode extends Replica {
 				System.out.println(ex.getMessage());
 			}
 		}
-		printTx();
+		// printTx();
 	}
 
 	/**

@@ -7,7 +7,7 @@ import java.util.Map;
 
 import pbftSimulator.NettyClient.NettyClientBootstrap;
 import pbftSimulator.NettyMessage.Constants;
-import pbftSimulator.NettyServer.ClientServerHandler;
+import pbftSimulator.NettyServer.PBFTSealerServerHandler;
 import pbftSimulator.message.CliTimeOutMsg;
 import pbftSimulator.message.Message;
 import pbftSimulator.message.ReplyMsg;
@@ -79,10 +79,14 @@ public class PBFTSealer {
 		curWorkspace = buf.append(String.valueOf(id)).append("/").toString();
 		buildWorkspace();
 
+		// 开启服务端
 		try {
-			// this.bootstrap = new NettyServerBootstrap(port, this);
 			bind();
 		} catch (InterruptedException e) { e.printStackTrace(); }
+
+		// 开启监听TxPool的线程
+		Thread t = new Thread(new MyRunnable());
+		t.start();
 	}
 	
 	/**
@@ -139,7 +143,7 @@ public class PBFTSealer {
                 ChannelPipeline p = socketChannel.pipeline();
                 p.addLast(new ObjectEncoder());
                 p.addLast(new ObjectDecoder(ClassResolvers.cacheDisabled(null)));
-                p.addLast(new ClientServerHandler(PBFTSealer.this));
+                p.addLast(new PBFTSealerServerHandler(PBFTSealer.this));
             }
         });
         ChannelFuture f= bootstrap.bind(this.port).sync();
@@ -163,6 +167,10 @@ public class PBFTSealer {
 		}
 		
 	}
+
+	public void threadProcess(String buff) {
+
+	}
 	
 	public void sendRequest(ArrayList<Transaction> txs, long time) {
 		//避免时间重复
@@ -174,6 +182,9 @@ public class PBFTSealer {
 		for (int i = 0; i < txs.size(); i ++) {
 			txStr.add(txs.get(i));
 		}
+		// for (int i = 0; i < txs.size(); i ++) {
+		// 	System.out.println(txStr.get(i).toString());
+		// }
 		// String txStr = "[";
 		// for (int i = 0; i < txs.size(); i ++) {
 		// 	txStr += txs.get(i).encoder();
@@ -185,10 +196,9 @@ public class PBFTSealer {
 		// System.out.println(jaArry);
 		
 
-		// Message requestMsg = new RequestMsg("Message", txStr, time, id, id, priId, time + netDlys[priId]);
 		Message requestMsg = new RequestMsg("Message", txStr, time, id, id, priId, time + netDlys[priId]);
 
-		// Simulator.sendMsg(requestMsg, sendTag, this.logger);
+		Simulator.sendMsg(requestMsg, sendTag, this.logger);
 		sendMsg(replicaAddrs.get(priId).getIP(), replicaAddrs.get(priId).getPort(), requestMsg, sendTag, this.logger);
 		reqStats.put(time, PROCESSING);
 		reqMsgs.put(time, requestMsg);
@@ -320,6 +330,28 @@ public class PBFTSealer {
 			e.printStackTrace();
 		}
 	}
+}
 
-
+class MyRunnable implements Runnable {
+	@Override
+	public void run() {
+		MqListener mqListener = new MqListener();
+		System.out.println("开始监听TxPool");
+        while (true) {
+            // 设置接收者接收消息的时间，这里设定为100s.即100s没收到新消息就会自动关闭
+            TextMessage message = (TextMessage) mqListener.consumer.receive();
+            if (null != message) {
+                System.out.println("收到消息" + message.getText());
+				PBFTSealer.threadProcess(message.getText());
+            } else {
+                break;
+            }
+        }
+        //关闭listener
+        try {
+            if (null != mqListener.connection)
+                mqListener.connection.close();
+        } catch (Throwable ignore) {
+        }
+	}
 }

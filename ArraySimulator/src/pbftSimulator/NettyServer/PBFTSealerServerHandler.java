@@ -18,16 +18,16 @@ import java.net.InetSocketAddress;
 
 import javax.management.relation.RelationException;
 
-public class ClientServerHandler extends SimpleChannelInboundHandler<String> {
+public class PBFTSealerServerHandler extends SimpleChannelInboundHandler<String> {
     private PBFTSealer client;
 	
-    public ClientServerHandler() {
+    public PBFTSealerServerHandler() {
 		super();
         this.client = null;
 		// TODO Auto-generated constructor stub
 	}
 
-    public ClientServerHandler(PBFTSealer client) {
+    public PBFTSealerServerHandler(PBFTSealer client) {
 		super();
         this.client = client;
 		// TODO Auto-generated constructor stub
@@ -56,8 +56,9 @@ public class ClientServerHandler extends SimpleChannelInboundHandler<String> {
                     baseMsg = new TimeOutMsg();
                     baseMsg = baseMsg.decoder(jsbuff);
                     break;
-                case Message.Transaction:
+                case Message.TRANSACTION:
                     //将收到的Tx放入消息队列
+                    // baseMsg = new 
                     MqSender mqSender = new MqSender();
                     mqSender.sendMessage(mqSender.session, mqSender.producer, jsbuff);
 
@@ -86,7 +87,7 @@ public class ClientServerHandler extends SimpleChannelInboundHandler<String> {
     
         } catch (Exception e) {
             e.printStackTrace();
-            System.out.println("exit.");
+            System.out.println("PBFTSealer exit.");
         } finally {
             ReferenceCountUtil.release(baseMsg);
         }

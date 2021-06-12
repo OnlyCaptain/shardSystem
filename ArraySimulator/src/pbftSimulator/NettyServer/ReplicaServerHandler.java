@@ -76,16 +76,16 @@ public class ReplicaServerHandler extends SimpleChannelInboundHandler<String> {
             // this.replica.logger.info(jsbuff);
             // this.replica.logger.info(baseMsg.encoder());
             replica.msgProcess(baseMsg);
-            if(NettyChannelMap.get(baseMsg.getClientId())==null) {
-                NettyChannelMap.add(baseMsg.getClientId(), (SocketChannel) channelHandlerContext.channel());    
-                InetSocketAddress insocket = (InetSocketAddress) channelHandlerContext.channel().remoteAddress();
-                String ip = insocket.getAddress().getHostAddress();
-                int port = insocket.getPort();
-            }
+            // if(NettyChannelMap.get(baseMsg.getClientId())==null) {
+            //     NettyChannelMap.add(baseMsg.getClientId(), (SocketChannel) channelHandlerContext.channel());    
+            //     InetSocketAddress insocket = (InetSocketAddress) channelHandlerContext.channel().remoteAddress();
+            //     String ip = insocket.getAddress().getHostAddress();
+            //     int port = insocket.getPort();
+            // }
     
         } catch (Exception e) {
             e.printStackTrace();
-            System.out.println("exit.");
+            System.out.println("ShardNode exit.");
         } finally {
             ReferenceCountUtil.release(baseMsg);
         }

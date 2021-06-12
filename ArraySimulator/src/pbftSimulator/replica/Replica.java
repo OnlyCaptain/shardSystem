@@ -258,8 +258,8 @@ public class Replica {
 		}
 		// System.out.println(d);
 		// Simulator.sendMsgToOthers(cm, id, sendTag, this.logger);
-		sendMsgToOthers(cm, sendTag, this.logger);
 		addMessageToCache(cm);
+		sendMsgToOthers(cm, sendTag, this.logger);
 	}
 	
 	public void execute(Message msg, long time) {
@@ -307,7 +307,7 @@ public class Replica {
 				cnt++;
 			}
 		}
-		this.logger.debug("cnt is "+cnt+" and d is "+m.mString());
+		this.logger.debug("In prepare: cnt is "+cnt+" and d is "+m.mString());
 		if(cnt >= 2 * Utils.getMaxTorelentNumber(Simulator.RN)) {
 			return true;
 		}
@@ -325,6 +325,7 @@ public class Replica {
 				cnt++;
 			}
 		}
+		this.logger.debug("In commited: cnt is "+cnt+" and d is "+m.mString());
 		if(cnt > 2 * Utils.getMaxTorelentNumber(Simulator.RN)) {
 			return true;
 		}
@@ -436,8 +437,8 @@ public class Replica {
 		String d = Utils.getMD5Digest(prePrepareMsg.mString());
 		Message prepareMsg = new PrepareMsg(msgv, msgn, d, id, id, id, msg.rcvtime);
 		if(isInMsgCache(prepareMsg)) return;
-		addMessageToCache(prepareMsg);
 		// Simulator.sendMsgToOthers(prepareMsg, id, sendTag, this.logger);
+		addMessageToCache(prepareMsg);
 		sendMsgToOthers(prepareMsg, sendTag, this.logger);
 	}
 	
@@ -783,6 +784,7 @@ public class Replica {
 			bootstrap.eventLoopGroup.shutdownGracefully();
 		} catch (InterruptedException e) {
 			e.printStackTrace();
+			System.out.println("发送失败");
 		}
 		
 

@@ -11,6 +11,7 @@ import pbftSimulator.Simulator;
 
 public class Message {
 	
+	public static final int TRANSACTION = 8;
 	public static final int REQUEST = 0;		
 	public static final int PREPREPARE = 1;
 	public static final int PREPARE = 2;
@@ -19,7 +20,6 @@ public class Message {
 	public static final int CHECKPOINT = 5;
 	public static final int VIEWCHANGE = 6;
 	public static final int NEWVIEW = 7;
-	public static final int Transaction = 8;
 	
 	public static final int TIMEOUT = 8;					//用来提醒节点超时的虚拟消息
 	public static final int CLITIMEOUT = 9;					//用来提醒客户端超时的虚拟消息

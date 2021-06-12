@@ -96,7 +96,7 @@ public class Transaction {
 
 	public void setValue(double value) { this.value = value; }
 
-	public void setTimeStamp(long t) { this.timestamp = t; }
+	public void setTimestamp(long t) { this.timestamp = t; }
 
 	public String toString() {
 		return encoder();

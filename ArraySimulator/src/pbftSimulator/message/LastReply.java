@@ -1,5 +1,6 @@
 package pbftSimulator.message;
 
+
 public class LastReply {
 	
 	public int c;

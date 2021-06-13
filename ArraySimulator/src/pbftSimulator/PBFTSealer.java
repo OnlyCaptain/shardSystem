@@ -67,7 +67,7 @@ public class PBFTSealer {
 
 	public Semaphore lastBlockEnd;
 
-	public PBFTSealer(int id, String IP, int port, int[] netDlys, String[] replicaIPs, int[] replicaPorts) {
+	public PBFTSealer(String name, int id, String IP, int port, int[] netDlys, ArrayList<PairAddress> curIPports) {
 		this.id = id;
 		this.netDlys = netDlys;
 		this.IP = IP;
@@ -80,12 +80,10 @@ public class PBFTSealer {
 		this.time = 0;
 		this.lastBlockEnd = new Semaphore(1, true);
 
-		for (int i = 0; i < replicaIPs.length; i ++) {
-			replicaAddrs.add(new PairAddress(i, replicaIPs[i], replicaPorts[i]));
-		}
+		this.replicaAddrs = curIPports;
 
 		// 定义当前Replica的工作目录
-		this.name = "PBFTSealer_".concat(String.valueOf(id));
+		this.name = "PBFTSealer_".concat(String.valueOf(id)).concat("_").concat(name);
 		StringBuffer buf = new StringBuffer("./workspace/");
 		curWorkspace = buf.append(this.name).append("/").toString();
 		buildWorkspace();
@@ -343,7 +341,7 @@ class MyRunnable implements Runnable {
 	@Override
 	public void run() {
 		MqListener mqListener = new MqListener();
-		System.out.println("开始监听TxPool"+this.pbftSealer.name);
+		System.out.println("开始监听TxPool of "+this.pbftSealer.name);
 		int count = 0;
         while (true) {
 			ArrayList<Transaction> txsBuffer = new ArrayList<>();

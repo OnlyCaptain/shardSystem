@@ -72,7 +72,9 @@ public class test {
 	
 	public static void main(String[] args) {
 		int[] usefulPorts = netPortsInit(SHARDNODENUM * SHARDNUM);
+		
 		Map<String, ArrayList<PairAddress>> topos = new HashMap<> ();
+
 		for (int i = 0; i < SHARDNUM; i ++) {
 			String shardID = String.valueOf(i);
 			topos.put(shardID, new ArrayList<PairAddress>());

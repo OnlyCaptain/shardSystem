@@ -3,7 +3,9 @@ package pbftSimulator;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Random;
@@ -12,6 +14,7 @@ import java.util.Set;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
+import net.sf.json.JSONObject;
 import pbftSimulator.message.Message;
 import pbftSimulator.replica.Replica;
 import shardSystem.ByztShardNode;
@@ -39,7 +42,12 @@ public class Simulator {
 
 	public static final int BLOCKTXNUM = 50;
 
-	public static final Level LOGLEVEL = Level.DEBUG;
+	public static final int SHARDNUM = 3;     // 分片个数
+	public static final int SHARDNODENUM = RN;   // 每个分片的节点数量
+	public static final int SLICENUM = 2;    // 地址倒数几位，作为识别分片的依据
+	public static final int PBFTSEALERPORT = 58052;
+
+	public static final Level LOGLEVEL = Level.INFO;
 	public static final int REQTXSIZE = 50;
 
 	//消息优先队列（按消息计划被处理的时间戳排序）
@@ -76,24 +84,31 @@ public class Simulator {
 		// System.out.println();
 
 		// boolean[] byzts = {true, false, false, false, false, false, true};
-		Replica[] reps = new Replica[RN];
-		for(int i = 0; i < RN; i++) {
-//			if(byzts[i]) {
-//				reps[i] = new ByztReplica(i, IPs[i], ports[i], netDlys[i], netDlysToClis[i]);
-//			}else {
-				reps[i] = new shardNode(i, IPs[i], ports[i], netDlys[i], netDlysToClis[i], IPs, ports, clientIPs, clientPorts);
-//				}
+		int[] usefulPorts = netPortsInit(SHARDNODENUM * SHARDNUM);
+		
+		Map<String, ArrayList<PairAddress>> topos = new HashMap<> ();
+
+		for (int i = 0; i < SHARDNUM; i ++) {
+			String shardID = String.valueOf(i);
+			topos.put(shardID, new ArrayList<PairAddress>());
+			for (int j = 0; j < SHARDNODENUM; j ++) {
+				topos.get(shardID).add(new PairAddress(j, "127.0.0.1", usefulPorts[i*SHARDNODENUM+j]));
+			}
 		}
+		System.out.println(topos.toString());
+		JSONObject js = JSONObject.fromObject(topos);
+		System.out.println(js.toString());
 		
-		
-	//初始化CN个
-	//		PBFTSealer[] clis = new PBFTSealer[CN];
-	//		for(int i = 0; i < CN; i++) {
-		//			//客户端的编号设置为负数
-		//			clis[i] = new PBFTSealer(PBFTSealer.getCliId(i), clientIPs[i], clientPorts[i], netDlysToNodes[i], IPs, ports); 
-		//		}
-		
-		//		//初始随机发送INFLIGHT个请求消息
+
+
+		Replica[] reps = new Replica[SHARDNUM * SHARDNODENUM];
+		for (int i = 0; i < SHARDNUM; i ++) {
+			String shardID = String.valueOf(i);
+			for (int j = 0; j < SHARDNODENUM; j ++) {
+				reps[i*SHARDNODENUM + j] = new shardNode(shardID, j, topos.get(shardID).get(j).getIP(), topos.get(shardID).get(j).getPort(), netDlys[j], netDlysToClis[j], topos);
+			}
+		}
+
 		Random rand = new Random(555);
 		long requestNums = 0;
 		ArrayList<Transaction> txs = getTxsFromFile("../data/Tx_500.csv");
@@ -105,7 +120,7 @@ public class Simulator {
 			start += 50;
 			requestNums++;
 		}
-		
+
 //		if (msgQue.isEmpty()) 
 //			System.out.println("Error!");
 //		Message testMsg = msgQue.poll();

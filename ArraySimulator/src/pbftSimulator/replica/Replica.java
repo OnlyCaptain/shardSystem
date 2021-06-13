@@ -56,6 +56,7 @@ public class Replica {
 	public static final int STABLE = 1;			//已经收到了f+1个reply
 	public String receiveTag = "Receive";
 	public String sendTag = "Send";
+	public String shardID;    // 节点所属分片 ID
 
 	public String name;
 	public int id; 										//当前节点的id
@@ -87,6 +88,13 @@ public class Replica {
 	public Map<Message, Integer> reqStats;			//request请求状态
 
 	public PBFTSealer pbftSealer;
+	Map<String, ArrayList<PairAddress>> topos;  // 这个东西，应该有如下的结构：
+	/** 
+	 * topos: {
+	 * 	 "0": [ {ip:.., port:.., id:...}, {}, ... ]
+	 * 	 "1": [ {ip:.., port:.., id:...}, {}, ... ]
+	 * }
+	*/
 	
 	public static Comparator<PrePrepareMsg> nCmp = new Comparator<PrePrepareMsg>(){
 		@Override
@@ -95,14 +103,16 @@ public class Replica {
 		}
 	};
 	
-	public Replica(String name, int id, String IP, int port, int[] netDlys, int[] netDlyToClis, String[] IPs, int[] ports, String[] cIPs, int[] cports) {
+	public Replica(String name, String shardID, int id, String IP, int port, int[] netDlys, int[] netDlyToClis,  Map<String, ArrayList<PairAddress>> topos) {
+		this.name = "shard_".concat(shardID).concat("_").concat(name).concat(String.valueOf(id));
+		this.shardID = shardID;
 		this.id = id;
-		this.netDlys = netDlys;
-		this.netDlyToClis = netDlyToClis;
 		this.IP = IP;
 		this.port = port;
-		this.name = name.concat(String.valueOf(id));
-		
+		this.netDlys = netDlys;
+		this.netDlyToClis = netDlyToClis;
+		this.topos = topos;
+
 		msgCache = new HashMap<>();
 		lastReplyMap = new HashMap<>();
 		checkPoints = new HashMap<>();
@@ -112,15 +122,17 @@ public class Replica {
 		neighbors = new ArrayList<PairAddress>();
 		clients = new ArrayList<PairAddress>();
 
-		for (int i = 0; i < IPs.length; i ++) {
-			if (ports[i] == port)  
+		ArrayList<PairAddress> IPAddrs = topos.get(shardID);
+
+		for (int i = 0; i < IPAddrs.size(); i ++) {
+			if (IPAddrs.get(i).getPort() == port && IPAddrs.get(i).getIP() == IP)  
 				continue;
-			neighbors.add(new PairAddress(i, IPs[i], ports[i]));
+			neighbors.add(IPAddrs.get(i));
 		}
 
-		for (int i = 0; i < cIPs.length; i ++) {
-			clients.add(new PairAddress(PBFTSealer.getCliId(-1), cIPs[i], cports[i]));
-		}
+		// if (isPrimary())
+		clients.add(new PairAddress(PBFTSealer.getCliId(0), this.IP, Simulator.PBFTSEALERPORT+Integer.parseInt(shardID)));
+		
 		
 		// 定义当前Replica的工作目录
 		curWorkspace = "./workspace/".concat(this.name).concat("/");
@@ -134,7 +146,9 @@ public class Replica {
 		} catch (InterruptedException e) { e.printStackTrace(); }
 
 		if (isPrimary()) {
-			this.pbftSealer = new PBFTSealer(PBFTSealer.getCliId(0), cIPs[0], cports[0], netDlys, IPs, ports);
+			ArrayList<PairAddress> curIPports = topos.get(shardID);
+			System.out.println(String.format("分片 %s 的打包器建立在端口 %d 上", shardID, clients.get(0).getPort()));
+			this.pbftSealer = new PBFTSealer(this.name, PBFTSealer.getCliId(0), clients.get(0).getIP(), clients.get(0).getPort(), netDlys, curIPports);
 		}
 	}
 

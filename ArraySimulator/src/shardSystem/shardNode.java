@@ -1,6 +1,8 @@
 package shardSystem;
 
 import pbftSimulator.PBFTSealer;
+import pbftSimulator.PairAddress;
+import pbftSimulator.Simulator;
 import pbftSimulator.message.CheckPointMsg;
 import pbftSimulator.message.LastReply;
 import pbftSimulator.message.Message;
@@ -33,13 +35,9 @@ import net.sf.json.JSONObject;
  * 分片的节点。除了pbft之外的功能
  */
 public class shardNode extends Replica {
-	
-	public static final int SHARDNUM = 1;    // 分片的数量
-	public static final int SLICENUM = 2;    // 地址倒数几位，作为识别分片的依据
 
 	public static String NAME = "shardNode_";
 
-	public String shardID;    // 节点所属分片 ID
 	public String name;
 	public String url;    // 数据库 url
 	public Map<String, String> addrShard;
@@ -47,12 +45,12 @@ public class shardNode extends Replica {
 
 
 
-	public shardNode(int id, String IP, int port, int[] netDlys, int[] netDlyToClis, String[] IPs, int[] ports, String[] cIPs, int[] cports) {
-		super(NAME, id, IP, port, netDlys, netDlyToClis, IPs, ports, cIPs, cports);
 
-		this.name = NAME.concat(String.valueOf(id));
+	public shardNode(String shardID, int id, String IP, int port, int[] netDlys, int[] netDlyToClis, Map<String, ArrayList<PairAddress>> topos) {
+		super(NAME, shardID, id, IP, port, netDlys, netDlyToClis, topos);
+
+		this.name = "shard_".concat(shardID).concat("_").concat(NAME).concat(String.valueOf(id));
 		System.out.println(this.curWorkspace);
-		shardID = "0";
 		url = "jdbc:sqlite:".concat(this.curWorkspace).concat(this.name).concat("-sqlite.db");
 		createDB();
 		txPending = new PriorityQueue<>(Transaction.cmp);
@@ -60,13 +58,13 @@ public class shardNode extends Replica {
 		// 地址映射分片表
 		String[] hex = {"0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"};
 		addrShard = new HashMap<>();
-		int n = (int)Math.ceil(16*16 / SHARDNUM), k = n, curS = 0;
+		int n = (int)Math.ceil(16*16 / Simulator.SHARDNUM), k = n, curS = 0;
 		// 两位 -> 
 		for (int i = 0; i < 16; i ++) {
 			for (int j = 0; j < 16; j ++) {
-				addrShard.put(hex[i].concat(hex[j]), String.valueOf(curS));
+				addrShard.put(hex[i].concat(hex[j]), (String)topos.keySet().toArray()[curS]);
 				k --;
-				if (k <= 0) {
+				if (k < 0) {
 					k = n;
 					curS ++;
 				}
@@ -141,13 +139,13 @@ public class shardNode extends Replica {
 			ResultSet rs = pstmt.executeQuery();
 			while (rs.next()) {
 				executedFlag = true;
-				// this.logger.info("这个交易已经被执行过："+rs.getString("sender")
-				// 			+rs.getString("recipient")
-				// 			+rs.getDouble("value")
-				// 			+rs.getLong("timestamp")
-				// 			+rs.getLong("gasPrice")
-				// 			+rs.getLong("accountNonce")
-				// 			);
+				this.logger.info("这个交易已经被执行过："+rs.getString("sender")
+							+rs.getString("recipient")
+							+rs.getDouble("value")
+							+rs.getLong("timestamp")
+							+rs.getLong("gasPrice")
+							+rs.getLong("accountNonce")
+							);
 			}
         } catch (SQLException e) {
             System.out.println(e.getMessage());
@@ -183,11 +181,8 @@ public class shardNode extends Replica {
 			// 这里可能需要判断是哪个地方的交易，然后再转发 relay Transaction。
 			// 考虑到 Primary 的存在，可以把转发部分交给Primary。
 			if (isPrimary()) {
-				// if (queryShardID(tx.recipient))
-				sendCrossTx();
+				sendCrossTx(txs);
 			}
-
-
 			// 以下是存交易
 			Connection conn = connect();
 			txMemory(conn, tx);
@@ -213,7 +208,7 @@ public class shardNode extends Replica {
 		String result;
 
 		// 1. 根据尾数 mod
-		String slice = addr.substring(addr.length()-SLICENUM, addr.length());
+		String slice = addr.substring(addr.length()-Simulator.SLICENUM, addr.length());
 		result = addrShard.get(slice);
 
 		// 2. 根据地址数据库查询 
@@ -224,7 +219,7 @@ public class shardNode extends Replica {
 	/**
 	 * 发送跨分片交易的后半段
 	 */
-	public void sendCrossTx() {
+	public void sendCrossTx(ArrayList<Transaction> txs) {
 		
 	}
 

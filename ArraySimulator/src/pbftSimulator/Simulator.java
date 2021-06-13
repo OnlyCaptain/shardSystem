@@ -1,17 +1,18 @@
 package pbftSimulator;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.PriorityQueue;
-import java.util.Queue;
-import java.util.Random;
-import java.util.Set;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.*;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
 import pbftSimulator.message.Message;
 import pbftSimulator.replica.Replica;
 import shardSystem.ByztShardNode;
@@ -36,6 +37,9 @@ public class Simulator {
 	public static final double FACTOR = 1.005;				//超出额定负载后的指数基数
 	public static final int COLLAPSEDELAY = 10000;			//视为系统崩溃的网络时延
 	public static final boolean SHOWDETAILINFO = true;		//是否显示完整的消息交互过程
+
+	public static final int SHARDNUM = 3;				//分片数量
+	public static final int SHARDNODENUM = 7;				//每个分片中节点数量
 
 	public static final int BLOCKTXNUM = 50;
 
@@ -76,6 +80,15 @@ public class Simulator {
 		// System.out.println();
 
 		// boolean[] byzts = {true, false, false, false, false, false, true};
+
+		Map<String, ArrayList<PairAddress>> topos  = new HashMap<> ();
+		String configJsonFileName = "./ArraySimulator/src/config.json";
+		try {
+			topos = getConfigJson(configJsonFileName);
+		}catch (IOException e){
+			//do nothing
+		}
+
 		Replica[] reps = new Replica[RN];
 		for(int i = 0; i < RN; i++) {
 //			if(byzts[i]) {
@@ -306,4 +319,28 @@ public class Simulator {
 		}
 		return num;
 	}
+
+	public static Map<String, ArrayList<PairAddress>> getConfigJson(String fileName) throws IOException {
+
+		File file=new File(fileName);
+		String content= FileUtils.readFileToString(file,"UTF-8");
+
+		org.json.JSONObject jsonObject=new org.json.JSONObject(content);
+		org.json.JSONObject jsonTopo = jsonObject.getJSONObject("topo");
+
+		Map<String, ArrayList<PairAddress>> topos  = new HashMap<> ();
+
+		for (int i = 0; i < SHARDNUM; i ++) {
+
+			String shardID = String.valueOf(i);
+			JSONArray jsonShard = jsonTopo.getJSONArray(shardID);
+			topos.put(shardID, new ArrayList<PairAddress>());
+			for (int j = 0; j < SHARDNODENUM; j ++) {
+				JSONObject shardJ = jsonShard.getJSONObject(j);
+				topos.get(shardID).add(new PairAddress(j, shardJ.getString("IP"), shardJ.getInt("port")));
+			}
+		}
+		return topos;
+	}
+
 }

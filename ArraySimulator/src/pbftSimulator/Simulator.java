@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
 
+import org.apache.commons.io.FileUtils;
 // import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -96,7 +97,7 @@ public class Simulator {
 
 
 		Map<String, ArrayList<PairAddress>> topos  = new HashMap<> ();
-		String configJsonFileName = "./ArraySimulator/src/config.json";
+		String configJsonFileName = "./src/config.json";
 		try {
 			topos = getConfigJson(configJsonFileName);
 
@@ -134,6 +135,7 @@ public class Simulator {
 			}
 		} catch (IOException e){
 			//do nothing
+			e.printStackTrace();
 		}
 
 //		if (msgQue.isEmpty()) 

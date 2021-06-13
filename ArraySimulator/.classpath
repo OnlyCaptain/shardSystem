@@ -17,5 +17,6 @@
 	<classpathentry kind="lib" path="lib/activemq-all-5.13.3.jar"/>
 	<classpathentry kind="lib" path="lib/spring-jms-4.3.1.RELEASE.jar"/>
 	<classpathentry kind="lib" path="lib/log4j-1.2.17.jar"/>
+	<classpathentry kind="src" path="lib"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

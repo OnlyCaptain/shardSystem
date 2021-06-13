@@ -4,12 +4,18 @@ import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Semaphore;
 
+import javax.jms.JMSException;
+import javax.jms.TextMessage;
+
+import pbftSimulator.MQ.MqListener;
 import pbftSimulator.NettyClient.NettyClientBootstrap;
 import pbftSimulator.NettyMessage.Constants;
 import pbftSimulator.NettyServer.PBFTSealerServerHandler;
 import pbftSimulator.message.CliTimeOutMsg;
 import pbftSimulator.message.Message;
+import pbftSimulator.message.RawTxMessage;
 import pbftSimulator.message.ReplyMsg;
 import pbftSimulator.message.RequestMsg;
 import shardSystem.transaction.Transaction;
@@ -32,6 +38,7 @@ import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
 import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
 
 import java.io.File;
 import java.io.IOException;
@@ -57,6 +64,9 @@ public class PBFTSealer {
 	public String receiveTag = "CliReceive";
 	public String sendTag = "CliSend";
 	public ArrayList<PairAddress> replicaAddrs;
+	public long time;
+
+	public Semaphore lastBlockEnd;
 
 	public PBFTSealer(int id, String IP, int port, int[] netDlys, String[] replicaIPs, int[] replicaPorts) {
 		this.id = id;
@@ -68,15 +78,17 @@ public class PBFTSealer {
 		reqMsgs = new HashMap<>();
 		repMsgs = new HashMap<>();
 		replicaAddrs = new ArrayList<PairAddress>();
+		this.time = 0;
+		this.lastBlockEnd = new Semaphore(1, true);
 
 		for (int i = 0; i < replicaIPs.length; i ++) {
 			replicaAddrs.add(new PairAddress(replicaIPs[i], replicaPorts[i], i));
 		}
 
 		// 定义当前Replica的工作目录
-		this.name = "Client_".concat(String.valueOf(id));
-		StringBuffer buf = new StringBuffer("./workspace/client_");
-		curWorkspace = buf.append(String.valueOf(id)).append("/").toString();
+		this.name = "PBFTSealer_".concat(String.valueOf(id));
+		StringBuffer buf = new StringBuffer("./workspace/");
+		curWorkspace = buf.append(this.name).append("/").toString();
 		buildWorkspace();
 
 		// 开启服务端
@@ -85,7 +97,7 @@ public class PBFTSealer {
 		} catch (InterruptedException e) { e.printStackTrace(); }
 
 		// 开启监听TxPool的线程
-		Thread t = new Thread(new MyRunnable());
+		Thread t = new Thread(new MyRunnable(this));
 		t.start();
 	}
 	
@@ -153,6 +165,27 @@ public class PBFTSealer {
     }
 
 
+	public void threadProcess() throws JMSException {
+		MqListener mqListener = new MqListener();
+		System.out.println("开始监听TxPool");
+        while (true) {
+            // 设置接收者接收消息的时间，这里设定为100s.即100s没收到新消息就会自动关闭
+            TextMessage message = (TextMessage) mqListener.consumer.receive();
+            if (null != message) {
+                System.out.println("收到消息" + message.getText());
+//				PBFTSealer.threadProcess(message.getText());
+//				sendRequest(txs, 0);
+            } else {
+                break;
+            }
+        }
+        try {
+            if (null != mqListener.connection)
+                mqListener.connection.close();
+        } catch (Throwable ignore) {
+        }
+	}
+
 	public synchronized void msgProcess(Message msg) {
 		msg.print(receiveTag, this.logger);
 		switch(msg.type) {
@@ -167,13 +200,16 @@ public class PBFTSealer {
 		}
 		
 	}
-
-	public void threadProcess(String buff) {
-
-	}
 	
-	public void sendRequest(ArrayList<Transaction> txs, long time) {
+	public void sendRequest(ArrayList<Transaction> txs) {
 		//避免时间重复
+		try {
+			this.lastBlockEnd.acquire();
+			this.logger.info("等待上一个块完成");
+		} catch (InterruptedException e) {
+			this.logger.info("等待上一个块完成");
+		}
+		this.logger.info("正在发送消息");
 		while(reqStats.containsKey(time)) {
 			time++;
 		}
@@ -223,6 +259,7 @@ public class PBFTSealer {
 			reqStats.put(t, STABLE);
 			reqMsgs.remove(t);
 			repMsgs.remove(t);
+			this.lastBlockEnd.release();
 			this.logger.info("【Stable】客户端"+id+"在"+t
 					+"时间请求的消息已经得到了f+1 = " + Utils.getMaxTorelentNumber(Simulator.RN) + " 条reply，进入稳态，共耗时"+(repMsg.rcvtime - t)+"毫秒,此时占用带宽为"+Simulator.inFlyMsgLen+"B");
 		}
@@ -333,25 +370,60 @@ public class PBFTSealer {
 }
 
 class MyRunnable implements Runnable {
+	public PBFTSealer pbftSealer;
+
+	public MyRunnable(PBFTSealer pbftSealer) {
+		this.pbftSealer = pbftSealer;
+	}
+
 	@Override
 	public void run() {
 		MqListener mqListener = new MqListener();
-		System.out.println("开始监听TxPool");
+		System.out.println("开始监听TxPool"+this.pbftSealer.name);
+		int count = 0;
         while (true) {
-            // 设置接收者接收消息的时间，这里设定为100s.即100s没收到新消息就会自动关闭
-            TextMessage message = (TextMessage) mqListener.consumer.receive();
-            if (null != message) {
-                System.out.println("收到消息" + message.getText());
-				PBFTSealer.threadProcess(message.getText());
-            } else {
-                break;
-            }
+			ArrayList<Transaction> txsBuffer = new ArrayList<>();
+			// 读取够 Simulator.BLOCKTXNUM 就发送一次Request;
+			try {
+				int i = 0;
+				while (i < Simulator.BLOCKTXNUM) {
+					// 设置接收者接收消息的时间，这里设定为100s.即100s没收到新消息就会自动关闭
+					TextMessage message = null;
+					message = (TextMessage) mqListener.consumer.receive();
+					Transaction tx = null;
+
+					// if (null != message) {
+					// 	this.pbftSealer.logger.debug("收到消息" + message.getText());
+					// }
+					
+					tx = new Transaction(message.getText());
+					if (null != tx) {
+						txsBuffer.add(tx);
+					} 
+					// else {
+					// 	this.pbftSealer.logger.info("Receive an non-tx message");
+					// 	continue;
+					// }
+					i ++;
+				}
+				// this.pbftSealer.lastBlockEnd.acquire();
+				count ++;
+				System.out.println("In here, txsBuffer.size = "+txsBuffer.size());
+				System.out.println("这是第"+count+"个块");
+				this.pbftSealer.sendRequest(txsBuffer);
+				// Thread.sleep(7000);
+			} catch (JMSException e) {
+				System.out.println(e.getMessage());
+			} 
+			// catch (InterruptedException e) {
+			// 	System.out.println(e.getMessage());
+			// }
         }
         //关闭listener
-        try {
-            if (null != mqListener.connection)
-                mqListener.connection.close();
-        } catch (Throwable ignore) {
-        }
+        // try {
+        //     if (null != mqListener.connection)
+        //         mqListener.connection.close();
+        // } catch (Throwable ignore) {
+        // }
 	}
 }

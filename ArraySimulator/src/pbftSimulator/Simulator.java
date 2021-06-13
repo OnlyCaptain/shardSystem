@@ -38,6 +38,8 @@ public class Simulator {
 	public static final int COLLAPSEDELAY = 10000;			//视为系统崩溃的网络时延
 	public static final boolean SHOWDETAILINFO = true;		//是否显示完整的消息交互过程
 
+	public static final int BLOCKTXNUM = 50;
+
 	public static final Level LOGLEVEL = Level.DEBUG;
 	public static final int REQTXSIZE = 50;
 
@@ -91,18 +93,18 @@ public class Simulator {
 			clis[i] = new PBFTSealer(PBFTSealer.getCliId(i), clientIPs[i], clientPorts[i], netDlysToNodes[i], IPs, ports); 
 		}
 		
-		//初始随机发送INFLIGHT个请求消息
-		Random rand = new Random(555);
-		long requestNums = 0;
-		ArrayList<Transaction> txs = getTxsFromFile("../data/Tx_500.csv");
-		int start = 0;
+//		//初始随机发送INFLIGHT个请求消息
+//		Random rand = new Random(555);
+//		long requestNums = 0;
+//		ArrayList<Transaction> txs = getTxsFromFile("../data/Tx_500.csv");
+//		int start = 0;
 		
-		for(int i = 0; i < Math.min(INFLIGHT, REQNUM); i++) {
-			ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(start, start+50));
-			clis[rand.nextInt(CN)].sendRequest(tx1, 0);
-			start += 50;
-			requestNums++;
-		}
+//		for(int i = 0; i < Math.min(INFLIGHT, REQNUM); i++) {
+//			ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(start, start+50));
+//			clis[rand.nextInt(CN)].sendRequest(tx1);
+//			start += 50;
+//			requestNums++;
+//		}
 //		if (msgQue.isEmpty()) 
 //			System.out.println("Error!");
 //		Message testMsg = msgQue.poll();

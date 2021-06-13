@@ -69,12 +69,14 @@ public class ReplicaServerHandler extends SimpleChannelInboundHandler<String> {
                 case Message.CHECKPOINT:
                     break;
                 default:
-//                    this.logger.info("【Error】消息类型错误！");
+                    this.replica.logger.info("【Error】消息类型错误！");
                     return;
             }
             // baseMsg = baseMsg.decoder(jsbuff);
             // this.replica.logger.info(jsbuff);
             // this.replica.logger.info(baseMsg.encoder());
+            if (baseMsg == null)
+                this.replica.logger.debug("这里是Replica后端"+jsbuff);
             replica.msgProcess(baseMsg);
             // if(NettyChannelMap.get(baseMsg.getClientId())==null) {
             //     NettyChannelMap.add(baseMsg.getClientId(), (SocketChannel) channelHandlerContext.channel());    

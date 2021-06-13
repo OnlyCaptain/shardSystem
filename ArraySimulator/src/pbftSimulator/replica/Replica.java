@@ -207,7 +207,7 @@ public class Replica {
 				break;
 			case Message.PREPARE:
 				receivePrepare(msg);
-				break;
+				break; 
 			case Message.COMMIT:
 				receiveCommit(msg);
 				break;
@@ -289,9 +289,9 @@ public class Replica {
 			//周期性发送checkpoint消息
 			if(mm.n % K == 0) {
 				Message checkptMsg = new CheckPointMsg(v, mm.n, lastReplyMap, id, id, id, time);
-				addMessageToCache(checkptMsg);
+//				addMessageToCache(checkptMsg);
 				// Simulator.sendMsgToOthers(checkptMsg, id, sendTag, this.logger);
-				sendMsgToOthers(checkptMsg, sendTag, this.logger);
+				// sendMsgToOthers(checkptMsg, sendTag, this.logger);
 			}
 		}
 	}
@@ -408,9 +408,9 @@ public class Replica {
 			//否则如果不会超过水位就生成新的prePrepare消息并广播,同时启动timeout
 			if(inWater(n + 1)) {
 				n++;
-				this.logger.debug("before constructing: "+reqlyMsg.encoder());
+				// this.logger.debug("before constructing: "+reqlyMsg.encoder());
 				Message prePrepareMsg = new PrePrepareMsg(v, n, reqlyMsg, id, id, id, reqlyMsg.rcvtime);
-				this.logger.debug("after constructing: "+ prePrepareMsg.encoder());
+				// this.logger.debug("after constructing: "+ prePrepareMsg.encoder());
 				addMessageToCache(prePrepareMsg);
 				// Simulator.sendMsgToOthers(prePrepareMsg, id, sendTag, this.logger);
 				sendMsgToOthers(prePrepareMsg, sendTag, logger);

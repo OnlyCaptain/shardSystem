@@ -141,13 +141,13 @@ public class shardNode extends Replica {
 			ResultSet rs = pstmt.executeQuery();
 			while (rs.next()) {
 				executedFlag = true;
-				this.logger.info("这个交易已经被执行过："+rs.getString("sender")
-							+rs.getString("recipient")
-							+rs.getDouble("value")
-							+rs.getLong("timestamp")
-							+rs.getLong("gasPrice")
-							+rs.getLong("accountNonce")
-							);
+				// this.logger.info("这个交易已经被执行过："+rs.getString("sender")
+				// 			+rs.getString("recipient")
+				// 			+rs.getDouble("value")
+				// 			+rs.getLong("timestamp")
+				// 			+rs.getLong("gasPrice")
+				// 			+rs.getLong("accountNonce")
+				// 			);
 			}
         } catch (SQLException e) {
             System.out.println(e.getMessage());
@@ -313,7 +313,7 @@ public class shardNode extends Replica {
 			setTimer(lastRepNum+1, time);
 			if(rem != null) {
 				// Simulator.sendMsg(rm, sendTag, this.logger);
-				this.logger.info("再次确认request的消息结构："+rem.m.get(0));
+				// this.logger.info("再次确认request的消息结构："+rem.m.get(0));
 				// executeTx();
 				ArrayList<Transaction> txs = new ArrayList<>();
 				for (int i = 0; i < rem.m.size(); i ++) {
@@ -336,7 +336,7 @@ public class shardNode extends Replica {
 				Message checkptMsg = new CheckPointMsg(v, mm.n, lastReplyMap, id, id, id, time);
 				addMessageToCache(checkptMsg);
 				// Simulator.sendMsgToOthers(checkptMsg, id, sendTag, this.logger);
-				sendMsgToOthers(checkptMsg, sendTag, this.logger);
+				// sendMsgToOthers(checkptMsg, sendTag, this.logger);
 			}
 		}
 	}

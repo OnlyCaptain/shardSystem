@@ -35,7 +35,6 @@ import pbftSimulator.PairAddress;
 import pbftSimulator.Simulator;
 import pbftSimulator.Utils;
 import pbftSimulator.NettyClient.NettyClientBootstrap;
-import pbftSimulator.NettyServer.NettyServerBootstrap;
 import pbftSimulator.NettyServer.ReplicaServerHandler;
 import pbftSimulator.message.CheckPointMsg;
 import pbftSimulator.message.CommitMsg;
@@ -57,6 +56,7 @@ public class Replica {
 	public static final int STABLE = 1;			//已经收到了f+1个reply
 	public String receiveTag = "Receive";
 	public String sendTag = "Send";
+	public String shardID;    // 节点所属分片 ID
 
 	public String name;
 	public int id; 										//当前节点的id
@@ -86,6 +86,15 @@ public class Replica {
 	public Map<Integer, Map<Integer, LastReply>> checkPoints;
 	
 	public Map<Message, Integer> reqStats;			//request请求状态
+
+	public PBFTSealer pbftSealer;
+	Map<String, ArrayList<PairAddress>> topos;  // 这个东西，应该有如下的结构：
+	/** 
+	 * topos: {
+	 * 	 "0": [ {ip:.., port:.., id:...}, {}, ... ]
+	 * 	 "1": [ {ip:.., port:.., id:...}, {}, ... ]
+	 * }
+	*/
 	
 	public static Comparator<PrePrepareMsg> nCmp = new Comparator<PrePrepareMsg>(){
 		@Override
@@ -94,14 +103,16 @@ public class Replica {
 		}
 	};
 	
-	public Replica(String name, int id, String IP, int port, int[] netDlys, int[] netDlyToClis, String[] IPs, int[] ports, String[] cIPs, int[] cports) {
+	public Replica(String name, String shardID, int id, String IP, int port, int[] netDlys, int[] netDlyToClis,  Map<String, ArrayList<PairAddress>> topos) {
+		this.name = "shard_".concat(shardID).concat("_").concat(name).concat(String.valueOf(id));
+		this.shardID = shardID;
 		this.id = id;
-		this.netDlys = netDlys;
-		this.netDlyToClis = netDlyToClis;
 		this.IP = IP;
 		this.port = port;
-		this.name = name.concat(String.valueOf(id));
-		
+		this.netDlys = netDlys;
+		this.netDlyToClis = netDlyToClis;
+		this.topos = topos;
+
 		msgCache = new HashMap<>();
 		lastReplyMap = new HashMap<>();
 		checkPoints = new HashMap<>();
@@ -111,15 +122,17 @@ public class Replica {
 		neighbors = new ArrayList<PairAddress>();
 		clients = new ArrayList<PairAddress>();
 
-		for (int i = 0; i < IPs.length; i ++) {
-			if (ports[i] == port)  
+		ArrayList<PairAddress> IPAddrs = topos.get(shardID);
+
+		for (int i = 0; i < IPAddrs.size(); i ++) {
+			if (IPAddrs.get(i).getPort() == port && IPAddrs.get(i).getIP() == IP)  
 				continue;
-			neighbors.add(new PairAddress(IPs[i], ports[i], i));
+			neighbors.add(IPAddrs.get(i));
 		}
 
-		for (int i = 0; i < cIPs.length; i ++) {
-			clients.add(new PairAddress(cIPs[i], cports[i], PBFTSealer.getCliId(-1)));
-		}
+		// if (isPrimary())
+		clients.add(new PairAddress(PBFTSealer.getCliId(0), this.IP, Simulator.PBFTSEALERPORT+Integer.parseInt(shardID)));
+		
 		
 		// 定义当前Replica的工作目录
 		curWorkspace = "./workspace/".concat(this.name).concat("/");
@@ -131,6 +144,12 @@ public class Replica {
 			// this.bootstrap = new NettyServerBootstrap(port, this);
 			bind();
 		} catch (InterruptedException e) { e.printStackTrace(); }
+
+		if (isPrimary()) {
+			ArrayList<PairAddress> curIPports = topos.get(shardID);
+			System.out.println(String.format("分片 %s 的打包器建立在端口 %d 上", shardID, clients.get(0).getPort()));
+			this.pbftSealer = new PBFTSealer(this.name, PBFTSealer.getCliId(0), clients.get(0).getIP(), clients.get(0).getPort(), netDlys, curIPports);
+		}
 	}
 
 	/**
@@ -207,7 +226,7 @@ public class Replica {
 				break;
 			case Message.PREPARE:
 				receivePrepare(msg);
-				break;
+				break; 
 			case Message.COMMIT:
 				receiveCommit(msg);
 				break;
@@ -289,9 +308,9 @@ public class Replica {
 			//周期性发送checkpoint消息
 			if(mm.n % K == 0) {
 				Message checkptMsg = new CheckPointMsg(v, mm.n, lastReplyMap, id, id, id, time);
-				addMessageToCache(checkptMsg);
+//				addMessageToCache(checkptMsg);
 				// Simulator.sendMsgToOthers(checkptMsg, id, sendTag, this.logger);
-				sendMsgToOthers(checkptMsg, sendTag, this.logger);
+				// sendMsgToOthers(checkptMsg, sendTag, this.logger);
 			}
 		}
 	}
@@ -408,9 +427,9 @@ public class Replica {
 			//否则如果不会超过水位就生成新的prePrepare消息并广播,同时启动timeout
 			if(inWater(n + 1)) {
 				n++;
-				this.logger.debug("before constructing: "+reqlyMsg.encoder());
+				// this.logger.debug("before constructing: "+reqlyMsg.encoder());
 				Message prePrepareMsg = new PrePrepareMsg(v, n, reqlyMsg, id, id, id, reqlyMsg.rcvtime);
-				this.logger.debug("after constructing: "+ prePrepareMsg.encoder());
+				// this.logger.debug("after constructing: "+ prePrepareMsg.encoder());
 				addMessageToCache(prePrepareMsg);
 				// Simulator.sendMsgToOthers(prePrepareMsg, id, sendTag, this.logger);
 				sendMsgToOthers(prePrepareMsg, sendTag, logger);

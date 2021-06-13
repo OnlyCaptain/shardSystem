@@ -22,7 +22,7 @@ public class NettyChannelMap {
             }
         }
     }
-    public static void ptintAll(){
+    public static void printAll(){
         for (Map.Entry entry:map.entrySet()){
             map.remove(entry.getKey());
             System.out.println(entry.getKey());

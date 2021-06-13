@@ -9,15 +9,15 @@ import javax.jms.*;
 public class MqListener {
 
     // ConnectionFactory ：连接工厂，JMS 用它创建连接
-    ConnectionFactory connectionFactory;
+	public ConnectionFactory connectionFactory;
     // Connection ：JMS 客户端到JMS Provider 的连接
-    Connection connection = null;
+    public Connection connection = null;
     // Session： 一个发送或接收消息的线程
-    Session session;
+    public Session session;
     // Destination ：消息的目的地;消息发送给谁.
-    Destination destination;
+    public Destination destination;
     // 消费者，消息接收者
-    MessageConsumer consumer;
+    public MessageConsumer consumer;
 
 
 //    public static void main(String[] args) {

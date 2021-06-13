@@ -9,7 +9,6 @@ import java.util.Random;
 
 import pbftSimulator.Utils;
 import pbftSimulator.message.Message;
-import pbftSimulator.replica.ByztReplica;
 import pbftSimulator.replica.Replica;
 import shardSystem.transaction.Transaction;
 

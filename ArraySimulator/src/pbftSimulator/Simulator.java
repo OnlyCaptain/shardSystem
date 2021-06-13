@@ -1,22 +1,32 @@
 package pbftSimulator;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.*;
 
+import org.apache.commons.io.FileUtils;
+// import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
-import pbftSimulator.message.Message;
-import pbftSimulator.replica.OfflineReplica;
-import pbftSimulator.replica.Replica;
-import pbftSimulator.replica.ByztReplica;
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
 
+import pbftSimulator.message.Message;
+import pbftSimulator.replica.Replica;
+import shardSystem.ByztShardNode;
+import shardSystem.OfflineShardNode;
 import shardSystem.shardNode;
 import shardSystem.transaction.Transaction;
 
@@ -38,7 +48,14 @@ public class Simulator {
 	public static final int COLLAPSEDELAY = 10000;			//视为系统崩溃的网络时延
 	public static final boolean SHOWDETAILINFO = true;		//是否显示完整的消息交互过程
 
-	public static final Level LOGLEVEL = Level.DEBUG;
+	public static final int BLOCKTXNUM = 50;
+
+	public static final int SHARDNUM = 3;     // 分片个数
+	public static final int SHARDNODENUM = RN;   // 每个分片的节点数量
+	public static final int SLICENUM = 2;    // 地址倒数几位，作为识别分片的依据
+	public static final int PBFTSEALERPORT = 58052;
+
+	public static final Level LOGLEVEL = Level.INFO;
 	public static final int REQTXSIZE = 50;
 
 	//消息优先队列（按消息计划被处理的时间戳排序）
@@ -64,7 +81,7 @@ public class Simulator {
 	
 	public static void main(String[] args) {
 		//初始化包含FN个拜占庭意节点的RN个replicas
-		boolean[] byzts = byztDistriInit(RN, FN);
+//		boolean[] byzts = byztDistriInit(RN, FN);
 		// for (int i = 0; i < RN; i ++) {
 		// 	System.out.print(String.valueOf(byzts[i]).concat(" "));
 		// }
@@ -75,34 +92,52 @@ public class Simulator {
 		// System.out.println();
 
 		// boolean[] byzts = {true, false, false, false, false, false, true};
-		Replica[] reps = new Replica[RN];
-		for(int i = 0; i < RN; i++) {
-//			if(byzts[i]) {
-//				reps[i] = new ByztReplica(i, IPs[i], ports[i], netDlys[i], netDlysToClis[i]);
-//			}else {
-				reps[i] = new shardNode(i, IPs[i], ports[i], netDlys[i], netDlysToClis[i], IPs, ports, clientIPs, clientPorts);
-//				}
+
+// 		int[] usefulPorts = netPortsInit(SHARDNODENUM * SHARDNUM);
+
+
+		Map<String, ArrayList<PairAddress>> topos  = new HashMap<> ();
+		String configJsonFileName = "./src/config.json";
+		try {
+			topos = getConfigJson(configJsonFileName);
+
+			// Map<String, ArrayList<PairAddress>> topos = new HashMap<> ();
+
+			// for (int i = 0; i < SHARDNUM; i ++) {
+			// 	String shardID = String.valueOf(i);
+			// 	topos.put(shardID, new ArrayList<PairAddress>());
+			// 	for (int j = 0; j < SHARDNODENUM; j ++) {
+			// 		topos.get(shardID).add(new PairAddress(j, "127.0.0.1", usefulPorts[i*SHARDNODENUM+j]));
+			// 	}
+			// }
+			System.out.println(topos.toString());
+			JSONObject js = JSONObject.fromObject(topos);
+			System.out.println(js.toString());
+
+			Replica[] reps = new Replica[SHARDNUM * SHARDNODENUM];
+			for (int i = 0; i < SHARDNUM; i ++) {
+				String shardID = String.valueOf(i);
+				for (int j = 0; j < SHARDNODENUM; j ++) {
+					reps[i*SHARDNODENUM + j] = new shardNode(shardID, j, topos.get(shardID).get(j).getIP(), topos.get(shardID).get(j).getPort(), netDlys[j], netDlysToClis[j], topos);
+				}
+			}
+
+			Random rand = new Random(555);
+			long requestNums = 0;
+			ArrayList<Transaction> txs = getTxsFromFile("../data/Tx_500.csv");
+			int start = 0;
+			
+			for(int i = 0; i < Math.min(INFLIGHT, REQNUM); i++) {
+				ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(start, start+50));
+				reps[0].pbftSealer.sendRequest(tx1);
+				start += 50;
+				requestNums++;
+			}
+		} catch (IOException e){
+			//do nothing
+			e.printStackTrace();
 		}
-		
-		//初始化CN个
-		PBFTSealer[] clis = new PBFTSealer[CN];
-		for(int i = 0; i < CN; i++) {
-			//客户端的编号设置为负数
-			clis[i] = new PBFTSealer(PBFTSealer.getCliId(i), clientIPs[i], clientPorts[i], netDlysToNodes[i], IPs, ports); 
-		}
-		
-		//初始随机发送INFLIGHT个请求消息
-		Random rand = new Random(555);
-		long requestNums = 0;
-		ArrayList<Transaction> txs = getTxsFromFile("../data/Tx_500.csv");
-		int start = 0;
-		
-		for(int i = 0; i < Math.min(INFLIGHT, REQNUM); i++) {
-			ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(start, start+50));
-			clis[rand.nextInt(CN)].sendRequest(tx1, 0);
-			start += 50;
-			requestNums++;
-		}
+
 //		if (msgQue.isEmpty()) 
 //			System.out.println("Error!");
 //		Message testMsg = msgQue.poll();
@@ -303,4 +338,28 @@ public class Simulator {
 		}
 		return num;
 	}
+
+	public static Map<String, ArrayList<PairAddress>> getConfigJson(String fileName) throws IOException {
+
+		File file=new File(fileName);
+		String content= FileUtils.readFileToString(file,"UTF-8");
+
+		JSONObject jsonObject = JSONObject.fromObject(content);
+		JSONObject jsonTopo = jsonObject.getJSONObject("topo");
+
+		Map<String, ArrayList<PairAddress>> topos  = new HashMap<> ();
+
+		for (int i = 0; i < SHARDNUM; i ++) {
+
+			String shardID = String.valueOf(i);
+			JSONArray jsonShard = jsonTopo.getJSONArray(shardID);
+			topos.put(shardID, new ArrayList<PairAddress>());
+			for (int j = 0; j < SHARDNODENUM; j ++) {
+				JSONObject shardJ = jsonShard.getJSONObject(j);
+				topos.get(shardID).add(new PairAddress(j, shardJ.getString("IP"), shardJ.getInt("port")));
+			}
+		}
+		return topos;
+	}
+
 }

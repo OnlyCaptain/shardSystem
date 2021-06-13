@@ -35,7 +35,6 @@ import pbftSimulator.PairAddress;
 import pbftSimulator.Simulator;
 import pbftSimulator.Utils;
 import pbftSimulator.NettyClient.NettyClientBootstrap;
-import pbftSimulator.NettyServer.NettyServerBootstrap;
 import pbftSimulator.NettyServer.ReplicaServerHandler;
 import pbftSimulator.message.CheckPointMsg;
 import pbftSimulator.message.CommitMsg;

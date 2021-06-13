@@ -11,7 +11,6 @@ import javax.jms.TextMessage;
 
 import pbftSimulator.MQ.MqListener;
 import pbftSimulator.NettyClient.NettyClientBootstrap;
-import pbftSimulator.NettyMessage.Constants;
 import pbftSimulator.NettyServer.PBFTSealerServerHandler;
 import pbftSimulator.message.CliTimeOutMsg;
 import pbftSimulator.message.Message;

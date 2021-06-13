@@ -13,10 +13,9 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 import pbftSimulator.message.Message;
-import pbftSimulator.replica.OfflineReplica;
 import pbftSimulator.replica.Replica;
-import pbftSimulator.replica.ByztReplica;
-
+import shardSystem.ByztShardNode;
+import shardSystem.OfflineShardNode;
 import shardSystem.shardNode;
 import shardSystem.transaction.Transaction;
 

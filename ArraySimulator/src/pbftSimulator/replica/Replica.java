@@ -85,6 +85,8 @@ public class Replica {
 	public Map<Integer, Map<Integer, LastReply>> checkPoints;
 	
 	public Map<Message, Integer> reqStats;			//request请求状态
+
+	public PBFTSealer pbftSealer;
 	
 	public static Comparator<PrePrepareMsg> nCmp = new Comparator<PrePrepareMsg>(){
 		@Override
@@ -113,11 +115,11 @@ public class Replica {
 		for (int i = 0; i < IPs.length; i ++) {
 			if (ports[i] == port)  
 				continue;
-			neighbors.add(new PairAddress(IPs[i], ports[i], i));
+			neighbors.add(new PairAddress(i, IPs[i], ports[i]));
 		}
 
 		for (int i = 0; i < cIPs.length; i ++) {
-			clients.add(new PairAddress(cIPs[i], cports[i], PBFTSealer.getCliId(-1)));
+			clients.add(new PairAddress(PBFTSealer.getCliId(-1), cIPs[i], cports[i]));
 		}
 		
 		// 定义当前Replica的工作目录
@@ -130,6 +132,10 @@ public class Replica {
 			// this.bootstrap = new NettyServerBootstrap(port, this);
 			bind();
 		} catch (InterruptedException e) { e.printStackTrace(); }
+
+		if (isPrimary()) {
+			this.pbftSealer = new PBFTSealer(PBFTSealer.getCliId(0), cIPs[0], cports[0], netDlys, IPs, ports);
+		}
 	}
 
 	/**

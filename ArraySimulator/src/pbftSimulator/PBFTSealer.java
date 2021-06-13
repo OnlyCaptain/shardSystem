@@ -81,7 +81,7 @@ public class PBFTSealer {
 		this.lastBlockEnd = new Semaphore(1, true);
 
 		for (int i = 0; i < replicaIPs.length; i ++) {
-			replicaAddrs.add(new PairAddress(replicaIPs[i], replicaPorts[i], i));
+			replicaAddrs.add(new PairAddress(i, replicaIPs[i], replicaPorts[i]));
 		}
 
 		// 定义当前Replica的工作目录
@@ -163,28 +163,6 @@ public class PBFTSealer {
         }
     }
 
-
-	public void threadProcess() throws JMSException {
-		MqListener mqListener = new MqListener();
-		System.out.println("开始监听TxPool");
-        while (true) {
-            // 设置接收者接收消息的时间，这里设定为100s.即100s没收到新消息就会自动关闭
-            TextMessage message = (TextMessage) mqListener.consumer.receive();
-            if (null != message) {
-                System.out.println("收到消息" + message.getText());
-//				PBFTSealer.threadProcess(message.getText());
-//				sendRequest(txs, 0);
-            } else {
-                break;
-            }
-        }
-        try {
-            if (null != mqListener.connection)
-                mqListener.connection.close();
-        } catch (Throwable ignore) {
-        }
-	}
-
 	public synchronized void msgProcess(Message msg) {
 		msg.print(receiveTag, this.logger);
 		switch(msg.type) {
@@ -217,20 +195,7 @@ public class PBFTSealer {
 		for (int i = 0; i < txs.size(); i ++) {
 			txStr.add(txs.get(i));
 		}
-		// for (int i = 0; i < txs.size(); i ++) {
-		// 	System.out.println(txStr.get(i).toString());
-		// }
-		// String txStr = "[";
-		// for (int i = 0; i < txs.size(); i ++) {
-		// 	txStr += txs.get(i).encoder();
-		// 	txStr += ",";
-		// }
-		// txStr += "]";
-		// System.out.println(txStr);
-		// JSONArray jaArry = JSONArray.fromObject(txStr);
-		// System.out.println(jaArry);
 		
-
 		Message requestMsg = new RequestMsg("Message", txStr, time, id, id, priId, time + netDlys[priId]);
 
 		Simulator.sendMsg(requestMsg, sendTag, this.logger);
@@ -405,7 +370,6 @@ class MyRunnable implements Runnable {
 					// }
 					i ++;
 				}
-				// this.pbftSealer.lastBlockEnd.acquire();
 				count ++;
 				System.out.println("In here, txsBuffer.size = "+txsBuffer.size());
 				System.out.println("这是第"+count+"个块");
@@ -414,15 +378,6 @@ class MyRunnable implements Runnable {
 			} catch (JMSException e) {
 				System.out.println(e.getMessage());
 			} 
-			// catch (InterruptedException e) {
-			// 	System.out.println(e.getMessage());
-			// }
         }
-        //关闭listener
-        // try {
-        //     if (null != mqListener.connection)
-        //         mqListener.connection.close();
-        // } catch (Throwable ignore) {
-        // }
 	}
 }

@@ -65,7 +65,7 @@ public class Simulator {
 	
 	public static void main(String[] args) {
 		//初始化包含FN个拜占庭意节点的RN个replicas
-		boolean[] byzts = byztDistriInit(RN, FN);
+//		boolean[] byzts = byztDistriInit(RN, FN);
 		// for (int i = 0; i < RN; i ++) {
 		// 	System.out.print(String.valueOf(byzts[i]).concat(" "));
 		// }
@@ -85,25 +85,27 @@ public class Simulator {
 //				}
 		}
 		
-		//初始化CN个
-		PBFTSealer[] clis = new PBFTSealer[CN];
-		for(int i = 0; i < CN; i++) {
-			//客户端的编号设置为负数
-			clis[i] = new PBFTSealer(PBFTSealer.getCliId(i), clientIPs[i], clientPorts[i], netDlysToNodes[i], IPs, ports); 
+		
+	//初始化CN个
+	//		PBFTSealer[] clis = new PBFTSealer[CN];
+	//		for(int i = 0; i < CN; i++) {
+		//			//客户端的编号设置为负数
+		//			clis[i] = new PBFTSealer(PBFTSealer.getCliId(i), clientIPs[i], clientPorts[i], netDlysToNodes[i], IPs, ports); 
+		//		}
+		
+		//		//初始随机发送INFLIGHT个请求消息
+		Random rand = new Random(555);
+		long requestNums = 0;
+		ArrayList<Transaction> txs = getTxsFromFile("../data/Tx_500.csv");
+		int start = 0;
+		
+		for(int i = 0; i < Math.min(INFLIGHT, REQNUM); i++) {
+			ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(start, start+50));
+			reps[0].pbftSealer.sendRequest(tx1);
+			start += 50;
+			requestNums++;
 		}
 		
-//		//初始随机发送INFLIGHT个请求消息
-//		Random rand = new Random(555);
-//		long requestNums = 0;
-//		ArrayList<Transaction> txs = getTxsFromFile("../data/Tx_500.csv");
-//		int start = 0;
-		
-//		for(int i = 0; i < Math.min(INFLIGHT, REQNUM); i++) {
-//			ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(start, start+50));
-//			clis[rand.nextInt(CN)].sendRequest(tx1);
-//			start += 50;
-//			requestNums++;
-//		}
 //		if (msgQue.isEmpty()) 
 //			System.out.println("Error!");
 //		Message testMsg = msgQue.poll();

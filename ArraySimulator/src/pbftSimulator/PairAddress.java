@@ -2,15 +2,15 @@ package pbftSimulator;
 
 public class PairAddress {
 	
+	private int id;
 	private String IP;
 	private int port;
-	private int id;
 	
 	public PairAddress() {
 		// TODO Auto-generated constructor stub
+		id = 0;
 		IP = "127.0.0.1";
 		port = 0;
-		id = 0;
 	}
 	
 	/**
@@ -18,9 +18,17 @@ public class PairAddress {
 	 * @param IP
 	 * @param port
 	 */
-	public PairAddress(String IP, int port, int id) {
+	public PairAddress(int id, String IP, int port) {
+		this.id = id;
 		this.IP = IP;
 		this.port = port;
+	}
+
+	public int getId() {
+		return id;
+	}
+
+	public void setId(int id) {
 		this.id = id;
 	}
 
@@ -40,12 +48,14 @@ public class PairAddress {
 		this.port = port;
 	}
 
-	public int getId() {
-		return id;
+	
+	public String encoder() {
+		String result = String.format("(%d,%s,%d)", this.id, this.IP, this.port);
+		return result;
 	}
 
-	public void setId(int id) {
-		this.id = id;
+	public String toString() {
+		return encoder();
 	}
-	
+
 }

@@ -7,6 +7,7 @@ import pbftSimulator.message.CheckPointMsg;
 import pbftSimulator.message.LastReply;
 import pbftSimulator.message.Message;
 import pbftSimulator.message.PrePrepareMsg;
+import pbftSimulator.message.RawTxMessage;
 import pbftSimulator.message.ReplyMsg;
 import pbftSimulator.message.RequestMsg;
 import pbftSimulator.replica.Replica;
@@ -181,7 +182,28 @@ public class shardNode extends Replica {
 			// 这里可能需要判断是哪个地方的交易，然后再转发 relay Transaction。
 			// 考虑到 Primary 的存在，可以把转发部分交给Primary。
 			if (isPrimary()) {
-				sendCrossTx(txs);
+				Map<String, ArrayList<Transaction>> classifi = new HashMap<>();
+				for (int ind = 0; ind < txs.size(); ind ++) {
+					String sendShard = queryShardID(txs.get(ind).getSender());
+					String reciShard = queryShardID(txs.get(ind).getRecipient());
+					if (!sendShard.equals(this.shardID) && !reciShard.equals(this.shardID)) {
+						this.logger.error("收到了错误的交易，打包区块的时候没写好");
+					} else if (!sendShard.equals(this.shardID) && reciShard.equals(this.shardID)) {
+						this.logger.debug("这个是relay tx的后半部分，停止转发");
+					} else if (sendShard.equals(this.shardID) && reciShard.equals(this.shardID)) {
+						this.logger.debug("这个是relay tx的前半部分，需要转发");
+						if (classifi.keySet().contains(reciShard)) {
+							classifi.put(reciShard, new ArrayList<Transaction>());
+						}
+						ArrayList<Transaction> buf = classifi.get(reciShard);
+						buf.add(txs.get(ind));
+					} else {
+						this.logger.debug("存在片内交易");
+					}
+				}
+				for (Map.Entry<String, ArrayList<Transaction>> entry : classifi.entrySet()) { 
+					sendCrossTx(entry.getValue(), entry.getKey());
+				}  
 			}
 			// 以下是存交易
 			Connection conn = connect();
@@ -219,8 +241,9 @@ public class shardNode extends Replica {
 	/**
 	 * 发送跨分片交易的后半段
 	 */
-	public void sendCrossTx(ArrayList<Transaction> txs) {
-		
+	public void sendCrossTx(ArrayList<Transaction> txs, String targetShard) {
+		RawTxMessage rt = new RawTxMessage((Transaction[])txs.toArray());
+		this.sendMsg(clients.get(0).getIP(), Simulator.PBFTSEALERPORT+Integer.parseInt(targetShard), rt, sendTag, this.logger);
 	}
 
 	/**

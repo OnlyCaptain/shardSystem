@@ -52,6 +52,7 @@ public class PBFTSealer {
 	public int v;								//视图编号
 	public String IP;
 	public int port;
+	public String shardID;
 	public Logger logger;
 	public String curWorkspace;
 	public Map<Long, Integer> reqStats;			//request 请求状态
@@ -67,11 +68,12 @@ public class PBFTSealer {
 
 	public Semaphore lastBlockEnd;
 
-	public PBFTSealer(String name, int id, String IP, int port, int[] netDlys, ArrayList<PairAddress> curIPports) {
+	public PBFTSealer(String shardID, int id, String IP, int port, int[] netDlys, ArrayList<PairAddress> curIPports) {
 		this.id = id;
 		this.netDlys = netDlys;
 		this.IP = IP;
 		this.port = port;
+		this.shardID = shardID;
 		reqStats = new HashMap<>();
 		reqTimes = new HashMap<>();
 		reqMsgs = new HashMap<>();
@@ -83,7 +85,7 @@ public class PBFTSealer {
 		this.replicaAddrs = curIPports;
 
 		// 定义当前Replica的工作目录
-		this.name = "PBFTSealer_".concat(String.valueOf(id)).concat("_").concat(name);
+		this.name = "PBFTSealer_".concat(String.valueOf(id)).concat("_ofShard").concat(shardID);
 		StringBuffer buf = new StringBuffer("./workspace/");
 		curWorkspace = buf.append(this.name).append("/").toString();
 		buildWorkspace();

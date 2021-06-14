@@ -148,7 +148,7 @@ public class Replica {
 		if (isPrimary()) {
 			ArrayList<PairAddress> curIPports = topos.get(shardID);
 			System.out.println(String.format("分片 %s 的打包器建立在端口 %d 上", shardID, clients.get(0).getPort()));
-			this.pbftSealer = new PBFTSealer(this.name, PBFTSealer.getCliId(0), clients.get(0).getIP(), clients.get(0).getPort(), netDlys, curIPports);
+			this.pbftSealer = new PBFTSealer(this.shardID, PBFTSealer.getCliId(0), clients.get(0).getIP(), clients.get(0).getPort(), netDlys, curIPports);
 		}
 	}
 

@@ -4,14 +4,17 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.ReferenceCountUtil;
+import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 import pbftSimulator.MQ.MqSender;
 import pbftSimulator.PBFTSealer;
 import pbftSimulator.message.Message;
+import pbftSimulator.message.RawTxMessage;
 import pbftSimulator.message.ReplyMsg;
 import pbftSimulator.message.RequestMsg;
 import pbftSimulator.message.TimeOutMsg;
 import pbftSimulator.replica.Replica;
+import shardSystem.transaction.Transaction;
 
 import java.net.InetSocketAddress;
 
@@ -57,7 +60,13 @@ public class PBFTSealerServerHandler extends SimpleChannelInboundHandler<String>
                 case Message.TRANSACTION:
                     //将收到的Tx放入消息队列
                     MqSender mqSender = new MqSender();
-                    mqSender.sendMessage(mqSender.session, mqSender.producer, jsbuff);
+                    
+                    RawTxMessage msg = new RawTxMessage(jsbuff);
+                    JSONArray ja = msg.getTxs();
+                    for (int i = 0; i < ja.size(); i ++) {
+                        Transaction txbuff = new Transaction(ja.get(i).toString());
+                        mqSender.sendMessage(mqSender.session, mqSender.producer, txbuff.toString());
+                    }
 
                     try {
                         if (null != mqSender.connection)

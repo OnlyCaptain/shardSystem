@@ -55,7 +55,7 @@ public class Simulator {
 	public static final int SLICENUM = 2;    // 地址倒数几位，作为识别分片的依据
 	public static final int PBFTSEALERPORT = 58052;
 
-	public static final Level LOGLEVEL = Level.INFO;
+	public static final Level LOGLEVEL = Level.DEBUG;
 	public static final int REQTXSIZE = 50;
 
 	public static final int BLOCK_GENERATION_TIME = 1000000;

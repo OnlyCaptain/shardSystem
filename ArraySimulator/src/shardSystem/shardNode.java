@@ -242,7 +242,7 @@ public class shardNode extends Replica {
 	 * 发送跨分片交易的后半段
 	 */
 	public void sendCrossTx(ArrayList<Transaction> txs, String targetShard) {
-		RawTxMessage rt = new RawTxMessage((Transaction[])txs.toArray());
+		RawTxMessage rt = new RawTxMessage(txs);
 		this.sendMsg(clients.get(0).getIP(), Simulator.PBFTSEALERPORT+Integer.parseInt(targetShard), rt, sendTag, this.logger);
 	}
 

@@ -192,7 +192,7 @@ public class shardNode extends Replica {
 						this.logger.debug("这个是relay tx的后半部分，停止转发");
 					} else if (sendShard.equals(this.shardID) && reciShard.equals(this.shardID)) {
 						this.logger.debug("这个是relay tx的前半部分，需要转发");
-						if (classifi.keySet().contains(reciShard)) {
+						if (!classifi.keySet().contains(reciShard)) {
 							classifi.put(reciShard, new ArrayList<Transaction>());
 						}
 						ArrayList<Transaction> buf = classifi.get(reciShard);

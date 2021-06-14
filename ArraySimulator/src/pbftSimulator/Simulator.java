@@ -58,6 +58,8 @@ public class Simulator {
 	public static final Level LOGLEVEL = Level.INFO;
 	public static final int REQTXSIZE = 50;
 
+	public static final int BLOCK_GENERATION_TIME = 1000000;
+
 	//消息优先队列（按消息计划被处理的时间戳排序）
 	public static Queue<Message> msgQue = new PriorityQueue<>(Message.cmp);
 	//正在网络中传播的消息的总大小

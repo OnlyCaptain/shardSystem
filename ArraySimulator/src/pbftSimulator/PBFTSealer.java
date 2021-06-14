@@ -389,29 +389,31 @@ class MyRunnable implements Runnable {
 		System.out.println("开始监听TxPool of "+this.pbftSealer.name);
 		int count = 0;
         while (true) {
+			long beginTime = System.currentTimeMillis();
 			ArrayList<Transaction> txsBuffer = new ArrayList<>();
 			// 读取够 Simulator.BLOCKTXNUM 就发送一次Request;
 			try {
 				int i = 0;
-				while (i < Simulator.BLOCKTXNUM) {
+				long endTime = System.currentTimeMillis();
+				while (i < Simulator.BLOCKTXNUM && endTime - beginTime < Simulator.BLOCK_GENERATION_TIME) {
 					// 设置接收者接收消息的时间，这里设定为100s.即100s没收到新消息就会自动关闭
 					TextMessage message = null;
-					message = (TextMessage) mqListener.consumer.receive();
+					message = (TextMessage) mqListener.consumer.receive(Simulator.BLOCK_GENERATION_TIME - (endTime - beginTime));
 					Transaction tx = null;
 
-					// if (null != message) {
-					// 	this.pbftSealer.logger.debug("收到消息" + message.getText());
-					// }
-					
-					tx = new Transaction(message.getText());
-					if (null != tx) {
-						txsBuffer.add(tx);
-					} 
-					// else {
-					// 	this.pbftSealer.logger.info("Receive an non-tx message");
-					// 	continue;
-					// }
+					if (null != message) {
+						this.pbftSealer.logger.debug("收到消息" + message.getText());
+						tx = new Transaction(message.getText());
+						if (null != tx) {
+							txsBuffer.add(tx);
+						} 
+					}
+					else {
+						this.pbftSealer.logger.debug("超过系统设置的出块时间"+Simulator.BLOCK_GENERATION_TIME+"ms, 还没有收集到足够的交易，停止收集，出块");
+						break;
+					}
 					i ++;
+					endTime = System.currentTimeMillis();
 				}
 				count ++;
 				System.out.println("In here, txsBuffer.size = "+txsBuffer.size());

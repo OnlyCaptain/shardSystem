@@ -1,12 +1,13 @@
 package pbftSimulator.message;
 
+import java.util.ArrayList;
+
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 import shardSystem.transaction.Transaction;
 
 public class RawTxMessage extends Message {
-	private Transaction tx;
-	private JSONArray m;   // transactions: [JSONObject, JSONObject, ... ]
+	public JSONArray m;   // transactions: [JSONObject, JSONObject, ... ]
 	
 	public RawTxMessage(Transaction[] txs) {
 		super(0, 0, 0);
@@ -14,6 +15,16 @@ public class RawTxMessage extends Message {
 		m = new JSONArray();
 		for (int i = 0; i < txs.length; i ++) {
 			m.add(txs[i]);
+		}
+		this.type = Message.TRANSACTION;
+	}
+
+	public RawTxMessage(ArrayList<Transaction> txs) {
+		super(0, 0, 0);
+		// this.tx = tx;
+		m = new JSONArray();
+		for (int i = 0; i < txs.size(); i ++) {
+			m.add(txs.get(i));
 		}
 		this.type = Message.TRANSACTION;
 	}
@@ -37,12 +48,12 @@ public class RawTxMessage extends Message {
 	// 	// TODO Auto-generated constructor stub
 	// }
 
-	public Transaction getTx() {
-		return tx;
+	public JSONArray getTxs() {
+		return m;
 	}
 
-	public void setTx(Transaction tx) {
-		this.tx = tx;
+	public void setTx(JSONArray m) {
+		this.m = m;
 	}
 
 	public JSONArray getM() {

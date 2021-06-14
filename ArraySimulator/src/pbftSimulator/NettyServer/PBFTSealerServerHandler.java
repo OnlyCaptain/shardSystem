@@ -8,6 +8,11 @@ import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 import pbftSimulator.MQ.MqSender;
 import pbftSimulator.PBFTSealer;
+import pbftSimulator.message.Message;
+import pbftSimulator.message.RawTxMessage;
+import pbftSimulator.message.ReplyMsg;
+import pbftSimulator.message.RequestMsg;
+import pbftSimulator.message.TimeOutMsg;
 import pbftSimulator.Simulator;
 import pbftSimulator.message.*;
 import pbftSimulator.replica.Replica;
@@ -85,6 +90,14 @@ public class PBFTSealerServerHandler extends SimpleChannelInboundHandler<String>
 
                     //将本shard的Tx放入消息队列
                     MqSender mqSender = new MqSender();
+
+                    RawTxMessage msg = new RawTxMessage(jsbuff);
+                    JSONArray ja = msg.getTxs();
+                    for (int i = 0; i < ja.size(); i ++) {
+                        Transaction txbuff = new Transaction(ja.get(i).toString());
+                        mqSender.sendMessage(mqSender.session, mqSender.producer, txbuff.toString());
+                    }
+
                     ArrayList<Transaction> thisShradTxs = classifi.get(sealer.shardID);
                     for (Transaction thisShradTx : thisShradTxs) {
                         mqSender.sendMessage(mqSender.session, mqSender.producer, thisShradTx.encoder());

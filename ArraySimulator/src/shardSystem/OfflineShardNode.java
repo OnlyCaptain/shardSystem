@@ -1,8 +1,10 @@
 package shardSystem;
 
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Queue;
 
+import pbftSimulator.PairAddress;
 import pbftSimulator.message.Message;
 import pbftSimulator.replica.Replica;
 import shardSystem.transaction.Transaction;
@@ -23,8 +25,8 @@ public class OfflineShardNode extends Replica {
 
 
 
-	public OfflineShardNode(int id, String IP, int port, int[] netDlys, int[] netDlyToClis, String[] IPs, int[] ports, String[] cIPs, int[] cports) {
-		super(NAME, id, IP, port, netDlys, netDlyToClis, IPs, ports, cIPs, cports);
+	public OfflineShardNode(String shardID, int id, String IP, int port, int[] netDlys, int[] netDlyToClis, Map<String, ArrayList<PairAddress>> topos) {
+		super(NAME, shardID, id, IP, port, netDlys, netDlyToClis, topos);
 		this.name = NAME.concat(String.valueOf(id));
 		System.out.println(this.curWorkspace);
 		shardID = "0";

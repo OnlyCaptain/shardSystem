@@ -1,11 +1,13 @@
 package shardSystem;
 
 
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Set;
 
+import pbftSimulator.PairAddress;
 import pbftSimulator.message.Message;
 import pbftSimulator.message.PrePrepareMsg;
 import pbftSimulator.replica.Replica;
@@ -27,8 +29,8 @@ public class ByztShardNode extends Replica {
 
 
 
-	public ByztShardNode(int id, String IP, int port, int[] netDlys, int[] netDlyToClis, String[] IPs, int[] ports, String[] cIPs, int[] cports) {
-		super(NAME, id, IP, port, netDlys, netDlyToClis, IPs, ports, cIPs, cports);
+	public ByztShardNode(String shardID, int id, String IP, int port, int[] netDlys, int[] netDlyToClis, Map<String, ArrayList<PairAddress>> topos) {
+		super(NAME, shardID, id, IP, port, netDlys, netDlyToClis, topos);
 		this.name = NAME.concat(String.valueOf(id));
 		System.out.println(this.curWorkspace);
 		shardID = "0";

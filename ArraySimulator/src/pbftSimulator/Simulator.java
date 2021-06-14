@@ -55,8 +55,10 @@ public class Simulator {
 	public static final int SLICENUM = 2;    // 地址倒数几位，作为识别分片的依据
 	public static final int PBFTSEALERPORT = 58052;
 
-	public static final Level LOGLEVEL = Level.INFO;
+	public static final Level LOGLEVEL = Level.DEBUG;
 	public static final int REQTXSIZE = 50;
+
+	public static final int BLOCK_GENERATION_TIME = 1000000;
 
 	//消息优先队列（按消息计划被处理的时间戳排序）
 	public static Queue<Message> msgQue = new PriorityQueue<>(Message.cmp);

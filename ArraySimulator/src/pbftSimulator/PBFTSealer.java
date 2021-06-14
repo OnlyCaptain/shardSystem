@@ -331,6 +331,49 @@ public class PBFTSealer {
 			e.printStackTrace();
 		}
 	}
+
+	/**
+	 * 发送跨分片交易的后半段
+	 */
+	public void sendToOtherShard(ArrayList<Transaction> txs, String targetShard) {
+		RawTxMessage rt = new RawTxMessage((Transaction[])txs.toArray());
+		this.sendMsg(this.IP, Simulator.PBFTSEALERPORT+Integer.parseInt(targetShard), rt, sendTag, this.logger);
+	}
+
+	/**
+	 * 根据地址查询该地址所在的分片。
+	 * TODO
+	 * @param addr 表示查询的地址（账户地址）
+	 * @return	返回对应的分片ID
+	 */
+	public String queryShardID(String addr) {
+		// 地址映射分片表
+		String[] hex = {"0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"};
+		Map<String, String>  addrShard = new HashMap<>();
+		int n = (int)Math.ceil(16*16 / Simulator.SHARDNUM), k = n, curS = 0;
+		// 两位 ->
+		for (int i = 0; i < 16; i ++) {
+			for (int j = 0; j < 16; j ++) {
+				addrShard.put(hex[i].concat(hex[j]), (String)Simulator.topos.keySet().toArray()[curS]);
+				k --;
+				if (k < 0) {
+					k = n;
+					curS ++;
+				}
+			}
+		}
+		// 查询的规则有两种方式：
+		String result;
+		// 1. 根据尾数 mod
+		String slice = addr.substring(addr.length()-Simulator.SLICENUM, addr.length());
+		result = addrShard.get(slice);
+		// 2. 根据地址数据库查询
+		// TODO
+		return result;  // 一开始只有一个分片
+	}
+
+
+
 }
 
 class MyRunnable implements Runnable {

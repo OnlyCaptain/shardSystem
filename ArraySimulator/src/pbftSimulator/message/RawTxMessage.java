@@ -45,6 +45,14 @@ public class RawTxMessage extends Message {
 		this.tx = tx;
 	}
 
+	public JSONArray getM() {
+		return m;
+	}
+
+	public void setM(JSONArray m) {
+		this.m = m;
+	}
+
 	public String toString() {
 		return encoder();
 	}

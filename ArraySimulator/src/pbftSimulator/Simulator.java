@@ -78,6 +78,7 @@ public class Simulator {
 	public static String[] clientIPs = netIPsInit(CN);
 //	public static int[] clientPorts = netPortsInit(CN);
 	public static int[] clientPorts = {58052, 65528, 59547};
+	public static Map<String, ArrayList<PairAddress>> topos;
 	
 	public static void main(String[] args) {
 		//初始化包含FN个拜占庭意节点的RN个replicas

@@ -68,7 +68,7 @@ public class PBFTSealer {
 
 	public String txPoolName;
 
-
+	public Map<String, String> addrShard;
 	public Map<String, ArrayList<PairAddress>> topos;  // 这个东西，应该有如下的结构：
 	/** 
 	 * topos: {
@@ -79,7 +79,7 @@ public class PBFTSealer {
 
 	public Semaphore lastBlockEnd;
 
-	public PBFTSealer(String shardID, int id, String IP, int port, int[] netDlys, Map<String, ArrayList<PairAddress>> topos) {
+	public PBFTSealer(String shardID, int id, String IP, int port, int[] netDlys, Map<String, ArrayList<PairAddress>> topos, Map<String,String> addrShard) {
 		this.id = id;
 		this.netDlys = netDlys;
 		this.IP = IP;
@@ -89,6 +89,7 @@ public class PBFTSealer {
 		reqTimes = new HashMap<>();
 		reqMsgs = new HashMap<>();
 		repMsgs = new HashMap<>();
+		this.addrShard = addrShard;
 		// replicaAddrs = new ArrayList<PairAddress>();
 		this.time = 0;
 		this.lastBlockEnd = new Semaphore(1, true);
@@ -216,7 +217,8 @@ public class PBFTSealer {
 		
 		Message requestMsg = new RequestMsg("Message", txStr, time, id, id, priId, time + netDlys[priId]);
 
-		Simulator.sendMsg(requestMsg, sendTag, this.logger);
+		// Simulator.sendMsg(requestMsg, sendTag, this.logger);
+		// this.logger.info("正在向")
 		sendMsg(replicaAddrs.get(priId).getIP(), replicaAddrs.get(priId).getPort(), requestMsg, sendTag, this.logger);
 		reqStats.put(time, PROCESSING);
 		reqMsgs.put(time, requestMsg);
@@ -358,38 +360,22 @@ public class PBFTSealer {
 		this.sendMsg(this.IP, Simulator.PBFTSEALER_PORT, rt, sendTag, this.logger);
 	}
 
-	// /**
-	//  * 根据地址查询该地址所在的分片。
-	//  * TODO
-	//  * @param addr 表示查询的地址（账户地址）
-	//  * @return	返回对应的分片ID
-	//  */
-	// public String queryShardID(String addr) {
-	// 	// 地址映射分片表
-	// 	String[] hex = {"0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"};
-	// 	Map<String, String>  addrShard = new HashMap<>();
-	// 	int n = (int)Math.ceil(16*16 / Simulator.SHARDNUM), k = n, curS = 0;
-	// 	// 两位 ->
-	// 	for (int i = 0; i < 16; i ++) {
-	// 		for (int j = 0; j < 16; j ++) {
-	// 			addrShard.put(hex[i].concat(hex[j]), (String)topos.keySet().toArray()[curS]);
-	// 			k --;
-	// 			if (k < 0) {
-	// 				k = n;
-	// 				curS ++;
-	// 			}
-	// 		}
-	// 	}
-	// 	System.out.println("查询中"+addrShard.toString());
-	// 	// 查询的规则有两种方式：
-	// 	String result;
-	// 	// 1. 根据尾数 mod
-	// 	String slice = addr.substring(addr.length()-Simulator.SLICENUM, addr.length());
-	// 	result = addrShard.get(slice);
-	// 	// 2. 根据地址数据库查询
-	// 	// TODO
-	// 	return result;  // 一开始只有一个分片
-	// }
+	/**
+	 * 根据地址查询该地址所在的分片。
+	 * TODO
+	 * @param addr 表示查询的地址（账户地址）
+	 * @return	返回对应的分片ID
+	 */
+	public String queryShardID(String addr) {
+		// 查询的规则有两种方式：
+		String result;
+		// 1. 根据尾数 mod
+		String slice = addr.substring(addr.length()-Simulator.SLICENUM, addr.length());
+		result = addrShard.get(slice);
+		// 2. 根据地址数据库查询
+		// TODO
+		return result;  // 一开始只有一个分片
+	}
 
 
 

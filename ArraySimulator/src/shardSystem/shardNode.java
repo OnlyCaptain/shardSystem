@@ -41,11 +41,13 @@ public class shardNode extends Replica {
 
 	public String name;
 	public String url;    // 数据库 url
-	public static Map<String, String> addrShard = getAddrShard(new String[]{"0"});
+	public static Map<String, String> addrShard;
 	public Queue<Transaction> txPending;
 
-	public shardNode(String shardID, int id, String IP, int port, int[] netDlys, int[] netDlyToClis, Map<String, ArrayList<PairAddress>> topos) {
-		super(NAME, shardID, id, IP, port, netDlys, netDlyToClis, topos);
+	public shardNode(String shardID, int id, String IP, int port, int[] netDlys, int[] netDlyToClis, Map<String, ArrayList<PairAddress>> topos, Map<String,String> addrShard) {
+		super(NAME, shardID, id, IP, port, netDlys, netDlyToClis, topos, addrShard);
+
+		this.addrShard = addrShard;
 
 		this.name = "shard_".concat(shardID).concat("_").concat(NAME).concat(String.valueOf(id));
 		System.out.println(this.curWorkspace);
@@ -104,25 +106,25 @@ public class shardNode extends Replica {
         }
     }
 
-	public static Map<String, String> getAddrShard(String[] shards) {
-		// 地址映射分片表
-		String[] hex = {"0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"};
-		Map<String, String> addrs = new HashMap<>();
-		int n = (int)Math.ceil(16*16 / Simulator.SHARDNUM), k = n, curS = 0;
-		// 两位 -> 
-		for (int i = 0; i < 16; i ++) {
-			for (int j = 0; j < 16; j ++) {
-				addrs.put(hex[i].concat(hex[j]), shards[curS]);
-				k --;
-				if (k < 0) {
-					k = n;
-					curS ++;
-				}
-			}
-		}
-		// System.out.println("查询中"+addrs.toString());
-		return addrs;
-	}
+	// public static Map<String, String> getAddrShard(String[] shards) {
+	// 	// 地址映射分片表
+	// 	String[] hex = {"0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"};
+	// 	Map<String, String> addrs = new HashMap<>();
+	// 	int n = (int)Math.ceil(16*16 / Simulator.SHARDNUM), k = n, curS = 0;
+	// 	// 两位 -> 
+	// 	for (int i = 0; i < 16; i ++) {
+	// 		for (int j = 0; j < 16; j ++) {
+	// 			addrs.put(hex[i].concat(hex[j]), shards[curS]);
+	// 			k --;
+	// 			if (k < 0) {
+	// 				k = n;
+	// 				curS ++;
+	// 			}
+	// 		}
+	// 	}
+	// 	// System.out.println("查询中"+addrs.toString());
+	// 	return addrs;
+	// }
 
 	/**
 	 * 判断交易是否被执行过，true说明有，false说明没有
@@ -230,7 +232,7 @@ public class shardNode extends Replica {
 	 * @param addr 表示查询的地址（账户地址）
 	 * @return	返回对应的分片ID
 	 */
-	public static String queryShardID(String addr) {
+	public String queryShardID(String addr) {
 		// 查询的规则有两种方式：
 		String result;
 

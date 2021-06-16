@@ -84,35 +84,19 @@ public class Simulator {
 	public static Map<String, ArrayList<PairAddress>> topos;
 	
 	public static void main(String[] args) {
-		//初始化包含FN个拜占庭意节点的RN个replicas
-//		boolean[] byzts = byztDistriInit(RN, FN);
-		// for (int i = 0; i < RN; i ++) {
-		// 	System.out.print(String.valueOf(byzts[i]).concat(" "));
-		// }
-		// System.out.println("");
-		// for (int i = 0; i < CN; i ++) {
-		// 	System.out.print(String.valueOf(clientPorts[i]).concat(" "));
-		// }
-		// System.out.println();
-
-		// boolean[] byzts = {true, false, false, false, false, false, true};
-
-// 		int[] usefulPorts = netPortsInit(SHARDNODENUM * SHARDNUM);
-
 
 		Map<String, ArrayList<PairAddress>> topos  = new HashMap<> ();
+		Map<String, String> addrShard = new HashMap<>();
 		String configJsonFileName = args[0];
 		try {
-			topos = getConfigJson(configJsonFileName);
+			topos = getTopoConfig(configJsonFileName);
+			addrShard = getAddrShard(configJsonFileName);
 			
-			System.out.println(topos.toString());
 			JSONObject js = JSONObject.fromObject(topos);
 			System.out.println(js.toString());
 
-			InetAddress addr = InetAddress.getLocalHost();
-			String curIP = addr.getHostAddress();
-			System.out.println("Local HostAddress"+curIP);   // ip
-			System.out.println("Local host name"+addr.getHostName());        // hostname
+			String curIP = Utils.getPublicIp();
+			System.out.println("Local HostAddress "+curIP);   // ip
 
 			// 开始获取自己在topos中是第几个。
 			int currentID = 0;
@@ -122,8 +106,8 @@ public class Simulator {
 					currentID = curShardIPs.get(i).getId();
 				}
 			}
-			shardNode currentReplica = new shardNode("0", currentID, curShardIPs.get(currentID).getIP(), curShardIPs.get(currentID).getPort(), netDlys[currentID], netDlysToClis[currentID], topos);
-			
+			shardNode currentReplica = new shardNode("0", currentID, curShardIPs.get(currentID).getIP(), curShardIPs.get(currentID).getPort(), netDlys[currentID], netDlysToClis[currentID], topos, addrShard);
+
 
 
 			// Map<String, ArrayList<PairAddress>> topos = new HashMap<> ();
@@ -313,7 +297,7 @@ public class Simulator {
 		return num;
 	}
 
-	public static Map<String, ArrayList<PairAddress>> getConfigJson(String fileName) throws IOException {
+	public static Map<String, ArrayList<PairAddress>> getTopoConfig(String fileName) throws IOException {
 
 		File file=new File(fileName);
 		String content= FileUtils.readFileToString(file,"UTF-8");
@@ -336,4 +320,25 @@ public class Simulator {
 		return topos;
 	}
 
+	public static Map<String, String> getAddrShard(String fileName) throws IOException {
+
+		File file=new File(fileName);
+		String content= FileUtils.readFileToString(file,"UTF-8");
+
+		JSONObject jsonObject = JSONObject.fromObject(content);
+		JSONObject jsonTopo = jsonObject.getJSONObject("addrShard");
+
+		Map<String, String> addrShard  = new HashMap<> ();
+
+		for (int i = 0; i < SHARDNUM; i ++) {
+
+			String shardID = String.valueOf(i);
+			JSONArray jsonShard = jsonTopo.getJSONArray(shardID);
+			for (int j = 0; j < jsonShard.size(); j ++) {
+				String shardJ = jsonShard.getString(j);
+				addrShard.put(shardJ, shardID);
+			}
+		}
+		return addrShard;
+	}
 }

@@ -1,7 +1,9 @@
 package pbftSimulator;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -11,10 +13,12 @@ import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 import net.sf.json.JSON;
+import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 import pbftSimulator.message.Message;
 import pbftSimulator.replica.Replica;
@@ -43,7 +47,7 @@ public class test {
 
 	public static final int BLOCKTXNUM = 50;
 
-	public static final int SHARDNUM = 3;
+	public static final int SHARDNUM = 1;
 	public static final int SHARDNODENUM = 7;
 
 	public static final Level LOGLEVEL = Level.DEBUG;
@@ -107,6 +111,39 @@ public class test {
 		System.out.println(topos.toString());
 		JSONObject js = JSONObject.fromObject(topos);
 		System.out.println(js.toString());
+		
+		System.out.println(Utils.getPublicIp());
+			
+		String[] shards = {"0"};
+
+		String[] hex = {"0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"};
+		Map<String, ArrayList<String>> addrs = new HashMap<>();
+
+		int n = (int)Math.ceil(16*16 / Simulator.SHARDNUM), k = n, curS = 0;
+		// 两位 -> 
+		for (int i = 0; i < 16; i ++) {
+			for (int j = 0; j < 16; j ++) {
+				if (!addrs.keySet().contains(shards[curS]))
+					addrs.put(shards[curS], new ArrayList<String>());
+				addrs.get(shards[curS]).add(hex[i].concat(hex[j]));
+				k --;
+				if (k < 0) {
+					k = n;
+					curS ++;
+				}
+			}
+		}
+		System.out.println(addrs.toString());
+		JSONObject js2 = JSONObject.fromObject(addrs);
+		System.out.println(js2.toString());
+		Map<String, String> addrShard = new HashMap<>();
+
+		try {
+			addrShard = getAddrShard("./src/config.json");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		System.out.println(addrShard.toString());
 
 
 		// Replica[] reps = new Replica[RN];
@@ -277,4 +314,27 @@ public class test {
 		}
 		return num;
 	}
+	
+	public static Map<String, String> getAddrShard(String fileName) throws IOException {
+
+		File file=new File(fileName);
+		String content= FileUtils.readFileToString(file,"UTF-8");
+
+		JSONObject jsonObject = JSONObject.fromObject(content);
+		JSONObject jsonTopo = jsonObject.getJSONObject("addrShard");
+
+		Map<String, String> addrShard  = new HashMap<> ();
+
+		for (int i = 0; i < SHARDNUM; i ++) {
+
+			String shardID = String.valueOf(i);
+			JSONArray jsonShard = jsonTopo.getJSONArray(shardID);
+			for (int j = 0; j < jsonShard.size(); j ++) {
+				String shardJ = jsonShard.getString(j);
+				addrShard.put(shardJ, shardID);
+			}
+		}
+		return addrShard;
+	}
+
 }

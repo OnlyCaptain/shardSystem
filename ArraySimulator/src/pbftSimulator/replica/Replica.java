@@ -103,7 +103,7 @@ public class Replica {
 		}
 	};
 	
-	public Replica(String name, String shardID, int id, String IP, int port, int[] netDlys, int[] netDlyToClis,  Map<String, ArrayList<PairAddress>> topos) {
+	public Replica(String name, String shardID, int id, String IP, int port, int[] netDlys, int[] netDlyToClis,  Map<String, ArrayList<PairAddress>> topos, Map<String,String> addrShard) {
 		this.name = "shard_".concat(shardID).concat("_").concat(name).concat(String.valueOf(id));
 		this.shardID = shardID;
 		this.id = id;
@@ -131,7 +131,7 @@ public class Replica {
 		}
 
 		// if (isPrimary())
-		clients.add(new PairAddress(PBFTSealer.getCliId(0), this.IP, Simulator.PBFTSEALER_PORT));
+		clients.add(new PairAddress(PBFTSealer.getCliId(0), this.topos.get(this.shardID).get(0).getIP(), Simulator.PBFTSEALER_PORT));
 		
 		
 		// 定义当前Replica的工作目录
@@ -148,7 +148,7 @@ public class Replica {
 		if (isPrimary()) {
 			ArrayList<PairAddress> curIPports = topos.get(shardID);
 			System.out.println(String.format("分片 %s 的打包器建立在端口 %d 上", shardID, clients.get(0).getPort()));
-			this.pbftSealer = new PBFTSealer(this.shardID, PBFTSealer.getCliId(0), clients.get(0).getIP(), clients.get(0).getPort(), netDlys, this.topos);
+			this.pbftSealer = new PBFTSealer(this.shardID, PBFTSealer.getCliId(0), clients.get(0).getIP(), clients.get(0).getPort(), netDlys, this.topos, addrShard);
 		}
 	}
 

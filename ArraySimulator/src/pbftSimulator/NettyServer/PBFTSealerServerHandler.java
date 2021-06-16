@@ -16,6 +16,7 @@ import pbftSimulator.message.TimeOutMsg;
 import pbftSimulator.Simulator;
 import pbftSimulator.message.*;
 import pbftSimulator.replica.Replica;
+import shardSystem.shardNode;
 import shardSystem.transaction.Transaction;
 
 import java.net.InetSocketAddress;
@@ -24,6 +25,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import javax.management.relation.RelationException;
+
 
 public class PBFTSealerServerHandler extends SimpleChannelInboundHandler<String> {
     private PBFTSealer sealer;
@@ -66,48 +68,50 @@ public class PBFTSealerServerHandler extends SimpleChannelInboundHandler<String>
 
                     RawTxMessage rawTxMessage = new RawTxMessage(jsbuff);
                     JSONArray m = rawTxMessage.getM();
-
+                    // 划分出属于本分片的交易与不属于本分片的交易
                     Map<String, ArrayList<Transaction>> classifi = new HashMap<>();
                     for(int i=0;i<m.size();i++){
-                        Transaction tx = (Transaction)m.get(i);
-                        String sendShard = sealer.queryShardID( tx.getSender());
-                        String reciShard = sealer.queryShardID( tx.getSender());
-                        //将tx放入 sender 的shard中
-                        if (!classifi.keySet().contains(sendShard)) {
-                            classifi.put(sendShard, new ArrayList<Transaction>());
-                        }
-                        ArrayList<Transaction> buf = classifi.get(sendShard);
-                        buf.add(tx);
-                        //sender和 reviver 不属于同一个Shard，将tx放入 reviver 的shard中
-                        if(!sendShard.equals(reciShard)) {
-                            if (!classifi.keySet().contains(reciShard)) {
-                                classifi.put(reciShard, new ArrayList<Transaction>());
+                        Transaction tx = new Transaction(m.get(i).toString());
+                        String sendShard = shardNode.queryShardID( tx.getSender());
+                        String reciShard = shardNode.queryShardID( tx.getRecipient());
+                        if (!sendShard.equals(this.sealer.shardID) && !reciShard.equals(this.sealer.shardID)) {
+                            if (!classifi.keySet().contains(sendShard)) {
+                                classifi.put(sendShard, new ArrayList<Transaction>());
                             }
-                            buf = classifi.get(reciShard);
+                            ArrayList<Transaction> buf = classifi.get(sendShard);
+                            buf.add(tx);
+                        }
+                        else {
+                            if (!classifi.keySet().contains(this.sealer.shardID)) {
+                                classifi.put(this.sealer.shardID, new ArrayList<Transaction>());
+                            }
+                            ArrayList<Transaction> buf = classifi.get(this.sealer.shardID);
                             buf.add(tx);
                         }
                     }
-
+                    int cur = 0, noCur = 0;
+                    for (Map.Entry<String, ArrayList<Transaction>> entry : classifi.entrySet()) { 
+                        if (entry.getKey().equals(this.sealer.shardID)) cur = entry.getValue().size();
+                        else noCur += entry.getValue().size();
+                    }  
+                    this.sealer.logger.debug(String.format("在分片%s 中，属于本分片的交易共有：%d 条,不属于本分片的交易有：%d 条", this.sealer.shardID, cur, noCur));
+                    
+                    
                     //将本shard的Tx放入消息队列
-                    MqSender mqSender = new MqSender();
-
-                    RawTxMessage msg = new RawTxMessage(jsbuff);
-                    JSONArray ja = msg.getTxs();
-                    for (int i = 0; i < ja.size(); i ++) {
-                        Transaction txbuff = new Transaction(ja.get(i).toString());
-                        mqSender.sendMessage(mqSender.session, mqSender.producer, txbuff.toString());
-                    }
-
-                    ArrayList<Transaction> thisShradTxs = classifi.get(sealer.shardID);
-                    for (Transaction thisShradTx : thisShradTxs) {
-                        mqSender.sendMessage(mqSender.session, mqSender.producer, thisShradTx.encoder());
+                    MqSender mqSender = new MqSender(this.sealer.txPoolName);
+                    ArrayList<Transaction> thisShardTxs = classifi.get(sealer.shardID);
+                    if (null != thisShardTxs) {
+                        for (Transaction thisShradTx : thisShardTxs) {
+                            mqSender.sendMessage(mqSender.session, mqSender.producer, thisShradTx.encoder());
+                        }
                     }
                     try {
                         if (null != mqSender.connection)
                             mqSender.connection.close();
                     } catch (Throwable ignore) {
-                    }
 
+                    }
+                    this.sealer.logger.debug(classifi.toString());
                     //将其他shard的Tx发送到其PBFTSealer
                     for(String shard : classifi.keySet()){
                         if(shard.equals(sealer.shardID)){

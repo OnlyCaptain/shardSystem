@@ -16,9 +16,11 @@ public class MqSender {
     public Session session; // Destination ：消息的目的地;消息发送给谁.
     public Destination destination; // MessageProducer：消息发送者
     public MessageProducer producer; // TextMessage message;
+    public String queueName;
 
 //    public static void main(String[] args) {
-    public MqSender(){
+    public MqSender(String queueName){
+        this.queueName = queueName;
 
         // 构造ConnectionFactory实例对象，此处采用ActiveMq的实现jar
         connectionFactory = new ActiveMQConnectionFactory(
@@ -32,7 +34,7 @@ public class MqSender {
             session = connection.createSession(Boolean.TRUE,
                     Session.AUTO_ACKNOWLEDGE);
             // 获取session注意参数值FirstQueue是一个服务器的queue，须在在ActiveMq的console配置
-            destination = session.createQueue("FirstQueue");
+            destination = session.createQueue(queueName);
             // 得到消息生成者【发送者】
             producer = session.createProducer(destination);
             // 设置不持久化，此处学习，实际根据项目决定
@@ -63,7 +65,7 @@ public class MqSender {
 
         TextMessage message = session.createTextMessage(msg);
         // 发送消息到目的地方
-        System.out.println("发送消息：" + "ActiveMq 发送的消息" + msg);
+        // System.out.println("发送消息：" + "ActiveMq 发送的消息" + msg);
         producer.send(message);
 
         session.commit();

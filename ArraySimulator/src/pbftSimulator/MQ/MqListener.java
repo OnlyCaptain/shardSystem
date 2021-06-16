@@ -18,10 +18,12 @@ public class MqListener {
     public Destination destination;
     // 消费者，消息接收者
     public MessageConsumer consumer;
+    public String queueName;
 
 
 //    public static void main(String[] args) {
-    public MqListener(){
+    public MqListener(String queueName){
+        this.queueName = queueName;
 
         connectionFactory = new ActiveMQConnectionFactory(
                 ActiveMQConnection.DEFAULT_USER,
@@ -35,7 +37,7 @@ public class MqListener {
             session = connection.createSession(Boolean.FALSE,
                     Session.AUTO_ACKNOWLEDGE);
             // 获取session注意参数值FirstQueue是一个服务器的queue，须在在ActiveMq的console配置
-            destination = session.createQueue("FirstQueue");
+            destination = session.createQueue(this.queueName);
             consumer = session.createConsumer(destination);
 
         } catch (Exception e) {

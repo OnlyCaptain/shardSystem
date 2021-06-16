@@ -88,7 +88,7 @@ public class Replica {
 	public Map<Message, Integer> reqStats;			//request请求状态
 
 	public PBFTSealer pbftSealer;
-	Map<String, ArrayList<PairAddress>> topos;  // 这个东西，应该有如下的结构：
+	public Map<String, ArrayList<PairAddress>> topos;  // 这个东西，应该有如下的结构：
 	/** 
 	 * topos: {
 	 * 	 "0": [ {ip:.., port:.., id:...}, {}, ... ]
@@ -148,7 +148,7 @@ public class Replica {
 		if (isPrimary()) {
 			ArrayList<PairAddress> curIPports = topos.get(shardID);
 			System.out.println(String.format("分片 %s 的打包器建立在端口 %d 上", shardID, clients.get(0).getPort()));
-			this.pbftSealer = new PBFTSealer(this.shardID, PBFTSealer.getCliId(0), clients.get(0).getIP(), clients.get(0).getPort(), netDlys, curIPports);
+			this.pbftSealer = new PBFTSealer(this.shardID, PBFTSealer.getCliId(0), clients.get(0).getIP(), clients.get(0).getPort(), netDlys, this.topos);
 		}
 	}
 
@@ -394,6 +394,7 @@ public class Replica {
 	public void receiveRequest(Message msg) {
 		if(msg == null) return;
 		RequestMsg reqlyMsg = (RequestMsg)msg;
+		this.logger.debug(reqlyMsg.encoder());
 		int c = reqlyMsg.c;
 		long t = reqlyMsg.t;
 		//如果这条请求已经reply过了，那么就再回复一次reply

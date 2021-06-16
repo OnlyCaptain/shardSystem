@@ -8,7 +8,7 @@ import javax.jms.TextMessage;
 public class MqListenerTest {
     public static void main(String[] args) throws JMSException {
 
-        MqListener mqListener = new MqListener();
+        MqListener mqListener = new MqListener("txPool_0");
 
         while (true) {
             // 设置接收者接收消息的时间，这里设定为100s.即100s没收到新消息就会自动关闭

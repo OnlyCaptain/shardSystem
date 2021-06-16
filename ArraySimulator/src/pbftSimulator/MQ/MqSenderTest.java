@@ -8,7 +8,7 @@ import shardSystem.transaction.Transaction;
 public class MqSenderTest {
     public static void main(String[] args) throws Exception {
 
-        MqSender mqSender = new MqSender();
+        MqSender mqSender = new MqSender("FirstQueue");
         // String msg =  "send a test message";
         ArrayList<Transaction> txs = Simulator.getTxsFromFile("./data/Tx_500.csv");
 		int start = 0;

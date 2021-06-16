@@ -58,7 +58,7 @@ public class Simulator {
 	public static final Level LOGLEVEL = Level.DEBUG;
 	public static final int REQTXSIZE = 50;
 
-	public static final int BLOCK_GENERATION_TIME = 1000000;
+	public static final int BLOCK_GENERATION_TIME = 10000;
 
 	//消息优先队列（按消息计划被处理的时间戳排序）
 	public static Queue<Message> msgQue = new PriorityQueue<>(Message.cmp);
@@ -132,7 +132,7 @@ public class Simulator {
 			
 			for(int i = 0; i < Math.min(INFLIGHT, REQNUM); i++) {
 				ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(start, start+50));
-				reps[0].pbftSealer.sendRequest(tx1);
+				reps[0].pbftSealer.sendRawTx(tx1);
 				start += 50;
 				requestNums++;
 			}

@@ -66,9 +66,20 @@ public class PBFTSealer {
 	public ArrayList<PairAddress> replicaAddrs;
 	public long time;
 
+	public String txPoolName;
+
+
+	public Map<String, ArrayList<PairAddress>> topos;  // 这个东西，应该有如下的结构：
+	/** 
+	 * topos: {
+	 * 	 "0": [ {ip:.., port:.., id:...}, {}, ... ]
+	 * 	 "1": [ {ip:.., port:.., id:...}, {}, ... ]
+	 * }
+	*/
+
 	public Semaphore lastBlockEnd;
 
-	public PBFTSealer(String shardID, int id, String IP, int port, int[] netDlys, ArrayList<PairAddress> curIPports) {
+	public PBFTSealer(String shardID, int id, String IP, int port, int[] netDlys, Map<String, ArrayList<PairAddress>> topos) {
 		this.id = id;
 		this.netDlys = netDlys;
 		this.IP = IP;
@@ -78,12 +89,14 @@ public class PBFTSealer {
 		reqTimes = new HashMap<>();
 		reqMsgs = new HashMap<>();
 		repMsgs = new HashMap<>();
-		replicaAddrs = new ArrayList<PairAddress>();
+		// replicaAddrs = new ArrayList<PairAddress>();
 		this.time = 0;
 		this.lastBlockEnd = new Semaphore(1, true);
 
-		this.replicaAddrs = curIPports;
+		this.topos = topos;
+		this.replicaAddrs = this.topos.get(shardID);
 
+		this.txPoolName = "txPool_".concat(this.shardID);
 		// 定义当前Replica的工作目录
 		this.name = "PBFTSealer_".concat(String.valueOf(id)).concat("_ofShard").concat(shardID);
 		StringBuffer buf = new StringBuffer("./workspace/");
@@ -176,6 +189,11 @@ public class PBFTSealer {
 				System.out.println("【Error】消息类型错误！");
 		}
 		
+	}
+
+	public void sendRawTx(ArrayList<Transaction> txs) {
+		RawTxMessage rt = new RawTxMessage(txs);
+		sendMsg(this.IP, this.port, rt, sendTag, this.logger);
 	}
 	
 	public void sendRequest(ArrayList<Transaction> txs) {
@@ -336,41 +354,42 @@ public class PBFTSealer {
 	 * 发送跨分片交易的后半段
 	 */
 	public void sendToOtherShard(ArrayList<Transaction> txs, String targetShard) {
-		RawTxMessage rt = new RawTxMessage((Transaction[])txs.toArray());
+		RawTxMessage rt = new RawTxMessage(txs);
 		this.sendMsg(this.IP, Simulator.PBFTSEALERPORT+Integer.parseInt(targetShard), rt, sendTag, this.logger);
 	}
 
-	/**
-	 * 根据地址查询该地址所在的分片。
-	 * TODO
-	 * @param addr 表示查询的地址（账户地址）
-	 * @return	返回对应的分片ID
-	 */
-	public String queryShardID(String addr) {
-		// 地址映射分片表
-		String[] hex = {"0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"};
-		Map<String, String>  addrShard = new HashMap<>();
-		int n = (int)Math.ceil(16*16 / Simulator.SHARDNUM), k = n, curS = 0;
-		// 两位 ->
-		for (int i = 0; i < 16; i ++) {
-			for (int j = 0; j < 16; j ++) {
-				addrShard.put(hex[i].concat(hex[j]), (String)Simulator.topos.keySet().toArray()[curS]);
-				k --;
-				if (k < 0) {
-					k = n;
-					curS ++;
-				}
-			}
-		}
-		// 查询的规则有两种方式：
-		String result;
-		// 1. 根据尾数 mod
-		String slice = addr.substring(addr.length()-Simulator.SLICENUM, addr.length());
-		result = addrShard.get(slice);
-		// 2. 根据地址数据库查询
-		// TODO
-		return result;  // 一开始只有一个分片
-	}
+	// /**
+	//  * 根据地址查询该地址所在的分片。
+	//  * TODO
+	//  * @param addr 表示查询的地址（账户地址）
+	//  * @return	返回对应的分片ID
+	//  */
+	// public String queryShardID(String addr) {
+	// 	// 地址映射分片表
+	// 	String[] hex = {"0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"};
+	// 	Map<String, String>  addrShard = new HashMap<>();
+	// 	int n = (int)Math.ceil(16*16 / Simulator.SHARDNUM), k = n, curS = 0;
+	// 	// 两位 ->
+	// 	for (int i = 0; i < 16; i ++) {
+	// 		for (int j = 0; j < 16; j ++) {
+	// 			addrShard.put(hex[i].concat(hex[j]), (String)topos.keySet().toArray()[curS]);
+	// 			k --;
+	// 			if (k < 0) {
+	// 				k = n;
+	// 				curS ++;
+	// 			}
+	// 		}
+	// 	}
+	// 	System.out.println("查询中"+addrShard.toString());
+	// 	// 查询的规则有两种方式：
+	// 	String result;
+	// 	// 1. 根据尾数 mod
+	// 	String slice = addr.substring(addr.length()-Simulator.SLICENUM, addr.length());
+	// 	result = addrShard.get(slice);
+	// 	// 2. 根据地址数据库查询
+	// 	// TODO
+	// 	return result;  // 一开始只有一个分片
+	// }
 
 
 
@@ -385,7 +404,7 @@ class MyRunnable implements Runnable {
 
 	@Override
 	public void run() {
-		MqListener mqListener = new MqListener();
+		MqListener mqListener = new MqListener(this.pbftSealer.txPoolName);
 		System.out.println("开始监听TxPool of "+this.pbftSealer.name);
 		int count = 0;
         while (true) {
@@ -402,7 +421,7 @@ class MyRunnable implements Runnable {
 					Transaction tx = null;
 
 					if (null != message) {
-						this.pbftSealer.logger.debug("收到消息" + message.getText());
+						// this.pbftSealer.logger.debug("收到消息" + message.getText());
 						tx = new Transaction(message.getText());
 						if (null != tx) {
 							txsBuffer.add(tx);
@@ -416,9 +435,8 @@ class MyRunnable implements Runnable {
 					endTime = System.currentTimeMillis();
 				}
 				count ++;
-				System.out.println("In here, txsBuffer.size = "+txsBuffer.size());
-				System.out.println("这是第"+count+"个块");
 				this.pbftSealer.sendRequest(txsBuffer);
+				System.out.println(String.format("这里是分片 %s 的第 %d 个块", this.pbftSealer.shardID, count)+"In here, txsBuffer.size = "+txsBuffer.size());
 				// Thread.sleep(7000);
 			} catch (JMSException e) {
 				System.out.println(e.getMessage());

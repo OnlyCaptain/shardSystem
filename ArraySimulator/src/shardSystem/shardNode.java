@@ -41,11 +41,8 @@ public class shardNode extends Replica {
 
 	public String name;
 	public String url;    // 数据库 url
-	public Map<String, String> addrShard;
+	public static Map<String, String> addrShard = getAddrShard(new String[]{"0", "1", "2"});
 	public Queue<Transaction> txPending;
-
-
-
 
 	public shardNode(String shardID, int id, String IP, int port, int[] netDlys, int[] netDlyToClis, Map<String, ArrayList<PairAddress>> topos) {
 		super(NAME, shardID, id, IP, port, netDlys, netDlyToClis, topos);
@@ -55,22 +52,7 @@ public class shardNode extends Replica {
 		url = "jdbc:sqlite:".concat(this.curWorkspace).concat(this.name).concat("-sqlite.db");
 		createDB();
 		txPending = new PriorityQueue<>(Transaction.cmp);
-
-		// 地址映射分片表
-		String[] hex = {"0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"};
-		addrShard = new HashMap<>();
-		int n = (int)Math.ceil(16*16 / Simulator.SHARDNUM), k = n, curS = 0;
-		// 两位 -> 
-		for (int i = 0; i < 16; i ++) {
-			for (int j = 0; j < 16; j ++) {
-				addrShard.put(hex[i].concat(hex[j]), (String)topos.keySet().toArray()[curS]);
-				k --;
-				if (k < 0) {
-					k = n;
-					curS ++;
-				}
-			}
-		}
+		
 	}
 
 	/**
@@ -122,6 +104,26 @@ public class shardNode extends Replica {
         }
     }
 
+	public static Map<String, String> getAddrShard(String[] shards) {
+		// 地址映射分片表
+		String[] hex = {"0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"};
+		Map<String, String> addrs = new HashMap<>();
+		int n = (int)Math.ceil(16*16 / Simulator.SHARDNUM), k = n, curS = 0;
+		// 两位 -> 
+		for (int i = 0; i < 16; i ++) {
+			for (int j = 0; j < 16; j ++) {
+				addrs.put(hex[i].concat(hex[j]), shards[curS]);
+				k --;
+				if (k < 0) {
+					k = n;
+					curS ++;
+				}
+			}
+		}
+		// System.out.println("查询中"+addrs.toString());
+		return addrs;
+	}
+
 	/**
 	 * 判断交易是否被执行过，true说明有，false说明没有
 	 * @param tx
@@ -168,6 +170,8 @@ public class shardNode extends Replica {
 	 * @param txs 交易类的数组
 	 */
 	public void txProcess(ArrayList<Transaction> txs) {
+		// 收集跨分片交易
+		Map<String, ArrayList<Transaction>> crossTx = new HashMap<>();
 		for (int i = 0; i < txs.size(); i ++) {
 			Transaction tx = txs.get(i);
 			if (!validateTx(tx)) {
@@ -182,28 +186,23 @@ public class shardNode extends Replica {
 			// 这里可能需要判断是哪个地方的交易，然后再转发 relay Transaction。
 			// 考虑到 Primary 的存在，可以把转发部分交给Primary。
 			if (isPrimary()) {
-				Map<String, ArrayList<Transaction>> classifi = new HashMap<>();
-				for (int ind = 0; ind < txs.size(); ind ++) {
-					String sendShard = queryShardID(txs.get(ind).getSender());
-					String reciShard = queryShardID(txs.get(ind).getRecipient());
-					if (!sendShard.equals(this.shardID) && !reciShard.equals(this.shardID)) {
-						this.logger.error("收到了错误的交易，打包区块的时候没写好");
-					} else if (!sendShard.equals(this.shardID) && reciShard.equals(this.shardID)) {
-						this.logger.debug("这个是relay tx的后半部分，停止转发");
-					} else if (sendShard.equals(this.shardID) && reciShard.equals(this.shardID)) {
-						this.logger.debug("这个是relay tx的前半部分，需要转发");
-						if (!classifi.keySet().contains(reciShard)) {
-							classifi.put(reciShard, new ArrayList<Transaction>());
-						}
-						ArrayList<Transaction> buf = classifi.get(reciShard);
-						buf.add(txs.get(ind));
-					} else {
-						this.logger.debug("存在片内交易");
+				String sendShard = queryShardID(tx.getSender());
+				String reciShard = queryShardID(tx.getRecipient());
+				if (!sendShard.equals(this.shardID) && !reciShard.equals(this.shardID)) {
+					this.logger.error("收到了错误的交易，打包区块的时候没写好");
+					this.logger.error(String.format("sender: %s, recipient: %s, sendSHARD: %s, reciSHARD: %s", tx.getSender(), tx.getRecipient(), sendShard, reciShard));
+				} else if (!sendShard.equals(this.shardID) && reciShard.equals(this.shardID)) {
+					this.logger.debug("这个是relay tx的后半部分，停止转发");
+				} else if (sendShard.equals(this.shardID) && !reciShard.equals(this.shardID)) {
+					this.logger.debug("这个是relay tx的前半部分，需要转发");
+					if (!crossTx.keySet().contains(reciShard)) {
+						crossTx.put(reciShard, new ArrayList<Transaction>());
 					}
+					ArrayList<Transaction> buf = crossTx.get(reciShard);
+					buf.add(tx);
+				} else {
+					this.logger.debug("存在片内交易");
 				}
-				for (Map.Entry<String, ArrayList<Transaction>> entry : classifi.entrySet()) { 
-					sendCrossTx(entry.getValue(), entry.getKey());
-				}  
 			}
 			// 以下是存交易
 			Connection conn = connect();
@@ -216,7 +215,13 @@ public class shardNode extends Replica {
 				System.out.println(ex.getMessage());
 			}
 		}
-		// printTx();
+		for (Map.Entry<String, ArrayList<Transaction>> entry : crossTx.entrySet()) { 
+			this.logger.debug(String.format("在分片%s 中，属于分片 %s 的跨分片交易有：%d 条", this.shardID, entry.getKey(), entry.getValue().size()));
+		}  
+                    
+		for (Map.Entry<String, ArrayList<Transaction>> entry : crossTx.entrySet()) { 
+			sendCrossTx(entry.getValue(), entry.getKey());
+		} 
 	}
 
 	/**
@@ -225,7 +230,7 @@ public class shardNode extends Replica {
 	 * @param addr 表示查询的地址（账户地址）
 	 * @return	返回对应的分片ID
 	 */
-	public String queryShardID(String addr) {
+	public static String queryShardID(String addr) {
 		// 查询的规则有两种方式：
 		String result;
 

@@ -240,6 +240,9 @@ public class shardNode extends Replica {
 		String slice = addr.substring(addr.length()-Simulator.SLICENUM, addr.length());
 		result = addrShard.get(slice);
 
+		if (result == null) {
+			System.out.println("问题地址："+addr);
+		}
 		// 2. 根据地址数据库查询 
 		// TODO
 		return result;  // 一开始只有一个分片

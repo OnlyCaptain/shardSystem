@@ -51,6 +51,7 @@ public class Client {
 		this.priPort = priPort;
 		this.name = "client";
 		this.curWorkspace = "./workspace/";
+		buildWorkspace();
 	}
 	
 	public void buildWorkspace() {
@@ -86,7 +87,7 @@ public class Client {
 	
 	public void sendRawTx(ArrayList<Transaction> txs) {
 		RawTxMessage rt = new RawTxMessage(txs);
-		System.out.println(rt.toString());
+//		System.out.println(rt.toString());
 		sendMsg(this.priIP, this.priPort, rt, sendTag, this.logger);
 	}
 	
@@ -102,7 +103,7 @@ public class Client {
 		String jsbuff = msg.encoder();
 		try {
 			NettyClientBootstrap bootstrap = new NettyClientBootstrap(sport, sIP, this.logger);
-			msg.print(tag, logger);
+//			msg.print(tag, logger);
 			bootstrap.socketChannel.writeAndFlush(jsbuff);
 			// 关闭连接
 			bootstrap.eventLoopGroup.shutdownGracefully();
@@ -136,11 +137,10 @@ public class Client {
 		String curIP = Utils.getPublicIp();
 		System.out.println("Local HostAddress "+curIP);   // ip
 		String priIP = "112.74.168.78";
-		int priPort = REPLICA_PORT;
+		int priPort = PBFTSEALER_PORT;
 		String txFilePath = args[0];
 		ArrayList<Transaction> txs = Client.getTxsFromFile(txFilePath);
 		Client client = new Client(curIP, 8080, priIP, priPort);
-		System.out.println(txs.toString());
 		int howManyTx = Integer.parseInt(args[1]);
 		int times = (int)Math.ceil(howManyTx/50);
 		int start = 0;

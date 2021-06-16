@@ -74,14 +74,36 @@ public class test {
 		int[] usefulPorts = netPortsInit(SHARDNODENUM * SHARDNUM);
 		
 		Map<String, ArrayList<PairAddress>> topos = new HashMap<> ();
+		topos.put("0", new ArrayList<PairAddress>());
+		String filepath = "./src/IPlists.csv";
 
-		for (int i = 0; i < SHARDNUM; i ++) {
-			String shardID = String.valueOf(i);
-			topos.put(shardID, new ArrayList<PairAddress>());
-			for (int j = 0; j < SHARDNODENUM; j ++) {
-				topos.get(shardID).add(new PairAddress(j, "127.0.0.1", usefulPorts[i*SHARDNODENUM+j]));
+		try {
+			BufferedReader reader = new BufferedReader(new FileReader(filepath));//换成你的文件名
+			reader.readLine();//第一行信息，为标题信息，不用，如果需要，注释掉
+			String line = null; 
+			int id = 0;
+			while((line=reader.readLine())!=null){ 
+				String item[] = line.split(",");
+				String IP = item[0].replace("\"", "");;//CSV格式文件为逗号分隔符文件，这里根据逗号切分
+
+				topos.get("0").add(new PairAddress(id++, IP, 60635));
+				// String last = item[item.length-1];//这就是你要的数据了
+				// result.add(new Transaction(item[0], item[1], Double.parseDouble(item[2]), null, Long.parseLong(item[3]), Double.parseDouble(item[4]), 0));
+				//int value = Integer.parseInt(last);//如果是数值，可以转化为数值
+				// System.out.println(last); 
 			}
+			reader.close();
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
+
+		// for (int i = 0; i < SHARDNUM; i ++) {
+		// 	String shardID = String.valueOf(i);
+		// 	topos.put(shardID, new ArrayList<PairAddress>());
+		// 	for (int j = 0; j < SHARDNODENUM; j ++) {
+		// 		topos.get(shardID).add(new PairAddress(j, "127.0.0.1", usefulPorts[i*SHARDNODENUM+j]));
+		// 	}
+		// }
 		System.out.println(topos.toString());
 		JSONObject js = JSONObject.fromObject(topos);
 		System.out.println(js.toString());

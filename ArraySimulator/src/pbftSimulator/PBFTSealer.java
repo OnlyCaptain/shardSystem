@@ -355,7 +355,7 @@ public class PBFTSealer {
 	 */
 	public void sendToOtherShard(ArrayList<Transaction> txs, String targetShard) {
 		RawTxMessage rt = new RawTxMessage(txs);
-		this.sendMsg(this.IP, Simulator.PBFTSEALERPORT+Integer.parseInt(targetShard), rt, sendTag, this.logger);
+		this.sendMsg(this.IP, Simulator.PBFTSEALER_PORT, rt, sendTag, this.logger);
 	}
 
 	// /**

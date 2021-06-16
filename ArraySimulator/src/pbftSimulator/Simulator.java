@@ -13,6 +13,7 @@ import java.util.Random;
 import java.util.Set;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.InetAddress;
 import java.util.*;
 
 import org.apache.commons.io.FileUtils;
@@ -49,16 +50,16 @@ public class Simulator {
 	public static final boolean SHOWDETAILINFO = true;		//是否显示完整的消息交互过程
 
 	public static final int BLOCKTXNUM = 50;
-
-	public static final int SHARDNUM = 3;     // 分片个数
+	public static final int SHARDNUM = 1;     // 分片个数
 	public static final int SHARDNODENUM = RN;   // 每个分片的节点数量
 	public static final int SLICENUM = 2;    // 地址倒数几位，作为识别分片的依据
-	public static final int PBFTSEALERPORT = 58052;
-
+	
 	public static final Level LOGLEVEL = Level.DEBUG;
 	public static final int REQTXSIZE = 50;
-
+	
 	public static final int BLOCK_GENERATION_TIME = 10000;
+	public static final int REPLICA_PORT = 60635;
+	public static final int PBFTSEALER_PORT = 58052;
 
 	//消息优先队列（按消息计划被处理的时间戳排序）
 	public static Queue<Message> msgQue = new PriorityQueue<>(Message.cmp);
@@ -100,9 +101,30 @@ public class Simulator {
 
 
 		Map<String, ArrayList<PairAddress>> topos  = new HashMap<> ();
-		String configJsonFileName = "./src/config.json";
+		String configJsonFileName = args[0];
 		try {
 			topos = getConfigJson(configJsonFileName);
+			
+			System.out.println(topos.toString());
+			JSONObject js = JSONObject.fromObject(topos);
+			System.out.println(js.toString());
+
+			InetAddress addr = InetAddress.getLocalHost();
+			String curIP = addr.getHostAddress();
+			System.out.println("Local HostAddress"+curIP);   // ip
+			System.out.println("Local host name"+addr.getHostName());        // hostname
+
+			// 开始获取自己在topos中是第几个。
+			int currentID = 0;
+			ArrayList<PairAddress> curShardIPs = topos.get("0");
+			for (int i = 0; i < curShardIPs.size(); i ++) {
+				if (curShardIPs.get(i).getIP().equals(curIP)) {
+					currentID = curShardIPs.get(i).getId();
+				}
+			}
+			shardNode currentReplica = new shardNode("0", currentID, curShardIPs.get(currentID).getIP(), curShardIPs.get(currentID).getPort(), netDlys[currentID], netDlysToClis[currentID], topos);
+			
+
 
 			// Map<String, ArrayList<PairAddress>> topos = new HashMap<> ();
 
@@ -113,81 +135,30 @@ public class Simulator {
 			// 		topos.get(shardID).add(new PairAddress(j, "127.0.0.1", usefulPorts[i*SHARDNODENUM+j]));
 			// 	}
 			// }
-			System.out.println(topos.toString());
-			JSONObject js = JSONObject.fromObject(topos);
-			System.out.println(js.toString());
-
-			Replica[] reps = new Replica[SHARDNUM * SHARDNODENUM];
-			for (int i = 0; i < SHARDNUM; i ++) {
-				String shardID = String.valueOf(i);
-				for (int j = 0; j < SHARDNODENUM; j ++) {
-					reps[i*SHARDNODENUM + j] = new shardNode(shardID, j, topos.get(shardID).get(j).getIP(), topos.get(shardID).get(j).getPort(), netDlys[j], netDlysToClis[j], topos);
-				}
-			}
-
-			Random rand = new Random(555);
-			long requestNums = 0;
-			ArrayList<Transaction> txs = getTxsFromFile("../data/Tx_500.csv");
-			int start = 0;
 			
-			for(int i = 0; i < Math.min(INFLIGHT, REQNUM); i++) {
-				ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(start, start+50));
-				reps[0].pbftSealer.sendRawTx(tx1);
-				start += 50;
-				requestNums++;
-			}
+
+			// Replica[] reps = new Replica[SHARDNUM * SHARDNODENUM];
+			// for (int i = 0; i < SHARDNUM; i ++) {
+			// 	String shardID = String.valueOf(i);
+			// 	for (int j = 0; j < SHARDNODENUM; j ++) {
+			// 		reps[i*SHARDNODENUM + j] = new shardNode(shardID, j, topos.get(shardID).get(j).getIP(), topos.get(shardID).get(j).getPort(), netDlys[j], netDlysToClis[j], topos);
+			// 	}
+			// }
+
+			// Random rand = new Random(555);
+			// long requestNums = 0;
+			// ArrayList<Transaction> txs = getTxsFromFile("../data/Tx_500.csv");
+			// int start = 0;
+			
+			// for(int i = 0; i < Math.min(INFLIGHT, REQNUM); i++) {
+			// 	ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(start, start+50));
+			// 	reps[0].pbftSealer.sendRawTx(tx1);
+			// 	start += 50;
+			// 	requestNums++;
+			// }
 		} catch (IOException e){
-			//do nothing
 			e.printStackTrace();
 		}
-
-//		if (msgQue.isEmpty()) 
-//			System.out.println("Error!");
-//		Message testMsg = msgQue.poll();
-//		reps[0].sendMsg(reps[1].IP, reps[1].port, testMsg, "Testing", reps[0].logger);
-		
-//		long timestamp = 0;
-//		// 消息处理
-//		while(!msgQue.isEmpty()) {
-//			// System.out.println("size of msgQue".concat(String.valueOf(msgQue.size())));
-//			Message msg = msgQue.poll();
-//			switch(msg.type) {
-//				case Message.REPLY:
-//				case Message.CLITIMEOUT:
-//					clis[Client.getCliArrayIndex(msg.rcvId)].msgProcess(msg);
-//					break;
-//				default:
-//					// 消息从这里发送到 primary 节点
-//					reps[msg.rcvId].msgProcess(msg);
-//			}
-//			// 添加超时，如果这个Request超过某个时间不达到稳态，判定为共识失败。
-//			if (msg.ifTimeOut(timestamp)) {
-//				// System.out.println("timeout");
-//				continue;
-//			}
-//			//如果还未达到稳定状态的request消息小于INFLIGHT，随机选择一个客户端发送请求消息
-//			// if(requestNums - getStableRequestNum(clis) < INFLIGHT && requestNums < REQNUM) {
-//			// 	clis[rand.nextInt(CN)].sendRequest(msg.rcvtime);
-//			// 	requestNums++;
-//			// }
-//			inFlyMsgLen -= msg.len;
-//			timestamp = msg.rcvtime;
-//			if(getNetDelay(inFlyMsgLen, 0) > COLLAPSEDELAY ) {
-//				System.out.println("【Error】网络消息总负载"+inFlyMsgLen
-//						+"B,网络传播时延超过"+COLLAPSEDELAY/1000
-//						+"秒，系统已严重拥堵，不可用！");
-//				break;
-//			}
-//		}
-//		long totalTime = 0;
-//		long totalStableMsg = 0;
-//		for(int i = 0; i < CN; i++) {
-//			totalTime += clis[i].accTime;
-//			totalStableMsg += clis[i].stableMsgNum();
-//		}
-//		double tps = getStableRequestNum(clis)/(double)(timestamp/1000);
-//		System.out.println("【The end】消息平均确认时间为:"+totalTime/totalStableMsg
-//				+"毫秒;消息吞吐量为:"+tps+"tps");
 	}
 
 	/**

@@ -131,7 +131,7 @@ public class Replica {
 		}
 
 		// if (isPrimary())
-		clients.add(new PairAddress(PBFTSealer.getCliId(0), this.IP, Simulator.PBFTSEALERPORT+Integer.parseInt(shardID)));
+		clients.add(new PairAddress(PBFTSealer.getCliId(0), this.IP, Simulator.PBFTSEALER_PORT));
 		
 		
 		// 定义当前Replica的工作目录

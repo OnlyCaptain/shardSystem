@@ -41,7 +41,7 @@ public class shardNode extends Replica {
 
 	public String name;
 	public String url;    // 数据库 url
-	public static Map<String, String> addrShard = getAddrShard(new String[]{"0", "1", "2"});
+	public static Map<String, String> addrShard = getAddrShard(new String[]{"0"});
 	public Queue<Transaction> txPending;
 
 	public shardNode(String shardID, int id, String IP, int port, int[] netDlys, int[] netDlyToClis, Map<String, ArrayList<PairAddress>> topos) {
@@ -248,7 +248,7 @@ public class shardNode extends Replica {
 	 */
 	public void sendCrossTx(ArrayList<Transaction> txs, String targetShard) {
 		RawTxMessage rt = new RawTxMessage(txs);
-		this.sendMsg(clients.get(0).getIP(), Simulator.PBFTSEALERPORT+Integer.parseInt(targetShard), rt, sendTag, this.logger);
+		this.sendMsg(clients.get(0).getIP(), Simulator.PBFTSEALER_PORT, rt, sendTag, this.logger);
 	}
 
 	/**

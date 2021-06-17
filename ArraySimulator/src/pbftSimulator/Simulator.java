@@ -92,6 +92,10 @@ public class Simulator {
 			topos = getTopoConfig(configJsonFileName);
 			addrShard = getAddrShard(configJsonFileName);
 			
+			JSONObject ad = JSONObject.fromObject(addrShard);
+//			System.out.println(ad.toString());
+			System.out.println(ad.size());
+			
 			JSONObject js = JSONObject.fromObject(topos);
 			System.out.println(js.toString());
 

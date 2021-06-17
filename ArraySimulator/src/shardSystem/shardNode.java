@@ -234,7 +234,7 @@ public class shardNode extends Replica {
 	 */
 	public String queryShardID(String addr) {
 		// 查询的规则有两种方式：
-		String result;
+		String result = null;
 
 		// 1. 根据尾数 mod
 		String slice = addr.substring(addr.length()-Simulator.SLICENUM, addr.length());

@@ -176,6 +176,9 @@ public class shardNode extends Replica {
 		Map<String, ArrayList<Transaction>> crossTx = new HashMap<>();
 		for (int i = 0; i < txs.size(); i ++) {
 			Transaction tx = txs.get(i);
+			String sendShard = queryShardID(tx.getSender());
+			String reciShard = queryShardID(tx.getRecipient());
+			
 			if (!validateTx(tx)) {
 				logger.warn("this is a invalid transaction. "+tx.toString());
 				continue;
@@ -187,24 +190,27 @@ public class shardNode extends Replica {
 			// txPending.add(tx);
 			// 这里可能需要判断是哪个地方的交易，然后再转发 relay Transaction。
 			// 考虑到 Primary 的存在，可以把转发部分交给Primary。
-			if (isPrimary()) {
-				String sendShard = queryShardID(tx.getSender());
-				String reciShard = queryShardID(tx.getRecipient());
-				if (!sendShard.equals(this.shardID) && !reciShard.equals(this.shardID)) {
-					this.logger.error("收到了错误的交易，打包区块的时候没写好");
-					this.logger.error(String.format("sender: %s, recipient: %s, sendSHARD: %s, reciSHARD: %s", tx.getSender(), tx.getRecipient(), sendShard, reciShard));
-				} else if (!sendShard.equals(this.shardID) && reciShard.equals(this.shardID)) {
-					this.logger.debug("这个是relay tx的后半部分，停止转发");
-				} else if (sendShard.equals(this.shardID) && !reciShard.equals(this.shardID)) {
-					this.logger.debug("这个是relay tx的前半部分，需要转发");
-					if (!crossTx.keySet().contains(reciShard)) {
-						crossTx.put(reciShard, new ArrayList<Transaction>());
+			try {
+				if (isPrimary()) {
+					if (!sendShard.equals(this.shardID) && !reciShard.equals(this.shardID)) {
+						this.logger.error("收到了错误的交易，打包区块的时候没写好");
+						this.logger.error(String.format("sender: %s, recipient: %s, sendSHARD: %s, reciSHARD: %s", tx.getSender(), tx.getRecipient(), sendShard, reciShard));
+					} else if (!sendShard.equals(this.shardID) && reciShard.equals(this.shardID)) {
+						this.logger.debug("这个是relay tx的后半部分，停止转发");
+					} else if (sendShard.equals(this.shardID) && !reciShard.equals(this.shardID)) {
+						this.logger.debug("这个是relay tx的前半部分，需要转发");
+						if (!crossTx.keySet().contains(reciShard)) {
+							crossTx.put(reciShard, new ArrayList<Transaction>());
+						}
+						ArrayList<Transaction> buf = crossTx.get(reciShard);
+						buf.add(tx);
+					} else {
+						this.logger.debug("存在片内交易");
 					}
-					ArrayList<Transaction> buf = crossTx.get(reciShard);
-					buf.add(tx);
-				} else {
-					this.logger.debug("存在片内交易");
 				}
+			} catch (NullPointerException e) {
+				System.out.println(e.getMessage());
+				System.out.println(String.format("发送分片：%s 接收分片: %s 本分片: %s",sendShard, reciShard, this.shardID));
 			}
 			// 以下是存交易
 			Connection conn = connect();

@@ -136,12 +136,13 @@ public class Client {
 
 		String curIP = Utils.getPublicIp();
 		System.out.println("Local HostAddress "+curIP);   // ip
-		String priIP = "112.74.168.78";
+		// String priIP = "112.74.168.78";
+		String priIP = args[1];
 		int priPort = PBFTSEALER_PORT;
 		String txFilePath = args[0];
 		ArrayList<Transaction> txs = Client.getTxsFromFile(txFilePath);
 		Client client = new Client(curIP, 8080, priIP, priPort);
-		int howManyTx = Integer.parseInt(args[1]);
+		int howManyTx = Integer.parseInt(args[2]);
 		int times = (int)Math.ceil(howManyTx/50);
 		int start = 0;
 		 for(int i = 0; i < times; i++) {

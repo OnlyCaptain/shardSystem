@@ -78,19 +78,27 @@ public class test {
 		int[] usefulPorts = netPortsInit(SHARDNODENUM * SHARDNUM);
 		
 		Map<String, ArrayList<PairAddress>> topos = new HashMap<> ();
-		topos.put("0", new ArrayList<PairAddress>());
-		String filepath = "./src/IPlists.csv";
+		// topos.put("0", new ArrayList<PairAddress>());
+		String filepath = "./ArraySimulator/src/IPlists.csv";
 
 		try {
 			BufferedReader reader = new BufferedReader(new FileReader(filepath));//换成你的文件名
 			reader.readLine();//第一行信息，为标题信息，不用，如果需要，注释掉
 			String line = null; 
 			int id = 0;
+			int shardId = -1;
 			while((line=reader.readLine())!=null){ 
 				String item[] = line.split(",");
 				String IP = item[0].replace("\"", "");;//CSV格式文件为逗号分隔符文件，这里根据逗号切分
 
-				topos.get("0").add(new PairAddress(id++, IP, 60635));
+				if (id % Simulator.SHARDNODENUM == 0) {
+					id = 0;
+					shardId ++;
+				}
+				String SID = String.valueOf(shardId);
+				if (!topos.keySet().contains(SID))
+					topos.put(SID, new ArrayList<PairAddress>());
+				topos.get(SID).add(new PairAddress(id++, IP, 60635));
 				// String last = item[item.length-1];//这就是你要的数据了
 				// result.add(new Transaction(item[0], item[1], Double.parseDouble(item[2]), null, Long.parseLong(item[3]), Double.parseDouble(item[4]), 0));
 				//int value = Integer.parseInt(last);//如果是数值，可以转化为数值
@@ -114,12 +122,12 @@ public class test {
 		
 		System.out.println(Utils.getPublicIp());
 			
-		String[] shards = {"0"};
+		String[] shards = topos.keySet().toArray(new String[topos.size()]);
 
 		String[] hex = {"0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"};
 		Map<String, ArrayList<String>> addrs = new HashMap<>();
 
-		int n = (int)Math.ceil(16*16 / Simulator.SHARDNUM), k = n, curS = 0;
+		int n = (int)Math.ceil(16*16 / topos.size()), k = n, curS = 0;
 		// 两位 -> 
 		for (int i = 0; i < 16; i ++) {
 			for (int j = 0; j < 16; j ++) {

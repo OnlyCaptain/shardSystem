@@ -50,7 +50,7 @@ public class Simulator {
 	public static final boolean SHOWDETAILINFO = true;		//是否显示完整的消息交互过程
 
 	public static final int BLOCKTXNUM = 50;
-	public static final int SHARDNUM = 1;     // 分片个数
+	// public static final int SHARDNUM = 3;     // 分片个数
 	public static final int SHARDNODENUM = RN;   // 每个分片的节点数量
 	public static final int SLICENUM = 2;    // 地址倒数几位，作为识别分片的依据
 	
@@ -104,13 +104,26 @@ public class Simulator {
 
 			// 开始获取自己在topos中是第几个。
 			int currentID = 0;
-			ArrayList<PairAddress> curShardIPs = topos.get("0");
-			for (int i = 0; i < curShardIPs.size(); i ++) {
-				if (curShardIPs.get(i).getIP().equals(curIP)) {
-					currentID = curShardIPs.get(i).getId();
+			String [] shardLists = topos.keySet().toArray(new String[topos.size()]);
+			String currentShardID = shardLists[0];
+			boolean ready = false;
+			for (int i = 0; i < shardLists.length; i ++) {
+				ArrayList<PairAddress> curIPs = topos.get(shardLists[i]);
+				for (int j = 0; j < curIPs.size(); j ++) {
+					if (curIPs.get(j).getIP().equals(curIP)) {
+						currentID = curIPs.get(j).getId();
+						ready = true;
+						break;
+					}
 				}
+				if (ready) 
+					break;
 			}
-			shardNode currentReplica = new shardNode("0", currentID, curShardIPs.get(currentID).getIP(), curShardIPs.get(currentID).getPort(), netDlys[currentID], netDlysToClis[currentID], topos, addrShard);
+			if (!ready) {
+				System.out.println("Error!!"+currentShardID+" "+currentID);
+			}
+			ArrayList<PairAddress> curShardIPs = topos.get(currentShardID);
+			shardNode currentReplica = new shardNode(currentShardID, currentID, curShardIPs.get(currentID).getIP(), curShardIPs.get(currentID).getPort(), netDlys[currentID], netDlysToClis[currentID], topos, addrShard);
 
 
 
@@ -311,7 +324,7 @@ public class Simulator {
 
 		Map<String, ArrayList<PairAddress>> topos  = new HashMap<> ();
 
-		for (int i = 0; i < SHARDNUM; i ++) {
+		for (int i = 0; i < jsonTopo.size(); i ++) {
 
 			String shardID = String.valueOf(i);
 			JSONArray jsonShard = jsonTopo.getJSONArray(shardID);
@@ -334,7 +347,7 @@ public class Simulator {
 
 		Map<String, String> addrShard  = new HashMap<> ();
 
-		for (int i = 0; i < SHARDNUM; i ++) {
+		for (int i = 0; i < jsonTopo.size(); i ++) {
 
 			String shardID = String.valueOf(i);
 			JSONArray jsonShard = jsonTopo.getJSONArray(shardID);

@@ -112,6 +112,7 @@ public class Simulator {
 				for (int j = 0; j < curIPs.size(); j ++) {
 					if (curIPs.get(j).getIP().equals(curIP)) {
 						currentID = curIPs.get(j).getId();
+						currentShardID = shardLists[i];
 						ready = true;
 						break;
 					}
@@ -122,6 +123,7 @@ public class Simulator {
 			if (!ready) {
 				System.out.println("Error!!"+currentShardID+" "+currentID);
 			}
+			System.out.println(String.format("这是第 %s 个分片的 %d 号节点", currentShardID, currentID));
 			ArrayList<PairAddress> curShardIPs = topos.get(currentShardID);
 			shardNode currentReplica = new shardNode(currentShardID, currentID, curShardIPs.get(currentID).getIP(), curShardIPs.get(currentID).getPort(), netDlys[currentID], netDlysToClis[currentID], topos, addrShard);
 

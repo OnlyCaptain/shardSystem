@@ -259,7 +259,8 @@ public class shardNode extends Replica {
 	 */
 	public void sendCrossTx(ArrayList<Transaction> txs, String targetShard) {
 		RawTxMessage rt = new RawTxMessage(txs);
-		this.sendMsg(clients.get(0).getIP(), Simulator.PBFTSEALER_PORT, rt, sendTag, this.logger);
+		String targetIP = this.topos.get(targetShard).get(0).getIP();
+		this.sendMsg(targetIP, Simulator.PBFTSEALER_PORT, rt, sendTag, this.logger);
 	}
 
 	/**

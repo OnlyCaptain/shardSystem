@@ -1,5 +1,5 @@
 rm -rf ~/shardRelease
-wget --no-check-certificate --content-disposition https://gitee.com/OnlyCaptain/shardRelease/attach_files/741235/download/shardRelease.zip
+wget --no-check-certificate --content-disposition https://gitee.com/OnlyCaptain/shardRelease/attach_files/741798/download/shardRelease.zip
 unzip shardRelease.zip
 
 systemctl stop firewalld.service

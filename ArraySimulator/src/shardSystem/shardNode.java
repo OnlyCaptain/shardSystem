@@ -44,8 +44,8 @@ public class shardNode extends Replica {
 	public static Map<String, String> addrShard;
 	public Queue<Transaction> txPending;
 
-	public shardNode(String shardID, int id, String IP, int port, int[] netDlys, int[] netDlyToClis, Map<String, ArrayList<PairAddress>> topos, Map<String,String> addrShard) {
-		super(NAME, shardID, id, IP, port, netDlys, netDlyToClis, topos, addrShard);
+	public shardNode(String shardID, int id, String IP, int port, Map<String, ArrayList<PairAddress>> topos, Map<String,String> addrShard) {
+		super(NAME, shardID, id, IP, port, topos, addrShard);
 
 		this.addrShard = addrShard;
 
@@ -110,7 +110,7 @@ public class shardNode extends Replica {
 	// 	// 地址映射分片表
 	// 	String[] hex = {"0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"};
 	// 	Map<String, String> addrs = new HashMap<>();
-	// 	int n = (int)Math.ceil(16*16 / Simulator.SHARDNUM), k = n, curS = 0;
+	// 	int n = (int)Math.ceil(16*16 / config.SHARDNUM), k = n, curS = 0;
 	// 	// 两位 -> 
 	// 	for (int i = 0; i < 16; i ++) {
 	// 		for (int j = 0; j < 16; j ++) {
@@ -243,7 +243,7 @@ public class shardNode extends Replica {
 		String result = null;
 
 		// 1. 根据尾数 mod
-		String slice = addr.substring(addr.length()-Simulator.SLICENUM, addr.length());
+		String slice = addr.substring(addr.length()-config.SLICENUM, addr.length());
 		result = addrShard.get(slice);
 
 		if (result == null) {
@@ -260,7 +260,7 @@ public class shardNode extends Replica {
 	public void sendCrossTx(ArrayList<Transaction> txs, String targetShard) {
 		RawTxMessage rt = new RawTxMessage(txs);
 		String targetIP = this.topos.get(targetShard).get(0).getIP();
-		this.sendMsg(targetIP, Simulator.PBFTSEALER_PORT, rt, sendTag, this.logger);
+		this.sendMsg(targetIP, config.PBFTSEALER_PORT, rt, sendTag, this.logger);
 	}
 
 	/**
@@ -340,14 +340,14 @@ public class shardNode extends Replica {
 		ReplyMsg rm = null;
 		if(mm.m != null) {
 			rem = (RequestMsg)(mm.m);
-			rm = new ReplyMsg(mm.v, rem.t, rem.c, id, "result", id, rem.c, time + netDlyToClis[PBFTSealer.getCliArrayIndex(rem.c)]);
+			rm = new ReplyMsg(mm.v, rem.t, rem.c, id, "result", id, rem.c, time);
 		}
 		
 		if((rem == null || !isInMsgCache(rm)) && mm.n == lastRepNum + 1 && commited(mm)) {
 			lastRepNum++;
 			setTimer(lastRepNum+1, time);
 			if(rem != null) {
-				// Simulator.sendMsg(rm, sendTag, this.logger);
+				// config.sendMsg(rm, sendTag, this.logger);
 				// this.logger.info("再次确认request的消息结构："+rem.m.get(0));
 				// executeTx();
 				ArrayList<Transaction> txs = new ArrayList<>();
@@ -370,7 +370,7 @@ public class shardNode extends Replica {
 			if(mm.n % K == 0) {
 				Message checkptMsg = new CheckPointMsg(v, mm.n, lastReplyMap, id, id, id, time);
 				addMessageToCache(checkptMsg);
-				// Simulator.sendMsgToOthers(checkptMsg, id, sendTag, this.logger);
+				// config.sendMsgToOthers(checkptMsg, id, sendTag, this.logger);
 				// sendMsgToOthers(checkptMsg, sendTag, this.logger);
 			}
 		}

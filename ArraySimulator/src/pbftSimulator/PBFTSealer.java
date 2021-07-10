@@ -17,6 +17,7 @@ import pbftSimulator.message.Message;
 import pbftSimulator.message.RawTxMessage;
 import pbftSimulator.message.ReplyMsg;
 import pbftSimulator.message.RequestMsg;
+import shardSystem.config;
 import shardSystem.transaction.Transaction;
 
 import org.apache.log4j.FileAppender;
@@ -60,7 +61,6 @@ public class PBFTSealer {
 	public Map<Long, Message> reqMsgs;			//request消息（删除已经达到stable状态的request消息）
 	public Map<Long, Map<Integer, Message>> repMsgs;	//reply消息（删除已经达到stable状态的reply消息）
 	public long accTime;						//累积确认时间
-	public int netDlys[];						//与各节点的基础网络时延
 	public String receiveTag = "CliReceive";
 	public String sendTag = "CliSend";
 	public ArrayList<PairAddress> replicaAddrs;
@@ -79,9 +79,8 @@ public class PBFTSealer {
 
 	public Semaphore lastBlockEnd;
 
-	public PBFTSealer(String shardID, int id, String IP, int port, int[] netDlys, Map<String, ArrayList<PairAddress>> topos, Map<String,String> addrShard) {
+	public PBFTSealer(String shardID, int id, String IP, int port, Map<String, ArrayList<PairAddress>> topos, Map<String,String> addrShard) {
 		this.id = id;
-		this.netDlys = netDlys;
 		this.IP = IP;
 		this.port = port;
 		this.shardID = shardID;
@@ -134,7 +133,7 @@ public class PBFTSealer {
 			Layout layout = new PatternLayout("%-d{yyyy-MM-dd HH:mm:ss} [ %l:%r ms ] %n[%p] %m%n");
 			FileAppender appender = new FileAppender(layout, this.curWorkspace.concat(this.name).concat(".log"));
 			appender.setAppend(false);
-			logger.setLevel(Simulator.LOGLEVEL);
+			logger.setLevel(config.LOGLEVEL);
 			logger.setAdditivity(false); 
 			appender.activateOptions(); 
 			logger.addAppender(appender);
@@ -209,15 +208,15 @@ public class PBFTSealer {
 		while(reqStats.containsKey(time)) {
 			time++;
 		}
-		int priId = v % Simulator.RN;
+		int priId = v % config.RN;
 		JSONArray txStr = new JSONArray();
 		for (int i = 0; i < txs.size(); i ++) {
 			txStr.add(txs.get(i));
 		}
 		
-		Message requestMsg = new RequestMsg("Message", txStr, time, id, id, priId, time + netDlys[priId]);
+		Message requestMsg = new RequestMsg("Message", txStr, time, id, id, priId, time);
 
-		// Simulator.sendMsg(requestMsg, sendTag, this.logger);
+		// config.sendMsg(requestMsg, sendTag, this.logger);
 		// this.logger.info("正在向")
 		sendMsg(replicaAddrs.get(priId).getIP(), replicaAddrs.get(priId).getPort(), requestMsg, sendTag, this.logger);
 		reqStats.put(time, PROCESSING);
@@ -245,7 +244,7 @@ public class PBFTSealer {
 			repMsgs.remove(t);
 			this.lastBlockEnd.release();
 			this.logger.info("【Stable】客户端"+id+"在"+t
-					+"时间请求的消息已经得到了f+1 = " + Utils.getMaxTorelentNumber(Simulator.RN) + " 条reply，进入稳态，共耗时"+(repMsg.rcvtime - t)+"毫秒,此时占用带宽为"+Simulator.inFlyMsgLen+"B");
+					+"时间请求的消息已经得到了f+1 = " + Utils.getMaxTorelentNumber(config.RN) + " 条reply，进入稳态，共耗时"+(repMsg.rcvtime - t)+"毫秒");
 		}
 	}
 	
@@ -257,10 +256,10 @@ public class PBFTSealer {
 			return;
 		}
 		//否则给所有的节点广播request消息
-		for(int i = 0; i < Simulator.RN; i++) {
-			Message requestMsg = new RequestMsg("Message", null, t, id, id, i, cliTimeOutMsg.rcvtime + netDlys[i]);
+		for(int i = 0; i < config.RN; i++) {
+			Message requestMsg = new RequestMsg("Message", null, t, id, id, i, cliTimeOutMsg.rcvtime);
 			sendMsg(replicaAddrs.get(i).getIP(), replicaAddrs.get(i).getPort(), requestMsg, sendTag, this.logger);
-			// Simulator.sendMsg(requestMsg, sendTag, this.logger);
+			// config.sendMsg(requestMsg, sendTag, this.logger);
 		}
 		//发送一条Timeout消息，以便将来检查是否发生超时
 		setTimer(t, cliTimeOutMsg.rcvtime);
@@ -293,7 +292,7 @@ public class PBFTSealer {
 				cnt++;
 			}
 		}
-		if(cnt > Utils.getMaxTorelentNumber(Simulator.RN)) return true;
+		if(cnt > Utils.getMaxTorelentNumber(config.RN)) return true;
 		return false;
 	}
 	
@@ -325,8 +324,8 @@ public class PBFTSealer {
 	}
 	
 	public void setTimer(long t, long time) {
-		Message timeoutMsg = new CliTimeOutMsg(t, id, id, time + Simulator.CLITIMEOUT);
-		// Simulator.sendMsg(timeoutMsg, "ClientTimeOut", this.logger);
+		Message timeoutMsg = new CliTimeOutMsg(t, id, id, time + config.CLITIMEOUT);
+		// config.sendMsg(timeoutMsg, "ClientTimeOut", this.logger);
 		this.logger.warn("Timeout. + "+timeoutMsg.toString());
 	}
 
@@ -358,7 +357,7 @@ public class PBFTSealer {
 	public void sendToOtherShard(ArrayList<Transaction> txs, String targetShard) {
 		RawTxMessage rt = new RawTxMessage(txs);
 		String targetIP = this.topos.get(targetShard).get(0).getIP();
-		this.sendMsg(targetIP, Simulator.PBFTSEALER_PORT, rt, sendTag, this.logger);
+		this.sendMsg(targetIP, config.PBFTSEALER_PORT, rt, sendTag, this.logger);
 	}
 
 	/**
@@ -371,7 +370,7 @@ public class PBFTSealer {
 		// 查询的规则有两种方式：
 		String result;
 		// 1. 根据尾数 mod
-		String slice = addr.substring(addr.length()-Simulator.SLICENUM, addr.length());
+		String slice = addr.substring(addr.length()-config.SLICENUM, addr.length());
 		result = addrShard.get(slice);
 		// 2. 根据地址数据库查询
 		// TODO
@@ -397,14 +396,14 @@ class MyRunnable implements Runnable {
         while (true) {
 			long beginTime = System.currentTimeMillis();
 			ArrayList<Transaction> txsBuffer = new ArrayList<>();
-			// 读取够 Simulator.BLOCKTXNUM 就发送一次Request;
+			// 读取够 config.BLOCKTXNUM 就发送一次Request;
 			try {
 				int i = 0;
 				long endTime = System.currentTimeMillis();
-				while (i < Simulator.BLOCKTXNUM && endTime - beginTime < Simulator.BLOCK_GENERATION_TIME) {
+				while (i < config.BLOCKTXNUM && endTime - beginTime < config.BLOCK_GENERATION_TIME) {
 					// 设置接收者接收消息的时间，这里设定为100s.即100s没收到新消息就会自动关闭
 					TextMessage message = null;
-					message = (TextMessage) mqListener.consumer.receive(Simulator.BLOCK_GENERATION_TIME - (endTime - beginTime));
+					message = (TextMessage) mqListener.consumer.receive(config.BLOCK_GENERATION_TIME - (endTime - beginTime));
 					Transaction tx = null;
 
 					if (null != message) {
@@ -415,7 +414,7 @@ class MyRunnable implements Runnable {
 						} 
 					}
 					else {
-						this.pbftSealer.logger.debug("超过系统设置的出块时间"+Simulator.BLOCK_GENERATION_TIME+"ms, 还没有收集到足够的交易，停止收集，出块");
+						this.pbftSealer.logger.debug("超过系统设置的出块时间"+config.BLOCK_GENERATION_TIME+"ms, 还没有收集到足够的交易，停止收集，出块");
 						break;
 					}
 					i ++;

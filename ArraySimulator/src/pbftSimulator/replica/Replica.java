@@ -47,6 +47,7 @@ import pbftSimulator.message.ReplyMsg;
 import pbftSimulator.message.RequestMsg;
 import pbftSimulator.message.TimeOutMsg;
 import pbftSimulator.message.ViewChangeMsg;
+import shardSystem.config;
 
 public class Replica {
 	
@@ -68,8 +69,6 @@ public class Replica {
 	public int n;										//消息处理序列号
 	public int lastRepNum;								//最新回复的消息处理序列号
 	public int h;										//低水位 = 稳定状态checkpoint的n
-	public int netDlys[];								//与其他节点的网络延迟
-	public int netDlyToClis[];							//与客户端的网络延迟
 	public boolean isTimeOut;							//当前正在处理的请求是否超时（如果超时了不会再发送任何消息）
 	public Logger logger;
 
@@ -103,14 +102,12 @@ public class Replica {
 		}
 	};
 	
-	public Replica(String name, String shardID, int id, String IP, int port, int[] netDlys, int[] netDlyToClis,  Map<String, ArrayList<PairAddress>> topos, Map<String,String> addrShard) {
+	public Replica(String name, String shardID, int id, String IP, int port,  Map<String, ArrayList<PairAddress>> topos, Map<String,String> addrShard) {
 		this.name = "shard_".concat(shardID).concat("_").concat(name).concat(String.valueOf(id));
 		this.shardID = shardID;
 		this.id = id;
 		this.IP = IP;
 		this.port = port;
-		this.netDlys = netDlys;
-		this.netDlyToClis = netDlyToClis;
 		this.topos = topos;
 
 		msgCache = new HashMap<>();
@@ -131,7 +128,7 @@ public class Replica {
 		}
 
 		// if (isPrimary())
-		clients.add(new PairAddress(PBFTSealer.getCliId(0), this.topos.get(this.shardID).get(0).getIP(), Simulator.PBFTSEALER_PORT));
+		clients.add(new PairAddress(PBFTSealer.getCliId(0), this.topos.get(this.shardID).get(0).getIP(), config.PBFTSEALER_PORT));
 		
 		
 		// 定义当前Replica的工作目录
@@ -148,7 +145,7 @@ public class Replica {
 		if (isPrimary()) {
 			ArrayList<PairAddress> curIPports = topos.get(shardID);
 			System.out.println(String.format("分片 %s 的打包器建立在端口 %d 上", shardID, clients.get(0).getPort()));
-			this.pbftSealer = new PBFTSealer(this.shardID, PBFTSealer.getCliId(0), clients.get(0).getIP(), clients.get(0).getPort(), netDlys, this.topos, addrShard);
+			this.pbftSealer = new PBFTSealer(this.shardID, PBFTSealer.getCliId(0), clients.get(0).getIP(), clients.get(0).getPort(), this.topos, addrShard);
 		}
 	}
 
@@ -202,7 +199,7 @@ public class Replica {
 			Layout layout = new PatternLayout("%-d{yyyy-MM-dd HH:mm:ss} [ %l:%r ms ] %n[%p] %m%n");
 			FileAppender appender = new FileAppender(layout, this.curWorkspace.concat(this.name).concat(".log"));
 			appender.setAppend(false);
-			logger.setLevel(Simulator.LOGLEVEL);
+			logger.setLevel(config.LOGLEVEL);
 			logger.setAdditivity(false); 
 			appender.activateOptions(); 
 			logger.addAppender(appender);
@@ -276,7 +273,7 @@ public class Replica {
 			return;
 		}
 		// System.out.println(d);
-		// Simulator.sendMsgToOthers(cm, id, sendTag, this.logger);
+		// config.sendMsgToOthers(cm, id, sendTag, this.logger);
 		addMessageToCache(cm);
 		sendMsgToOthers(cm, sendTag, this.logger);
 	}
@@ -287,14 +284,14 @@ public class Replica {
 		ReplyMsg rm = null;
 		if(mm.m != null) {
 			rem = (RequestMsg)(mm.m);
-			rm = new ReplyMsg(mm.v, rem.t, rem.c, id, "result", id, rem.c, time + netDlyToClis[PBFTSealer.getCliArrayIndex(rem.c)]);
+			rm = new ReplyMsg(mm.v, rem.t, rem.c, id, "result", id, rem.c, time);
 		}
 		
 		if((rem == null || !isInMsgCache(rm)) && mm.n == lastRepNum + 1 && commited(mm)) {
 			lastRepNum++;
 			setTimer(lastRepNum+1, time);
 			if(rem != null) {
-				// Simulator.sendMsg(rm, sendTag, this.logger);
+				// config.sendMsg(rm, sendTag, this.logger);
 				sendMsg(clients.get(PBFTSealer.getCliId(rem.c)).getIP(), clients.get(PBFTSealer.getCliId(rem.c)).getPort(), rm, sendTag, this.logger);
 				LastReply llp = lastReplyMap.get(rem.c);
 				if(llp == null) {
@@ -309,7 +306,7 @@ public class Replica {
 			if(mm.n % K == 0) {
 				Message checkptMsg = new CheckPointMsg(v, mm.n, lastReplyMap, id, id, id, time);
 //				addMessageToCache(checkptMsg);
-				// Simulator.sendMsgToOthers(checkptMsg, id, sendTag, this.logger);
+				// config.sendMsgToOthers(checkptMsg, id, sendTag, this.logger);
 				// sendMsgToOthers(checkptMsg, sendTag, this.logger);
 			}
 		}
@@ -327,7 +324,7 @@ public class Replica {
 			}
 		}
 		this.logger.debug("In prepare: cnt is "+cnt+" and d is "+m.mString());
-		if(cnt >= 2 * Utils.getMaxTorelentNumber(Simulator.RN)) {
+		if(cnt >= 2 * Utils.getMaxTorelentNumber(config.RN)) {
 			return true;
 		}
 		return false;
@@ -345,7 +342,7 @@ public class Replica {
 			}
 		}
 		this.logger.debug("In commited: cnt is "+cnt+" and d is "+m.mString());
-		if(cnt > 2 * Utils.getMaxTorelentNumber(Simulator.RN)) {
+		if(cnt > 2 * Utils.getMaxTorelentNumber(config.RN)) {
 			return true;
 		}
 		return false;
@@ -361,7 +358,7 @@ public class Replica {
 				cnt++;
 			}
 		}
-		if(cnt > 2 * Utils.getMaxTorelentNumber(Simulator.RN)) {
+		if(cnt > 2 * Utils.getMaxTorelentNumber(config.RN)) {
 			return true;
 		}
 		return false;
@@ -380,7 +377,7 @@ public class Replica {
 			}
 			int cnt = snMap.get(ckt.n)+1;
 			snMap.put(ckt.n, cnt);
-			if(cnt > Utils.getMaxTorelentNumber(Simulator.RN)) {
+			if(cnt > Utils.getMaxTorelentNumber(config.RN)) {
 				checkPoints.put(ckt.n, ckt.s);
 				maxN = Math.max(maxN, ckt.n);
 			}
@@ -399,9 +396,9 @@ public class Replica {
 		long t = reqlyMsg.t;
 		//如果这条请求已经reply过了，那么就再回复一次reply
 		if(reqStats.containsKey(msg) && reqStats.get(msg) == STABLE) {
-			long recTime = msg.rcvtime + netDlyToClis[PBFTSealer.getCliArrayIndex(c)];
+			long recTime = msg.rcvtime;
 			Message replyMsg = new ReplyMsg(v, t, c, id, "result", id, c, recTime);
-			Simulator.sendMsg(replyMsg, sendTag, this.logger);
+//			config.sendMsg(replyMsg, sendTag, this.logger);
 			// sendMsg(this.IP, sport, msg, tag, logger);
 			return;
 		}
@@ -419,7 +416,7 @@ public class Replica {
 					PrePrepareMsg ppMsg = (PrePrepareMsg)m;
 					if(ppMsg.v == v && ppMsg.i == id && ppMsg.m.equals(msg)) {
 						m.rcvtime = msg.rcvtime;
-						// Simulator.sendMsgToOthers(m, id, sendTag, this.logger);
+						// config.sendMsgToOthers(m, id, sendTag, this.logger);
 						sendMsgToOthers(m, sendTag, this.logger);
 						return;
 					}
@@ -432,7 +429,7 @@ public class Replica {
 				Message prePrepareMsg = new PrePrepareMsg(v, n, reqlyMsg, id, id, id, reqlyMsg.rcvtime);
 				// this.logger.debug("after constructing: "+ prePrepareMsg.encoder());
 				addMessageToCache(prePrepareMsg);
-				// Simulator.sendMsgToOthers(prePrepareMsg, id, sendTag, this.logger);
+				// config.sendMsgToOthers(prePrepareMsg, id, sendTag, this.logger);
 				sendMsgToOthers(prePrepareMsg, sendTag, logger);
 			}
 		}
@@ -446,7 +443,7 @@ public class Replica {
 		int i = prePrepareMsg.i;
 		//检查消息的视图是否与节点视图相符，消息的发送者是否是主节点，
 		//消息的视图是否合法，序号是否在水位内
-		if(msgv < v || !inWater(msgn) || i != msgv % Simulator.RN || !hasNewView(v)) {
+		if(msgv < v || !inWater(msgn) || i != msgv % config.RN || !hasNewView(v)) {
 			return;
 		}
 		//把prePrepare消息和其包含的request消息放进缓存
@@ -457,7 +454,7 @@ public class Replica {
 		String d = Utils.getMD5Digest(prePrepareMsg.mString());
 		Message prepareMsg = new PrepareMsg(msgv, msgn, d, id, id, id, msg.rcvtime);
 		if(isInMsgCache(prepareMsg)) return;
-		// Simulator.sendMsgToOthers(prepareMsg, id, sendTag, this.logger);
+		// config.sendMsgToOthers(prepareMsg, id, sendTag, this.logger);
 		addMessageToCache(prepareMsg);
 		sendMsgToOthers(prepareMsg, sendTag, this.logger);
 	}
@@ -493,7 +490,7 @@ public class Replica {
 		//如果消息已经进入稳态，就忽略这条消息
 		if(tMsg.n <= lastRepNum || tMsg.v < v ) return;
 		//如果不再会有新的request请求，则停止timeOut
-		if(reqStats.size() >= Simulator.REQNUM) return;
+		if(reqStats.size() >= config.REQNUM) return;
 		isTimeOut = true;
 		//发送viewChange消息
 		Map<Integer, LastReply> ss = checkPoints.get(h);
@@ -501,7 +498,7 @@ public class Replica {
 		Map<Integer, Set<Message>> P = computeP();
 		Message vm = new ViewChangeMsg(v + 1, h, ss, C, P, id, id, id, msg.rcvtime);
 		addMessageToCache(vm);
-		// Simulator.sendMsgToOthers(vm, id, sendTag, this.logger);
+		// config.sendMsgToOthers(vm, id, sendTag, this.logger);
 		sendMsgToOthers(vm, sendTag, this.logger);
 	}
 	
@@ -547,7 +544,7 @@ public class Replica {
 				Map<String, Set<Message>> VONMap = computeVON();
 				Message nvMsg = new NewViewMsg(v, VONMap.get("V"), VONMap.get("O"), VONMap.get("N"), id, id, id, msg.rcvtime);
 				addMessageToCache(nvMsg);
-				// Simulator.sendMsgToOthers(nvMsg, id, sendTag, this.logger);
+				// config.sendMsgToOthers(nvMsg, id, sendTag, this.logger);
 				sendMsgToOthers(nvMsg, sendTag, this.logger);
 				//发送所有不在O内的request消息的prePrepare消息
 				Set<Message> reqSet = msgCache.get(Message.REQUEST);
@@ -589,7 +586,7 @@ public class Replica {
 	}
 	
 	public int getPriId() {
-		return v % Simulator.RN;
+		return v % config.RN;
 	}
 	
 	public boolean isPrimary() {
@@ -827,8 +824,8 @@ public class Replica {
 
 
 	public void setTimer(int n, long time) {
-		Message timeOutMsg = new TimeOutMsg(v, n, id, id, time + Simulator.TIMEOUT);
-		Simulator.sendMsg(timeOutMsg, sendTag, this.logger);
+		Message timeOutMsg = new TimeOutMsg(v, n, id, id, time + config.TIMEOUT);
+//		config.sendMsg(timeOutMsg, sendTag, this.logger);
 	}
 
 }

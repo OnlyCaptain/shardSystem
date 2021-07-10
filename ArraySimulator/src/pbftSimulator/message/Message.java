@@ -8,6 +8,7 @@ import org.apache.log4j.Logger;
 import net.sf.json.JSON;
 import net.sf.json.JSONObject;
 import pbftSimulator.Simulator;
+import shardSystem.config;
 
 public class Message {
 	
@@ -64,7 +65,7 @@ public class Message {
 	}
 	
 	public void print(String tag, Logger logger) {
-		if(!Simulator.SHOWDETAILINFO) return;
+		if(!config.SHOWDETAILINFO) return;
 		String prefix = "【"+tag+"】";
 		// System.out.println(prefix+toString());
 		logger.info(prefix+toString());
@@ -248,7 +249,7 @@ public class Message {
     }
 
 	public boolean ifTimeOut(long time) {
-		if (Math.abs(rcvtime-time) >= Simulator.TIMEOUT) 
+		if (Math.abs(rcvtime-time) >= config.TIMEOUT) 
 			return true;
 		return false;
 	}

@@ -29,8 +29,8 @@ public class ByztShardNode extends Replica {
 
 
 
-	public ByztShardNode(String shardID, int id, String IP, int port, int[] netDlys, int[] netDlyToClis, Map<String, ArrayList<PairAddress>> topos, Map<String,String> addrShard) {
-		super(NAME, shardID, id, IP, port, netDlys, netDlyToClis, topos, addrShard);
+	public ByztShardNode(String shardID, int id, String IP, int port, Map<String, ArrayList<PairAddress>> topos, Map<String,String> addrShard) {
+		super(NAME, shardID, id, IP, port, topos, addrShard);
 		this.name = NAME.concat(String.valueOf(id));
 		System.out.println(this.curWorkspace);
 		shardID = "0";

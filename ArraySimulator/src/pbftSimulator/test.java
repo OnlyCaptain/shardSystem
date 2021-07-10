@@ -24,6 +24,7 @@ import pbftSimulator.message.Message;
 import pbftSimulator.replica.Replica;
 import shardSystem.ByztShardNode;
 import shardSystem.OfflineShardNode;
+import shardSystem.config;
 import shardSystem.shardNode;
 import shardSystem.transaction.Transaction;
 
@@ -91,7 +92,7 @@ public class test {
 				String item[] = line.split(",");
 				String IP = item[0].replace("\"", "");;//CSV格式文件为逗号分隔符文件，这里根据逗号切分
 
-				if (id % Simulator.SHARDNODENUM == 0) {
+				if (id % config.SHARDNODENUM == 0) {
 					id = 0;
 					shardId ++;
 				}

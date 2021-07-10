@@ -1,6 +1,5 @@
 package pbftSimulator.replica;
 
-import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -13,7 +12,6 @@ import java.util.Set;
 
 import org.apache.log4j.FileAppender;
 import org.apache.log4j.Layout;
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 
@@ -25,14 +23,12 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
-import net.sf.json.JSONObject;
 
 import java.io.File;
 import java.io.IOException;
 
 import pbftSimulator.PBFTSealer;
 import pbftSimulator.PairAddress;
-import pbftSimulator.Simulator;
 import pbftSimulator.Utils;
 import pbftSimulator.NettyClient.NettyClientBootstrap;
 import pbftSimulator.NettyServer.ReplicaServerHandler;
@@ -73,7 +69,7 @@ public class Replica {
 	public Logger logger;
 
 	public ArrayList<PairAddress> neighbors;
-	public ArrayList<PairAddress> clients;
+	public ArrayList<PairAddress> sealerIPs;
 	
 	//消息缓存<type, <msg>>:type消息类型;
 	public Map<Integer, Set<Message>> msgCache;
@@ -87,7 +83,7 @@ public class Replica {
 	public Map<Message, Integer> reqStats;			//request请求状态
 
 	public PBFTSealer pbftSealer;
-	public Map<String, ArrayList<PairAddress>> topos;  // 这个东西，应该有如下的结构：
+//	public Map<String, ArrayList<PairAddress>> topos;  // 这个东西，应该有如下的结构：
 	/** 
 	 * topos: {
 	 * 	 "0": [ {ip:.., port:.., id:...}, {}, ... ]
@@ -102,13 +98,12 @@ public class Replica {
 		}
 	};
 	
-	public Replica(String name, String shardID, int id, String IP, int port,  Map<String, ArrayList<PairAddress>> topos, Map<String,String> addrShard) {
+	public Replica(String name, String shardID, int id, String IP, int port) {
 		this.name = "shard_".concat(shardID).concat("_").concat(name).concat(String.valueOf(id));
 		this.shardID = shardID;
 		this.id = id;
 		this.IP = IP;
 		this.port = port;
-		this.topos = topos;
 
 		msgCache = new HashMap<>();
 		lastReplyMap = new HashMap<>();
@@ -117,9 +112,9 @@ public class Replica {
 		checkPoints.put(0, lastReplyMap);
 
 		neighbors = new ArrayList<PairAddress>();
-		clients = new ArrayList<PairAddress>();
+		sealerIPs = new ArrayList<PairAddress>();
 
-		ArrayList<PairAddress> IPAddrs = topos.get(shardID);
+		ArrayList<PairAddress> IPAddrs = config.topos.get(shardID);
 
 		for (int i = 0; i < IPAddrs.size(); i ++) {
 			if (IPAddrs.get(i).getPort() == port && IPAddrs.get(i).getIP() == IP)  
@@ -127,25 +122,27 @@ public class Replica {
 			neighbors.add(IPAddrs.get(i));
 		}
 
-		// if (isPrimary())
-		clients.add(new PairAddress(PBFTSealer.getCliId(0), this.topos.get(this.shardID).get(0).getIP(), config.PBFTSEALER_PORT));
-		
+		switch (config.env) {
+			case "dev":
+				sealerIPs.add(new PairAddress(PBFTSealer.getCliId(0), config.topos.get(this.shardID).get(0).getIP(), config.PBFTSealer_ports.get(this.shardID)));
+				break;
+			case "prod":
+				sealerIPs.add(new PairAddress(PBFTSealer.getCliId(0), config.topos.get(this.shardID).get(0).getIP(), config.PBFTSEALER_PORT));
+				break;
+			case "default":
+				this.logger.error("打包器地址出问题，配置环境不对");
+		}
 		
 		// 定义当前Replica的工作目录
 		curWorkspace = "./workspace/".concat(this.name).concat("/");
 		buildWorkspace();
-		// System.out.println(this);
-		//初始时启动Timer
-		setTimer(lastRepNum + 1, 0);
 		try {
-			// this.bootstrap = new NettyServerBootstrap(port, this);
 			bind();
 		} catch (InterruptedException e) { e.printStackTrace(); }
 
 		if (isPrimary()) {
-			ArrayList<PairAddress> curIPports = topos.get(shardID);
-			System.out.println(String.format("分片 %s 的打包器建立在端口 %d 上", shardID, clients.get(0).getPort()));
-			this.pbftSealer = new PBFTSealer(this.shardID, PBFTSealer.getCliId(0), clients.get(0).getIP(), clients.get(0).getPort(), this.topos, addrShard);
+			System.out.println(String.format("分片 %s 的打包器建立在端口 %d 上", shardID, sealerIPs.get(0).getPort()));
+			this.pbftSealer = new PBFTSealer(this.shardID, PBFTSealer.getCliId(0), sealerIPs.get(0).getIP(), sealerIPs.get(0).getPort());
 		}
 	}
 
@@ -292,7 +289,7 @@ public class Replica {
 			setTimer(lastRepNum+1, time);
 			if(rem != null) {
 				// config.sendMsg(rm, sendTag, this.logger);
-				sendMsg(clients.get(PBFTSealer.getCliId(rem.c)).getIP(), clients.get(PBFTSealer.getCliId(rem.c)).getPort(), rm, sendTag, this.logger);
+				sendMsg(sealerIPs.get(PBFTSealer.getCliId(rem.c)).getIP(), sealerIPs.get(PBFTSealer.getCliId(rem.c)).getPort(), rm, sendTag, this.logger);
 				LastReply llp = lastReplyMap.get(rem.c);
 				if(llp == null) {
 					llp = new LastReply(rem.c, rem.t, "result");

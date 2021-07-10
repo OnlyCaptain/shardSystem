@@ -4,14 +4,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.PriorityQueue;
-import java.util.Queue;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Level;
@@ -67,16 +60,20 @@ public class test {
 	public static int[][] netDlysToNodes = Utils.flipMatrix(netDlysToClis);
 
 	// 节点IPs and ports
-	public static String[] IPs = netIPsInit(RN);
-//	public static int[] ports = netPortsInit(RN);
-	public static int[] ports = {64960, 65456, 61444, 51988, 51653, 63367, 60635};
+	public static String[] IPs = netIPsInit(RN*3+3);
+	public static int[] ports = netPortsInit(RN*3+3);
+//	public static int[] ports = {64960, 65456, 61444, 51988, 51653, 63367, 60635};
 
 	public static String[] clientIPs = netIPsInit(CN);
 //	public static int[] clientPorts = netPortsInit(CN);
 	public static int[] clientPorts = {58052, 65528, 59547};
 	
 	public static void main(String[] args) {
-		int[] usefulPorts = netPortsInit(SHARDNODENUM * SHARDNUM);
+		int[] usefulPorts = netPortsInit(3*7 +3);
+		for (int p: usefulPorts) {
+			System.out.print(p+" ");
+		}
+		System.out.println();
 		
 		Map<String, ArrayList<PairAddress>> topos = new HashMap<> ();
 		// topos.put("0", new ArrayList<PairAddress>());
@@ -86,12 +83,12 @@ public class test {
 			BufferedReader reader = new BufferedReader(new FileReader(filepath));//换成你的文件名
 			reader.readLine();//第一行信息，为标题信息，不用，如果需要，注释掉
 			String line = null; 
-			int id = 0;
+			int id = 0, p_i = 0;
 			int shardId = -1;
 			while((line=reader.readLine())!=null){ 
 				String item[] = line.split(",");
-				String IP = item[0].replace("\"", "");;//CSV格式文件为逗号分隔符文件，这里根据逗号切分
-
+//				String IP = item[0].replace("\"", "");;//CSV格式文件为逗号分隔符文件，这里根据逗号切分
+				String IP = "127.0.0.1";
 				if (id % config.SHARDNODENUM == 0) {
 					id = 0;
 					shardId ++;
@@ -99,11 +96,8 @@ public class test {
 				String SID = String.valueOf(shardId);
 				if (!topos.keySet().contains(SID))
 					topos.put(SID, new ArrayList<PairAddress>());
-				topos.get(SID).add(new PairAddress(id++, IP, 60635));
-				// String last = item[item.length-1];//这就是你要的数据了
-				// result.add(new Transaction(item[0], item[1], Double.parseDouble(item[2]), null, Long.parseLong(item[3]), Double.parseDouble(item[4]), 0));
-				//int value = Integer.parseInt(last);//如果是数值，可以转化为数值
-				// System.out.println(last); 
+//				topos.get(SID).add(new PairAddress(id++, IP, 60635));
+				topos.get(SID).add(new PairAddress(id++, IP, usefulPorts[p_i++]));
 			}
 			reader.close();
 		} catch (Exception e) {

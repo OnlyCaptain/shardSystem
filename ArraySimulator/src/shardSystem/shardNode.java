@@ -1,8 +1,6 @@
 package shardSystem;
 
 import pbftSimulator.PBFTSealer;
-import pbftSimulator.PairAddress;
-import pbftSimulator.Simulator;
 import pbftSimulator.message.CheckPointMsg;
 import pbftSimulator.message.LastReply;
 import pbftSimulator.message.Message;
@@ -20,15 +18,10 @@ import java.sql.SQLException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
-import org.apache.log4j.Logger;
-
-import net.sf.json.JSONArray;
-import net.sf.json.JSONObject;
 
 
 /**
@@ -44,8 +37,8 @@ public class shardNode extends Replica {
 	public static Map<String, String> addrShard;
 	public Queue<Transaction> txPending;
 
-	public shardNode(String shardID, int id, String IP, int port, Map<String, ArrayList<PairAddress>> topos, Map<String,String> addrShard) {
-		super(NAME, shardID, id, IP, port, topos, addrShard);
+	public shardNode(String shardID, int id, String IP, int port) {
+		super(NAME, shardID, id, IP, port);
 
 		this.addrShard = addrShard;
 
@@ -105,26 +98,6 @@ public class shardNode extends Replica {
             }
         }
     }
-
-	// public static Map<String, String> getAddrShard(String[] shards) {
-	// 	// 地址映射分片表
-	// 	String[] hex = {"0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"};
-	// 	Map<String, String> addrs = new HashMap<>();
-	// 	int n = (int)Math.ceil(16*16 / config.SHARDNUM), k = n, curS = 0;
-	// 	// 两位 -> 
-	// 	for (int i = 0; i < 16; i ++) {
-	// 		for (int j = 0; j < 16; j ++) {
-	// 			addrs.put(hex[i].concat(hex[j]), shards[curS]);
-	// 			k --;
-	// 			if (k < 0) {
-	// 				k = n;
-	// 				curS ++;
-	// 			}
-	// 		}
-	// 	}
-	// 	// System.out.println("查询中"+addrs.toString());
-	// 	return addrs;
-	// }
 
 	/**
 	 * 判断交易是否被执行过，true说明有，false说明没有
@@ -259,7 +232,7 @@ public class shardNode extends Replica {
 	 */
 	public void sendCrossTx(ArrayList<Transaction> txs, String targetShard) {
 		RawTxMessage rt = new RawTxMessage(txs);
-		String targetIP = this.topos.get(targetShard).get(0).getIP();
+		String targetIP = config.topos.get(targetShard).get(0).getIP();
 		this.sendMsg(targetIP, config.PBFTSEALER_PORT, rt, sendTag, this.logger);
 	}
 
@@ -356,7 +329,7 @@ public class shardNode extends Replica {
 				}
 				txProcess(txs);
 				// 处理交易
-				sendMsg(clients.get(PBFTSealer.getCliId(rem.c)).getIP(), clients.get(PBFTSealer.getCliId(rem.c)).getPort(), rm, sendTag, this.logger);
+				sendMsg(sealerIPs.get(PBFTSealer.getCliId(rem.c)).getIP(), sealerIPs.get(PBFTSealer.getCliId(rem.c)).getPort(), rm, sendTag, this.logger);
 				LastReply llp = lastReplyMap.get(rem.c);
 				if(llp == null) {
 					llp = new LastReply(rem.c, rem.t, "result");

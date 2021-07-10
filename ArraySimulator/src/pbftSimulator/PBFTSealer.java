@@ -68,8 +68,8 @@ public class PBFTSealer {
 
 	public String txPoolName;
 
-	public Map<String, String> addrShard;
-	public Map<String, ArrayList<PairAddress>> topos;  // 这个东西，应该有如下的结构：
+//	public Map<String, String> addrShard;
+//	public Map<String, ArrayList<PairAddress>> topos;  // 这个东西，应该有如下的结构：
 	/** 
 	 * topos: {
 	 * 	 "0": [ {ip:.., port:.., id:...}, {}, ... ]
@@ -79,7 +79,7 @@ public class PBFTSealer {
 
 	public Semaphore lastBlockEnd;
 
-	public PBFTSealer(String shardID, int id, String IP, int port, Map<String, ArrayList<PairAddress>> topos, Map<String,String> addrShard) {
+	public PBFTSealer(String shardID, int id, String IP, int port) {
 		this.id = id;
 		this.IP = IP;
 		this.port = port;
@@ -88,13 +88,11 @@ public class PBFTSealer {
 		reqTimes = new HashMap<>();
 		reqMsgs = new HashMap<>();
 		repMsgs = new HashMap<>();
-		this.addrShard = addrShard;
 		// replicaAddrs = new ArrayList<PairAddress>();
 		this.time = 0;
 		this.lastBlockEnd = new Semaphore(1, true);
 
-		this.topos = topos;
-		this.replicaAddrs = this.topos.get(shardID);
+		this.replicaAddrs = config.topos.get(shardID);
 
 		this.txPoolName = "txPool_".concat(this.shardID);
 		// 定义当前Replica的工作目录
@@ -356,7 +354,7 @@ public class PBFTSealer {
 	 */
 	public void sendToOtherShard(ArrayList<Transaction> txs, String targetShard) {
 		RawTxMessage rt = new RawTxMessage(txs);
-		String targetIP = this.topos.get(targetShard).get(0).getIP();
+		String targetIP = config.topos.get(targetShard).get(0).getIP();
 		this.sendMsg(targetIP, config.PBFTSEALER_PORT, rt, sendTag, this.logger);
 	}
 
@@ -371,7 +369,7 @@ public class PBFTSealer {
 		String result;
 		// 1. 根据尾数 mod
 		String slice = addr.substring(addr.length()-config.SLICENUM, addr.length());
-		result = addrShard.get(slice);
+		result = config.addrShard.get(slice);
 		// 2. 根据地址数据库查询
 		// TODO
 		return result;  // 一开始只有一个分片

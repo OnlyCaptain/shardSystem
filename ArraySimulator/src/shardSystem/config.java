@@ -45,6 +45,7 @@ public class config {
     public static Map<String, ArrayList<PairAddress>> topos;
     public static Map<String, String> addrShard;
     public static final Level LOGLEVEL = Level.DEBUG;
+    public static Map<String, Integer> PBFTSealer_ports;
 
     public static void Init(String configPath) {
         String content = "{}";
@@ -101,14 +102,24 @@ public class config {
             }
 
             JSONObject jsonAddr = jsonObject.getJSONObject("addrShard");
-            Map<String, String> addrShard  = new HashMap<> ();
+            addrShard  = new HashMap<> ();
             Iterator<String> addrKeys = jsonAddr.keys();
             while (addrKeys.hasNext()) {
                 String shardID = addrKeys.next();
-                JSONArray jsonShard = jsonTopo.getJSONArray(shardID);
+                JSONArray jsonShard = jsonAddr.getJSONArray(shardID);
                 for (int j = 0; j < jsonShard.size(); j ++) {
                     String shardJ = jsonShard.getString(j);
                     addrShard.put(shardJ, shardID);
+                }
+            }
+
+            if (env.equals("dev")) {
+                JSONObject PBFTSealers = jsonObject.getJSONObject("PBFTSealers");
+                PBFTSealer_ports = new HashMap<> ();
+                Iterator<String> sealerKeys = PBFTSealers.keys();
+                while (sealerKeys.hasNext()) {
+                    String shardID = sealerKeys.next();
+                    PBFTSealer_ports.put(shardID, PBFTSealers.getInt(shardID));
                 }
             }
 
@@ -121,7 +132,6 @@ public class config {
     }
 
     public static String Print() {
-//        JSONObject jsStr = JSONObject.fromObject(this);
         String jsbuf = name + " | "+env+" | "+dataPath+" | "+consensus_protocol+" | "+
                 String.valueOf(RN)+" | "+
                 String.valueOf(SHARDNODENUM)+" | "+
@@ -145,8 +155,13 @@ public class config {
                 String.valueOf(REQTXSIZE)+" | "+
                 String.valueOf(BLOCK_GENERATION_TIME)+" | "+
                 String.valueOf(REPLICA_PORT)+" | "+
-                String.valueOf(PBFTSEALER_PORT);
-
+                String.valueOf(PBFTSEALER_PORT) + "\n" +
+                topos.toString() + "\n" +
+                addrShard.toString();
+        if (env.equals("dev")) {
+            jsbuf = jsbuf + "\n" +
+                    PBFTSealer_ports.toString();
+        }
         return jsbuf;
     }
 
@@ -159,7 +174,7 @@ public class config {
     }
 
     public static void main(String[] args) {
-        String configPath = "ArraySimulator/src/config-dev.json";
+        String configPath = "ArraySimulator/src/config-prod.json";
         config.reInit(configPath);
         System.out.println(config.Print());
     }

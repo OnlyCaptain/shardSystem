@@ -2,11 +2,7 @@ package pbftSimulator;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 
 import shardSystem.config;
 import shardSystem.shardNode;
@@ -26,34 +22,59 @@ public class Simulator {
 
 		Map<String, ArrayList<PairAddress>> topos  = config.topos;
 		Map<String, String> addrShard = config.addrShard;
+
 		String curIP = Utils.getPublicIp();
 		System.out.println("Local HostAddress "+curIP);   // ip
 		System.out.println("config show: " + config.Print());
 
-		// 开始获取自己在topos中是第几个。
-		int currentID = 0;
-		String [] shardLists = topos.keySet().toArray(new String[topos.size()]);
-		String currentShardID = shardLists[0];
-		boolean ready = false;
-		for (int i = 0; i < shardLists.length; i ++) {
-			ArrayList<PairAddress> curIPs = topos.get(shardLists[i]);
-			for (int j = 0; j < curIPs.size(); j ++) {
-				if (curIPs.get(j).getIP().equals(curIP)) {
-					currentID = curIPs.get(j).getId();
-					currentShardID = shardLists[i];
-					ready = true;
-					break;
+		switch (config.env) {
+			case "dev": {
+				shardNode[] systemReplicas = new shardNode[config.SHARDNUM*config.SHARDNODENUM];
+				Iterator<String> shardKeys = topos.keySet().iterator();
+				int ind = 0;
+				while (shardKeys.hasNext()) {
+					String curShardID = shardKeys.next();
+					for (int id = 0; id < topos.get(curShardID).size(); id ++) {
+						PairAddress curPair = topos.get(curShardID).get(id);
+						systemReplicas[ind++] = new shardNode(curShardID, id, curPair.getIP(), curPair.getPort());
+					}
 				}
-			}
-			if (ready)
 				break;
+			}
+			case "prod": {
+				// 开始获取自己在topos中是第几个。
+				int currentID = 0;
+				Iterator<String> shardKeys = topos.keySet().iterator();
+				String thisMachineShardID = "0";
+				boolean ready = false;
+				while (shardKeys.hasNext()) {
+					String currentShardID = shardKeys.next();
+					ArrayList<PairAddress> curIPs = topos.get(currentShardID);
+					for (int j = 0; j < curIPs.size(); j ++) {
+						if (curIPs.get(j).getIP().equals(curIP)) {
+							currentID = curIPs.get(j).getId();
+							thisMachineShardID = currentShardID;
+							ready = true;
+							break;
+						}
+					}
+					if (ready) break;
+				}
+
+				if (!ready) {
+					System.out.println("Error!! this machine is not registered. shardID: "+thisMachineShardID+", curID:"+currentID);
+				}
+
+				System.out.println(String.format("这是第 %s 个分片的 %d 号节点", thisMachineShardID, currentID));
+				ArrayList<PairAddress> curShardIPs = topos.get(thisMachineShardID);
+				PairAddress curPair = topos.get(thisMachineShardID).get(currentID);
+				shardNode currentReplica = new shardNode(thisMachineShardID, currentID, curPair.getIP(), curPair.getPort());
+				break;
+			}
+			default:
+				System.out.println("Wrong env config, check it.");
 		}
-		if (!ready) {
-			System.out.println("Error!!"+currentShardID+" "+currentID);
-		}
-		System.out.println(String.format("这是第 %s 个分片的 %d 号节点", currentShardID, currentID));
-		ArrayList<PairAddress> curShardIPs = topos.get(currentShardID);
-		shardNode currentReplica = new shardNode(currentShardID, currentID, curShardIPs.get(currentID).getIP(), curShardIPs.get(currentID).getPort(), topos, addrShard);
+
 	}
 
 	/**

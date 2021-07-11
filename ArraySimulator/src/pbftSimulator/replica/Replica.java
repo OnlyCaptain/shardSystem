@@ -32,17 +32,7 @@ import pbftSimulator.PairAddress;
 import pbftSimulator.Utils;
 import pbftSimulator.NettyClient.NettyClientBootstrap;
 import pbftSimulator.NettyServer.ReplicaServerHandler;
-import pbftSimulator.message.CheckPointMsg;
-import pbftSimulator.message.CommitMsg;
-import pbftSimulator.message.LastReply;
-import pbftSimulator.message.Message;
-import pbftSimulator.message.NewViewMsg;
-import pbftSimulator.message.PrePrepareMsg;
-import pbftSimulator.message.PrepareMsg;
-import pbftSimulator.message.ReplyMsg;
-import pbftSimulator.message.RequestMsg;
-import pbftSimulator.message.TimeOutMsg;
-import pbftSimulator.message.ViewChangeMsg;
+import pbftSimulator.message.*;
 import shardSystem.config;
 
 public class Replica {
@@ -478,6 +468,7 @@ public class Replica {
 		if(isInMsgCache(msg) || msgv < v || !inWater(msgn) || !hasNewView(v)) {
 			return;
 		}
+
 		//把commit消息放进缓存
 		addMessageToCache(msg);
 	}
@@ -823,6 +814,28 @@ public class Replica {
 	public void setTimer(int n, long time) {
 		Message timeOutMsg = new TimeOutMsg(v, n, id, id, time + config.TIMEOUT);
 //		config.sendMsg(timeOutMsg, sendTag, this.logger);
+	}
+
+
+
+	public void sendTimer(String sIP, int sport, TimeMsg msg, String tag, Logger logger){
+		String jsbuff = msg.encoder();
+		// System.out.println("after encoding" + jsbuff);
+		try {
+			NettyClientBootstrap bootstrap = new NettyClientBootstrap(sport, sIP, this.logger);
+			msg.print(tag, logger);
+			bootstrap.socketChannel.writeAndFlush(jsbuff);
+			// //通知server，即将关闭连接.(server需要从map中删除该client）
+			// String clo = "";
+			// bootstrap.socketChannel.writeAndFlush(clo);
+//			关闭连接
+			bootstrap.eventLoopGroup.shutdownGracefully();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+			System.out.println("发送失败");
+		}
+
+
 	}
 
 }

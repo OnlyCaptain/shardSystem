@@ -5,14 +5,8 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.ReferenceCountUtil;
 import net.sf.json.JSONObject;
-import pbftSimulator.message.CommitMsg;
-import pbftSimulator.message.Message;
-import pbftSimulator.message.PrePrepareMsg;
-import pbftSimulator.message.PrepareMsg;
-import pbftSimulator.message.RequestMsg;
+import pbftSimulator.message.*;
 import pbftSimulator.replica.Replica;
-
-import java.net.InetSocketAddress;
 
 public class ReplicaServerHandler extends SimpleChannelInboundHandler<String> {
     private Replica replica;

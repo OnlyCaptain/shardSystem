@@ -24,7 +24,6 @@ public class Message {
 	
 	public static final int TIMEOUT = 8;					//用来提醒节点超时的虚拟消息
 	public static final int CLITIMEOUT = 9;					//用来提醒客户端超时的虚拟消息
-	public static final int TESTDELAY = 10;					//用来收集延迟数据
 	public static final long PRQMSGLEN = 0;					//PreRequest消息是虚拟消息
 	public static final long REQMSGLEN = 100;				//Request消息的大小(bytes),可按实际情况设置
 	public static final long PPRMSGLEN = 4 + REQMSGLEN;		//RrePrepare消息的大小

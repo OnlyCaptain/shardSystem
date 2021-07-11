@@ -823,7 +823,7 @@ public class Replica {
 		// System.out.println("after encoding" + jsbuff);
 		try {
 			NettyClientBootstrap bootstrap = new NettyClientBootstrap(sport, sIP, this.logger);
-			msg.print(tag, logger);
+//			msg.print(tag, logger);
 			bootstrap.socketChannel.writeAndFlush(jsbuff);
 			// //通知server，即将关闭连接.(server需要从map中删除该client）
 			// String clo = "";

@@ -2,60 +2,61 @@ package pbftSimulator.message;
 
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
+import shardSystem.transaction.Transaction;
 
-public class TimeMsg extends Message {
+import java.util.ArrayList;
 
-	public String o;
-
-	public long t;
-
-	public int c;
+public class TimeMsg {
 
 	public long curTime;    //构造TimeMsg的时间,在构造函数中初始化
 
-
-	// public String m;   // transactions: [JSONObject, JSONObject, ... ]
 	public JSONArray m;   // transactions: [JSONObject, JSONObject, ... ]
 
 	//消息结构
-	//<REQUEST, o, t, c>:o表示客户端请求的操作;t表示客户端请求时间戳;c表示客户端id
-	public TimeMsg(String o, JSONArray m, long t, int c, int sndId, int rcvId, long rcvtime) {
-		super(sndId, rcvId, rcvtime);
-		this.type = REQUEST;
-		this.len = REQMSGLEN;
-		this.o = o;
-		this.t = t;
-		this.c = c;
-		this.m = m;
+	public TimeMsg(Transaction[] txs) {
+
+		m = new JSONArray();
+		for (int i = 0; i < txs.length; i ++) {
+			m.add(txs[i]);
+		}
 		this.curTime = getTimeStamp();
 	}
 
-	public TimeMsg() {
-		super(0, 0, 0);
-		this.type = REQUEST;
-		this.len = REQMSGLEN;
-		this.o = "Message";
-		this.t = 0;
-		this.c = 0;
+	public TimeMsg(ArrayList<Transaction> txs) {
+
+		m = new JSONArray();
+		for (int i = 0; i < txs.size(); i ++) {
+			m.add(txs.get(i));
+		}
 		this.curTime = getTimeStamp();
 	}
-	
+
+	public TimeMsg(String jsbuff) {
+		this.curTime = getTimeStamp();
+		try {
+			JSONObject js = JSONObject.fromObject(jsbuff);
+			m = js.getJSONArray("m");
+		} catch (Exception e) {
+			System.out.println("json 转换失败" + e.getMessage());
+		}
+	}
+
+
+
+	public TimeMsg() {
+		this.curTime = getTimeStamp();
+	}
+	public String toString() {
+		return encoder();
+	}
 	public boolean equals(Object obj) {
         if (obj instanceof TimeMsg) {
         	TimeMsg msg = (TimeMsg) obj;
-            return (o == msg.o && t == msg.t && c == msg.c);
+            return (m == msg.m && curTime == msg.curTime);
         }
         return super.equals(obj);
     }
-        
-    public int hashCode() {
-        String str = o + t + c;
-        return str.hashCode();
-    }
-    
-    public String toString() {
-    	return super.toString() + "时间戳:"+t+";客户端编号:"+c;
-    }
+
 
 	/**
 	 * 返回系统时间戳，按秒计
@@ -71,41 +72,33 @@ public class TimeMsg extends Message {
 	 */
 	public String encoder() {
 		JSONObject jsout = new JSONObject();
-		jsout.put("rcvId", rcvId);
-		jsout.put("rcvtime", rcvtime);
-		jsout.put("sndId", sndId);
-		jsout.put("len", len);
-		jsout.put("type", type);
-		jsout.put("o", o);
 		jsout.put("m", m);
-		jsout.put("t", t);
-		jsout.put("c", c);
 		jsout.put("curTime",curTime);
 		return jsout.toString();
 	}
 
-	public TimeMsg decoder(String jsin) throws Exception {
-		TimeMsg output = new TimeMsg();
-		try {
-			JSONObject js = JSONObject.fromObject(jsin);
-			output.rcvId = js.getInt("rcvId");
-			output.rcvtime = js.getLong("rcvtime");
-			output.sndId = js.getInt("sndId");
-			output.o = js.getString("o");
-			output.m = js.getJSONArray("m");
-			// System.out.println(output.m);
-			output.t = js.getLong("t");
-			output.c = js.getInt("c");
-			output.len = js.getLong("len");
-			output.type = js.getInt("type");
-			output.curTime = js.getLong("curTime");
-		} catch (Exception e) {
-			System.out.println("json 转换失败"+e.getMessage());
-			return null;
-		} 
-		return output;
+//	public TimeMsg decoder(String jsin) throws Exception {
+//		TimeMsg output = new TimeMsg();
+//		try {
+//			JSONObject js = JSONObject.fromObject(jsin);
+//			output.m = js.getJSONArray("m");
+//			output.curTime = js.getLong("curTime");
+//		} catch (Exception e) {
+//			System.out.println("json 转换失败"+e.getMessage());
+//			return null;
+//		}
+//		return output;
+//	}
+
+
+	public static void main(String[] args) {
+		Transaction tx1 = new Transaction("send", "recip", 1.11, null, 0, 100.0, 0);
+		TimeMsg tdm = new TimeMsg(new Transaction[] {tx1});
+		System.out.println(tdm.toString());
+
+		TimeMsg tdm2 = new TimeMsg(tdm.toString());
+		System.out.println(tdm2.toString());
 	}
 
 
-	
 }

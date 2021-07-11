@@ -26,7 +26,9 @@
     "BLOCK_GENERATION_TIME": 8000,
     "REPLICA_PORT": 60635,
     "PBFTSEALER_PORT": 58052,
-	
+    "COLLECTOR_PORT": 57050,
+
+
     "topo":	{
         "0": [{
             "port": 60635,

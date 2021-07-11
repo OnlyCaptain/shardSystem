@@ -802,7 +802,6 @@ public class Replica {
 	 * @param logger
 	 */
 	public void sendMsgToOthers(Message msg, String tag, Logger logger) {
-		// Message m = msg;
 		// 注意，这里 neighbors 已经不包括本节点的IP跟port
 		for (int i = 0; i < neighbors.size(); i ++) {
 			msg.setRcvId(neighbors.get(i).getId());
@@ -825,10 +824,7 @@ public class Replica {
 			NettyClientBootstrap bootstrap = new NettyClientBootstrap(sport, sIP, this.logger);
 //			msg.print(tag, logger);
 			bootstrap.socketChannel.writeAndFlush(jsbuff);
-			// //通知server，即将关闭连接.(server需要从map中删除该client）
-			// String clo = "";
 			// bootstrap.socketChannel.writeAndFlush(clo);
-//			关闭连接
 			bootstrap.eventLoopGroup.shutdownGracefully();
 		} catch (InterruptedException e) {
 			e.printStackTrace();

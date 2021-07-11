@@ -3,7 +3,7 @@ package transaction;
 import java.util.Comparator;
 
 import net.sf.json.JSONObject;
-import lightNode.Utils;
+import collector.Utils;
 
 public class Transaction {
 	

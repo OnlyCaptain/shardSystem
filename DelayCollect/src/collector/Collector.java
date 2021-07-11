@@ -28,9 +28,7 @@ import org.apache.log4j.PatternLayout;
 import message.Message;
 import message.RawTxMessage;
 import netty.NettyClientBootstrap;
-import pbftSimulator.NettyServer.PBFTSealerServerHandler;
-import pbftSimulator.PBFTSealer;
-import shardSystem.transaction.Transaction;
+import transaction.Transaction;
 
 /**
  * @author zhanjzh

@@ -122,7 +122,7 @@ public class Client {
 				String item[] = line.split(",");//CSV格式文件为逗号分隔符文件，这里根据逗号切分
 				// String last = item[item.length-1];//这就是你要的数据了
 				for (int i = 0; i < item.length; i ++) {
-					item[i] = item[i].strip();
+					item[i] = item[i].trim();
 				}
 				result.add(new Transaction(item[0], item[1], Double.parseDouble(item[2]), null, Long.parseLong(item[3]), Double.parseDouble(item[4]), 0));
 				//int value = Integer.parseInt(last);//如果是数值，可以转化为数值

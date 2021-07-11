@@ -2,7 +2,7 @@ package message;
 
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
-import shardSystem.transaction.Transaction;
+import transaction.Transaction;
 
 import java.util.ArrayList;
 

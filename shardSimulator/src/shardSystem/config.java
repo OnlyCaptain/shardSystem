@@ -166,7 +166,7 @@ public class config {
     }
 
     static {
-        Init("ArraySimulator/src/config-dev.json");
+        Init("shardSimulator/src/config-dev.json");
     }
 
     public static void reInit(String configPath) {
@@ -174,7 +174,7 @@ public class config {
     }
 
     public static void main(String[] args) {
-        String configPath = "ArraySimulator/src/config-prod.json";
+        String configPath = "shardSimulator/src/config-prod.json";
         config.reInit(configPath);
         System.out.println(config.Print());
     }

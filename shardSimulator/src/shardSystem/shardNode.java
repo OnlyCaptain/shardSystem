@@ -34,13 +34,10 @@ public class shardNode extends Replica {
 
 	public String name;
 	public String url;    // 数据库 url
-	public static Map<String, String> addrShard;
 	public Queue<Transaction> txPending;
 
 	public shardNode(String shardID, int id, String IP, int port) {
 		super(NAME, shardID, id, IP, port);
-
-		this.addrShard = addrShard;
 
 		this.name = "shard_".concat(shardID).concat("_").concat(NAME).concat(String.valueOf(id));
 		System.out.println(this.curWorkspace);
@@ -217,7 +214,7 @@ public class shardNode extends Replica {
 
 		// 1. 根据尾数 mod
 		String slice = addr.substring(addr.length()-config.SLICENUM, addr.length());
-		result = addrShard.get(slice);
+		result = config.addrShard.get(slice);
 
 		if (result == null) {
 			System.out.println("问题地址："+addr);

@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
+import message.TimeMsg;
 import org.apache.log4j.FileAppender;
 import org.apache.log4j.Layout;
 import org.apache.log4j.Level;
@@ -26,10 +27,12 @@ import transaction.Transaction;
 public class Client {
 	
 	public static final int REPLICA_PORT = 60635;
-	public static final int PBFTSEALER_PORT = 58052;
+	public static final int PBFTSEALER_PORT = 62458;
 	public static final int TIMEOUT = 500;					//节点超时设定(毫秒)
+	public static final String COLLECTOR_IP = "127.0.0.1";
+	public static final int COLLECTOR_PORT = 57050;
 	private static final Level LOGLEVEL = Level.INFO;
-	
+
 	public String IP;
 	public int port;
 	
@@ -50,7 +53,7 @@ public class Client {
 		this.priIP = priIP;
 		this.priPort = priPort;
 		this.name = "client";
-		this.curWorkspace = "./workspace/";
+		this.curWorkspace = "./workspace/client/";
 		buildWorkspace();
 	}
 	
@@ -87,8 +90,31 @@ public class Client {
 	
 	public void sendRawTx(ArrayList<Transaction> txs) {
 		RawTxMessage rt = new RawTxMessage(txs);
-//		System.out.println(rt.toString());
-		sendMsg(this.priIP, this.priPort, rt, sendTag, this.logger);
+//		sendMsg(this.priIP, this.priPort, rt, sendTag, this.logger);
+		long time = getTimeStamp();
+		TimeMsg tmsg = new TimeMsg(txs, time, TimeMsg.CommitTag);
+		System.out.println("正在发送记录时间的包");
+		sendTimer(Client.COLLECTOR_IP, Client.COLLECTOR_PORT, tmsg, sendTag, this.logger);
+		System.out.println(tmsg.encoder());
+	}
+
+	public static long getTimeStamp() {
+		return System.currentTimeMillis();
+	}
+
+	public void sendTimer(String sIP, int sport, TimeMsg msg, String tag, Logger logger) {
+		String jsbuff = msg.encoder();
+		// System.out.println("after encoding" + jsbuff);
+		try {
+			NettyClientBootstrap bootstrap = new NettyClientBootstrap(sport, sIP, this.logger);
+//			msg.print(tag, logger);
+			bootstrap.socketChannel.writeAndFlush(jsbuff);
+			// bootstrap.socketChannel.writeAndFlush(clo);
+			bootstrap.eventLoopGroup.shutdownGracefully();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+			System.out.println("发送失败");
+		}
 	}
 	
 	/**
@@ -149,10 +175,10 @@ public class Client {
 		int times = (int)Math.ceil(howManyTx/50);
 		int start = 0;
 		 for(int i = 0; i < times; i++) {
-		 	ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(start, start+50));
+		 	ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(start, Math.min(txs.size(), start+50)));
 		 	client.sendRawTx(tx1);
 		 	start += 50;
-		 	TimeUnit.SECONDS.sleep(5);
+//		 	TimeUnit.SECONDS.sleep(5);
 		 }
 	}
 	

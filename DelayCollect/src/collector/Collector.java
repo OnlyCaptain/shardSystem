@@ -50,6 +50,7 @@ public class Collector {
 
 	public EventLoopGroup boss;
 	public EventLoopGroup worker;
+	private static Connection conn = null;
 	
 	
 	public Collector(String IP, int port) {
@@ -57,7 +58,6 @@ public class Collector {
 		this.port = port;
 		this.name = "collector";
 		this.curWorkspace = "./workspace/";
-		buildWorkspace();
 
 		StringBuffer buf = new StringBuffer("./workspace/");
 		curWorkspace = buf.append(this.name).append("/").toString();
@@ -102,7 +102,8 @@ public class Collector {
 	 * Create transaction tx;
 	 */
 	private void createDB() {
-		Connection conn = connect();
+		if (this.conn == null)
+			this.conn = connect();
 		try {
 			Statement stmt = conn.createStatement();
 			String sql = "CREATE TABLE IF NOT EXISTS transactionsTime (\n"
@@ -123,14 +124,14 @@ public class Collector {
 		} catch (SQLException e) {
 			this.logger.error("创建数据库出错"+e.getMessage());
 		} finally {
-			logger.info("创建数据库完成");
-			try {
-				if (conn != null) {
-					conn.close();
-				}
-			} catch (SQLException ex) {
-				System.out.println(ex.getMessage());
-			}
+			logger.info("创建数据库完成, 句柄不关，一直开");
+//			try {
+//				if (conn != null) {
+//					conn.close();
+//				}
+//			} catch (SQLException ex) {
+//				System.out.println(ex.getMessage());
+//			}
 		}
 	}
 	
@@ -166,8 +167,11 @@ public class Collector {
 	 * 插入数据库
 	 * @param tmsg 交易时间信息
 	 */
-	public void txMemory(TimeMsg tmsg) {
-		Connection conn = this.connect();
+	public synchronized void txMemory(TimeMsg tmsg) {
+//		Connection conn = this.connect();
+		if (conn == null) {
+			conn = connect();
+		}
 		String recordSend = "INSERT INTO transactionsTime(sender, recipient, value, timestamp, gasPrice, accountNonce, digest, sendTime) VALUES(?,?,?,?,?,?,?,?)";
 		String recordCommit = "INSERT INTO transactionsTime(sender, recipient, value, timestamp, gasPrice, accountNonce, digest, commitTime) VALUES(?,?,?,?,?,?,?,?)";
 		String updateCommit = "update transactionsTime set commitTime=? where digest=?";

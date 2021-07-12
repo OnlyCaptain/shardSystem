@@ -33,6 +33,7 @@ public class CollectorServerHandler extends SimpleChannelInboundHandler<String> 
                 this.collector.logger.error("出错啦这里是Replica后端"+jsbuff);
                 return;
             }
+            System.out.println("记录打点时间："+baseMsg.getTime());
             this.collector.txMemory(baseMsg);
         } catch (Exception e) {
             e.printStackTrace();

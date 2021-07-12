@@ -26,7 +26,7 @@ public class TimeMsg {
     public TimeMsg(ArrayList<Transaction> txs, long time, String tag) {
         this.txs = new JSONArray();
         for (int i = 0; i < txs.size(); i ++) {
-            txs.add(txs.get(i));
+            this.txs.add(txs.get(i));
         }
         this.time = time;
         this.tag = tag;

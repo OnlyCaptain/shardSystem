@@ -72,7 +72,7 @@ public class configprod {
 				String item[] = line.split(",");
 				String IP = item[0].replace("\"", "");//CSV格式文件为逗号分隔符文件，这里根据逗号切分
 				System.out.println(SHARDNODENUM);
-				if (id % config.SHARDNODENUM == 0) {
+				if (id % SHARDNODENUM == 0) {
 					id = 0;
 					shardId ++;
 				}
@@ -115,13 +115,13 @@ public class configprod {
 	public static boolean createJsonFile(Object jsonData, String filePath) throws IOException {
 		TypeUtils.compatibleWithFieldName = true;     //防止大写的首字母变小写
 		String content = JSON.toJSONString(jsonData, SerializerFeature.PrettyFormat);    //格式化
-	  // 标记文件生成是否成功
+	  
 		File configprodjson = new File(filePath);
 		String content1= FileUtils.readFileToString(configprodjson,"UTF-8");
 
 		JSONObject jsonObject = JSONObject.fromObject(content1);
 		jsonObject.put("topo",content);         //需要改的只有topo
-		
+		// 标记文件生成是否成功
 		boolean flag = true;
 	  // 生成json格式文件
 		try {

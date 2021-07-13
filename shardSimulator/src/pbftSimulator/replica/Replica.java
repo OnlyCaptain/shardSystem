@@ -279,6 +279,12 @@ public class Replica {
 			setTimer(lastRepNum+1, time);
 			if(rem != null) {
 				// config.sendMsg(rm, sendTag, this.logger);
+				//发timemsg
+				TimeMsg tmg = new TimeMsg();
+				tmg.tag = sendTag;
+				tmg.txs = rem.m;
+				tmg.time = System.currentTimeMillis();
+				sendTimer("localhost", config.COLLECTOR_PORT, tmg, sendTag, this.logger);
 				sendMsg(sealerIPs.get(PBFTSealer.getCliId(rem.c)).getIP(), sealerIPs.get(PBFTSealer.getCliId(rem.c)).getPort(), rm, sendTag, this.logger);
 				LastReply llp = lastReplyMap.get(rem.c);
 				if(llp == null) {

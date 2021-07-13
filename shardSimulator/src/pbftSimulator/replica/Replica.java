@@ -282,7 +282,7 @@ public class Replica {
 				//发timemsg
 				TimeMsg tmg = new TimeMsg();
 				tmg.tag = sendTag;
-				tmg.txs = mm.m;
+				tmg.txs = rem.m;
 				tmg.time = System.currentTimeMillis();
 				sendTimer("localhost", config.COLLECTOR_PORT, tmg, sendTag, this.logger);
 				sendMsg(sealerIPs.get(PBFTSealer.getCliId(rem.c)).getIP(), sealerIPs.get(PBFTSealer.getCliId(rem.c)).getPort(), rm, sendTag, this.logger);

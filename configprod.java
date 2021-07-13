@@ -59,8 +59,8 @@ public class configprod {
 	
 	public static void main(String[] args) {
 		Map<String, ArrayList<PairAddress>> topos = new HashMap<> ();
-		String filepath = "./shardSimulator/src/IPlists.csv";
-		String filepath1 = "./shardSimulator/src/config-prod.json";
+		String filepath = "./src/IPlists.csv";
+		String filepath1 = "./src/config-prod.json";
 
 		try {
 			BufferedReader reader = new BufferedReader(new FileReader(filepath));//换成你的文件名

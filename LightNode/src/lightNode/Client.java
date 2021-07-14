@@ -27,9 +27,9 @@ import transaction.Transaction;
 public class Client {
 	
 	public static final int REPLICA_PORT = 60635;
-	public static final int PBFTSEALER_PORT = 62458;
+	public static final int PBFTSEALER_PORT = 58052;
 	public static final int TIMEOUT = 500;					//节点超时设定(毫秒)
-	public static final String COLLECTOR_IP = "127.0.0.1";
+	public static final String COLLECTOR_IP = "121.196.214.104";
 	public static final int COLLECTOR_PORT = 57050;
 	private static final Level LOGLEVEL = Level.INFO;
 
@@ -90,11 +90,11 @@ public class Client {
 	
 	public void sendRawTx(ArrayList<Transaction> txs) {
 		RawTxMessage rt = new RawTxMessage(txs);
-//		sendMsg(this.priIP, this.priPort, rt, sendTag, this.logger);
+		sendMsg(this.priIP, this.priPort, rt, sendTag, this.logger);
 		long time = getTimeStamp();
-		TimeMsg tmsg = new TimeMsg(txs, time, TimeMsg.CommitTag);
+		TimeMsg tmsg = new TimeMsg(txs, time, TimeMsg.SendTag);
 		System.out.println("正在发送记录时间的包");
-		sendTimer(Client.COLLECTOR_IP, Client.COLLECTOR_PORT, tmsg, sendTag, this.logger);
+		sendTimer(Client.COLLECTOR_IP, Client.COLLECTOR_PORT, tmsg, this.logger);
 		System.out.println(tmsg.encoder());
 	}
 
@@ -102,14 +102,11 @@ public class Client {
 		return System.currentTimeMillis();
 	}
 
-	public void sendTimer(String sIP, int sport, TimeMsg msg, String tag, Logger logger) {
+	public void sendTimer(String sIP, int sport, TimeMsg msg, Logger logger) {
 		String jsbuff = msg.encoder();
-		// System.out.println("after encoding" + jsbuff);
 		try {
 			NettyClientBootstrap bootstrap = new NettyClientBootstrap(sport, sIP, this.logger);
-//			msg.print(tag, logger);
 			bootstrap.socketChannel.writeAndFlush(jsbuff);
-			// bootstrap.socketChannel.writeAndFlush(clo);
 			bootstrap.eventLoopGroup.shutdownGracefully();
 		} catch (InterruptedException e) {
 			e.printStackTrace();
@@ -165,8 +162,8 @@ public class Client {
 
 		String curIP = Utils.getPublicIp();
 		System.out.println("Local HostAddress "+curIP);   // ip
-		// String priIP = "112.74.168.78";
-		String priIP = args[1];
+		 String priIP = "121.196.200.241";
+//		String priIP = args[1];
 		int priPort = PBFTSEALER_PORT;
 		String txFilePath = args[0];
 		ArrayList<Transaction> txs = Client.getTxsFromFile(txFilePath);

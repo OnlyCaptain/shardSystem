@@ -133,7 +133,7 @@ public class configprod {
 			file.createNewFile();
 		   // 将格式化后的字符串写入文件
 		   Writer write = new OutputStreamWriter(new FileOutputStream(file), "UTF-8");
-		   write.write(JSON.toJSONString(jsonObject));
+		   write.write(JSON.toJSONString(jsonObject, SerializerFeature.PrettyFormat));
 		   write.flush();
 		   write.close();
 		} catch (Exception e) {

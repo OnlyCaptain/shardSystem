@@ -41,6 +41,8 @@ public class config {
     public static int BLOCK_GENERATION_TIME;
     public static int REPLICA_PORT;
     public static int PBFTSEALER_PORT;
+    public static int COLLECTOR_PORT;
+    public static String COLLECTOR_IP;
 
     public static Map<String, ArrayList<PairAddress>> topos;
     public static Map<String, String> addrShard;
@@ -81,6 +83,8 @@ public class config {
             BLOCK_GENERATION_TIME = jsonObject.getInt("BLOCK_GENERATION_TIME");
             REPLICA_PORT = jsonObject.getInt("REPLICA_PORT");
             PBFTSEALER_PORT = jsonObject.getInt("PBFTSEALER_PORT");
+            COLLECTOR_PORT = jsonObject.getInt("COLLECTOR_PORT");
+            COLLECTOR_IP = jsonObject.getString("COLLECTOR_IP");
 
             JSONObject jsonTopo = jsonObject.getJSONObject("topo");
             topos  = new HashMap<>();

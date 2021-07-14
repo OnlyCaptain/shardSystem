@@ -82,7 +82,7 @@ public class TimeMsg {
 	}
 
 	public static void main(String[] args) {
-		Transaction tx1 = new Transaction("send", "recip", 1.11, null, 0, 100.0, 0);
+		Transaction tx1 = new Transaction("send", "recip", 1.11, null, 0, 100.0, 0, 0, 0, 0, 0, 0, 0, 0);
 		TimeMsg tdm = new TimeMsg(new Transaction[] {tx1}, 0, TimeMsg.SendTag);
 		System.out.println(tdm.toString());
 		TimeMsg tdm2 = new TimeMsg(tdm.toString());

@@ -178,14 +178,18 @@ public class test {
 		ArrayList<Transaction> result = new ArrayList<Transaction>();
 		try {
 			BufferedReader reader = new BufferedReader(new FileReader(filepath));//换成你的文件名
-			reader.readLine();//第一行信息，为标题信息，不用，如果需要，注释掉
-			String line = null; 
-			while((line=reader.readLine())!=null){ 
+			String title[] = reader.readLine().split(",");    // 文件头，用来做 json 的索引
+			for (int i = 0; i < title.length; i ++) title[i] = title[i].trim();
+
+			String line = null;
+			while((line=reader.readLine())!=null){
+				JSONObject jstmp = new JSONObject();
 				String item[] = line.split(",");//CSV格式文件为逗号分隔符文件，这里根据逗号切分
-				// String last = item[item.length-1];//这就是你要的数据了
-				result.add(new Transaction(item[0], item[1], Double.parseDouble(item[2]), null, Long.parseLong(item[3]), Double.parseDouble(item[4]), 0));
-				//int value = Integer.parseInt(last);//如果是数值，可以转化为数值
-				// System.out.println(last); 
+				for (int i = 0; i < item.length; i ++) {
+					item[i] = item[i].trim();
+					jstmp.element(title[i], item[i].trim());
+				}
+				result.add(new Transaction(jstmp.toString()));
 			}
 			reader.close();
 		} catch (Exception e) {

@@ -2,6 +2,10 @@ workspace/
 
 target/
 
+META-INF/
+
+out/
+
 .idea/
 
 .metadata/

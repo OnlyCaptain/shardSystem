@@ -27,6 +27,7 @@
     "REPLICA_PORT": 60635,
     "PBFTSEALER_PORT": 58052,
     "COLLECTOR_PORT": 57050,
+    "COLLECTOR_IP": "127.0.0.1",
 
 
     "topo":	{

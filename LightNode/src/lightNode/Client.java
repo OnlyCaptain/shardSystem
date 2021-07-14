@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
 import message.TimeMsg;
+import net.sf.json.JSONObject;
 import org.apache.log4j.FileAppender;
 import org.apache.log4j.Layout;
 import org.apache.log4j.Level;
@@ -25,11 +26,12 @@ import transaction.Transaction;
  *  only send transactions.
  */
 public class Client {
-	
-	public static final int REPLICA_PORT = 60635;
-	public static final int PBFTSEALER_PORT = 58052;
+
+//	public static final int PBFTSEALER_PORT = 58052;  // prod
+	public static final int PBFTSEALER_PORT = 62458;  // dev
 	public static final int TIMEOUT = 500;					//节点超时设定(毫秒)
-	public static final String COLLECTOR_IP = "121.196.214.104";
+	public static final String COLLECTOR_IP = "127.0.0.1";
+	public static final String PRI_IP = "127.0.0.1";
 	public static final int COLLECTOR_PORT = 57050;
 	private static final Level LOGLEVEL = Level.INFO;
 
@@ -67,7 +69,6 @@ public class Client {
         } else {
             System.out.println("创建目录" + curWorkspace + "失败！");
         }
-		// logger = Logger.getLogger(this.name);  
 		logger = Logger.getLogger(this.name);
 		logger.removeAllAppenders(); 
 		try {
@@ -126,9 +127,7 @@ public class Client {
 		String jsbuff = msg.encoder();
 		try {
 			NettyClientBootstrap bootstrap = new NettyClientBootstrap(sport, sIP, this.logger);
-//			msg.print(tag, logger);
 			bootstrap.socketChannel.writeAndFlush(jsbuff);
-			// 关闭连接
 			bootstrap.eventLoopGroup.shutdownGracefully();
 		} catch (InterruptedException e) {
 			e.printStackTrace();
@@ -139,17 +138,31 @@ public class Client {
 		ArrayList<Transaction> result = new ArrayList<Transaction>();
 		try {
 			BufferedReader reader = new BufferedReader(new FileReader(filepath));//换成你的文件名
-			reader.readLine();//第一行信息，为标题信息，不用，如果需要，注释掉
-			String line = null; 
-			while((line=reader.readLine())!=null){ 
+			String title[] = reader.readLine().split(",");    // 文件头，用来做 json 的索引
+			for (int i = 0; i < title.length; i ++) title[i] = title[i].trim();
+
+			String line = null;
+			while((line=reader.readLine())!=null){
+				JSONObject jstmp = new JSONObject();
+				JSONObject jsin = new JSONObject();
 				String item[] = line.split(",");//CSV格式文件为逗号分隔符文件，这里根据逗号切分
-				// String last = item[item.length-1];//这就是你要的数据了
 				for (int i = 0; i < item.length; i ++) {
 					item[i] = item[i].trim();
+					jstmp.element(title[i], item[i].trim());
 				}
-				result.add(new Transaction(item[0], item[1], Double.parseDouble(item[2]), null, Long.parseLong(item[3]), Double.parseDouble(item[4]), 0));
-				//int value = Integer.parseInt(last);//如果是数值，可以转化为数值
-				// System.out.println(last); 
+				jsin.put("sender", jstmp.getString("sender"));
+				jsin.put("recipient", jstmp.getString("recipient"));
+				jsin.put("value", Double.parseDouble(jstmp.getString("value")));
+				jsin.put("Monoxide_d1", Double.valueOf(jstmp.getString("Monoxide_d1")).intValue());
+				jsin.put("Monoxide_d2", Double.valueOf(jstmp.getString("Monoxide_d2")).intValue());
+				jsin.put("Metis_d1", Double.valueOf(jstmp.getString("Metis_d1")).intValue());
+				jsin.put("Metis_d2", Double.valueOf(jstmp.getString("Metis_d2")).intValue());
+				jsin.put("Proposed_d1", Double.valueOf(jstmp.getString("Proposed_d1")).intValue());
+				jsin.put("Proposed_d2", Double.valueOf(jstmp.getString("Proposed_d2")).intValue());
+				jsin.put("timestamp", System.currentTimeMillis());
+				jsin.put("gasPrice", 0);
+				jsin.put("accountNonce", 0);
+				result.add(new Transaction(jsin.toString()));
 			}
 			reader.close();
 		} catch (Exception e) {
@@ -162,20 +175,18 @@ public class Client {
 
 		String curIP = Utils.getPublicIp();
 		System.out.println("Local HostAddress "+curIP);   // ip
-		 String priIP = "121.196.200.241";
-//		String priIP = args[1];
+		String priIP = PRI_IP;
 		int priPort = PBFTSEALER_PORT;
 		String txFilePath = args[0];
 		ArrayList<Transaction> txs = Client.getTxsFromFile(txFilePath);
-		Client client = new Client(curIP, 8080, priIP, priPort);
-		int howManyTx = Integer.parseInt(args[2]);
-		int times = (int)Math.ceil(howManyTx/50);
+		Client client = new Client(curIP, 61080, priIP, priPort);
+
+		System.out.println(String.format("总共有 %d 条交易", txs.size()));
 		int start = 0;
-		 for(int i = 0; i < times; i++) {
-		 	ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(start, Math.min(txs.size(), start+50)));
+		while (start < txs.size()) {
+		 	ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(start, Math.min(txs.size(), start+100)));
 		 	client.sendRawTx(tx1);
-		 	start += 50;
-//		 	TimeUnit.SECONDS.sleep(5);
+		 	start += 100;
 		 }
 	}
 	

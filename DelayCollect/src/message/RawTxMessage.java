@@ -8,7 +8,7 @@ import transaction.Transaction;
 
 public class RawTxMessage extends Message {
 	public JSONArray m;   // transactions: [JSONObject, JSONObject, ... ]
-	
+
 	public RawTxMessage(Transaction[] txs) {
 		super(0, 0, 0);
 		// this.tx = tx;
@@ -40,7 +40,7 @@ public class RawTxMessage extends Message {
 			type = js.getInt("type");
 		} catch (Exception e) {
 			System.out.println("json 转换失败"+e.getMessage());
-		} 
+		}
 	}
 
 	// public RawTxMessage() {
@@ -80,7 +80,7 @@ public class RawTxMessage extends Message {
 	}
 
 	public static void main(String[] args) {
-		Transaction tx1 = new Transaction("send", "recip", 1.11, null, 0, 100.0, 0);
+		Transaction tx1 = new Transaction("send", "recip", 1.11, null, 0, 100.0, 0, 0, 0, 0, 0, 0, 0, 0);
 		// Transaction tx1 = new Transaction("send", "recip", 1.11, null, 0, 100, 0);
 		RawTxMessage rt = new RawTxMessage(new Transaction[] {tx1});
 		System.out.println(rt.toString());

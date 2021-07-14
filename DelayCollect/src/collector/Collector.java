@@ -19,11 +19,7 @@ import io.netty.handler.codec.serialization.ObjectEncoder;
 import message.TimeMsg;
 import net.sf.json.JSONArray;
 import netty.CollectorServerHandler;
-import org.apache.log4j.FileAppender;
-import org.apache.log4j.Layout;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.apache.log4j.PatternLayout;
+import org.apache.log4j.*;
 
 import message.Message;
 import message.RawTxMessage;
@@ -116,7 +112,14 @@ public class Collector {
 					+ " accountNonce integer NOT NULL,\n"
 					+ " value real NOT NULL,\n"
 					+ " sendTime integer,\n"
-					+ " commitTime integer\n"
+					+ " commitTime integer,\n"
+					+ " Broadcast integer NOT NULL,\n"
+					+ " Monoxide_d1 integer NOT NULL,\n"
+					+ " Monoxide_d2 integer NOT NULL,\n"
+					+ " Metis_d1 integer NOT NULL,\n"
+					+ " Metis_d2 integer NOT NULL,\n"
+					+ " Proposed_d1 integer NOT NULL,\n"
+					+ " Proposed_d2 integer NOT NULL\n"
 					+ " );";
 			stmt.execute(sql);
 			logger.info("Connection to SQLite has been established: ".concat(this.url));
@@ -125,13 +128,6 @@ public class Collector {
 			this.logger.error("创建数据库出错"+e.getMessage());
 		} finally {
 			logger.info("创建数据库完成, 句柄不关，一直开");
-//			try {
-//				if (conn != null) {
-//					conn.close();
-//				}
-//			} catch (SQLException ex) {
-//				System.out.println(ex.getMessage());
-//			}
 		}
 	}
 	
@@ -145,9 +141,9 @@ public class Collector {
         } else {
             System.out.println("创建目录" + curWorkspace + "失败！");
         }
-		logger = Logger.getLogger(this.name);
-		logger.removeAllAppenders(); 
 		try {
+			logger = Logger.getLogger(this.name);
+			logger.removeAllAppenders();
 			Layout layout = new PatternLayout("%-d{yyyy-MM-dd HH:mm:ss} [ %l:%r ms ] %n[%p] %m%n");
 			FileAppender appender = new FileAppender(layout, this.curWorkspace.concat(this.name).concat(".log"));
 			appender.setAppend(false);
@@ -155,7 +151,7 @@ public class Collector {
 			logger.setAdditivity(false); 
 			appender.activateOptions(); 
 			logger.addAppender(appender);
-			logger.info("Create log file ".concat(this.name));
+			System.out.println("Create log file ".concat(this.name));
 		} catch (SecurityException e) {  
 			e.printStackTrace();  
 		} catch (IOException e) {  
@@ -172,8 +168,8 @@ public class Collector {
 		if (conn == null) {
 			conn = connect();
 		}
-		String recordSend = "INSERT INTO transactionsTime(sender, recipient, value, timestamp, gasPrice, accountNonce, digest, sendTime) VALUES(?,?,?,?,?,?,?,?)";
-		String recordCommit = "INSERT INTO transactionsTime(sender, recipient, value, timestamp, gasPrice, accountNonce, digest, commitTime) VALUES(?,?,?,?,?,?,?,?)";
+		String recordSend = "INSERT INTO transactionsTime(sender,recipient,value,timestamp,gasPrice,accountNonce,digest,sendTime,Broadcast,Monoxide_d1,Monoxide_d2,Metis_d1,Metis_d2,Proposed_d1,Proposed_d2) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+		String recordCommit = "INSERT INTO transactionsTime(sender,recipient,value,timestamp,gasPrice,accountNonce,digest,commitTime,Broadcast,Monoxide_d1,Monoxide_d2,Metis_d1,Metis_d2,Proposed_d1,Proposed_d2) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 		String updateCommit = "update transactionsTime set commitTime=? where digest=?";
 		String queryExist = "SELECT digest FROM transactionsTime where digest = ?";
 		JSONArray txs = tmsg.getTxs();
@@ -202,6 +198,13 @@ public class Collector {
 						pstmt.setLong(6, tx.getAccountNonce());
 						pstmt.setString(7, tx.getDigest());
 						pstmt.setLong(8, time);
+						pstmt.setLong(9,tx.getBroadcast());
+						pstmt.setInt(10,tx.getMonoxide_d1());
+						pstmt.setInt(11,tx.getMonoxide_d2());
+						pstmt.setInt(12,tx.getMetis_d1());
+						pstmt.setInt(13,tx.getMetis_d2());
+						pstmt.setInt(14,tx.getProposed_d1());
+						pstmt.setInt(15,tx.getProposed_d2());
 						pstmt.executeUpdate();
 						logger.info("send记录中...");
 					} catch (SQLException e) {
@@ -225,7 +228,7 @@ public class Collector {
 							pstmt.executeUpdate();
 						}
 						else {
-							System.out.println("这个交易还没有被记录过");
+							System.out.println("记录中");
 							pstmt = conn.prepareStatement(recordCommit);
 							pstmt.setString(1, tx.getSender());
 							pstmt.setString(2, tx.getRecipient());
@@ -235,6 +238,13 @@ public class Collector {
 							pstmt.setLong(6, tx.getAccountNonce());
 							pstmt.setString(7, tx.getDigest());
 							pstmt.setLong(8, time);
+							pstmt.setLong(9,tx.getBroadcast());
+							pstmt.setInt(10,tx.getMonoxide_d1());
+							pstmt.setInt(11,tx.getMonoxide_d2());
+							pstmt.setInt(12,tx.getMetis_d1());
+							pstmt.setInt(13,tx.getMetis_d2());
+							pstmt.setInt(14,tx.getProposed_d1());
+							pstmt.setInt(15,tx.getProposed_d2());
 							pstmt.executeUpdate();
 						}
 						logger.info("commit记录中...");

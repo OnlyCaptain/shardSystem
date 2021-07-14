@@ -278,13 +278,6 @@ public class Replica {
 			lastRepNum++;
 			setTimer(lastRepNum+1, time);
 			if(rem != null) {
-				// config.sendMsg(rm, sendTag, this.logger);
-				//发timemsg
-				TimeMsg tmg = new TimeMsg();
-				tmg.tag = sendTag;
-				tmg.txs = rem.m;
-				tmg.time = System.currentTimeMillis();
-				sendTimer("localhost", config.COLLECTOR_PORT, tmg, sendTag, this.logger);
 				sendMsg(sealerIPs.get(PBFTSealer.getCliId(rem.c)).getIP(), sealerIPs.get(PBFTSealer.getCliId(rem.c)).getPort(), rm, sendTag, this.logger);
 				LastReply llp = lastReplyMap.get(rem.c);
 				if(llp == null) {
@@ -293,14 +286,15 @@ public class Replica {
 				}
 				llp.t = rem.t;
 				reqStats.put(rem, STABLE);
-				
 			}
-			//周期性发送checkpoint消息
+			// 周期性发送checkpoint消息
 			if(mm.n % K == 0) {
 				Message checkptMsg = new CheckPointMsg(v, mm.n, lastReplyMap, id, id, id, time);
-//				addMessageToCache(checkptMsg);
-				// config.sendMsgToOthers(checkptMsg, id, sendTag, this.logger);
-				// sendMsgToOthers(checkptMsg, sendTag, this.logger);
+				 /*
+				 addMessageToCache(checkptMsg);
+				 config.sendMsgToOthers(checkptMsg, id, sendTag, this.logger);
+				 sendMsgToOthers(checkptMsg, sendTag, this.logger);
+				 */
 			}
 		}
 	}
@@ -693,7 +687,9 @@ public class Replica {
 	}
 	
 	private boolean inWater(int n) {
-		return n == 0 || (n > h && n < h + L);
+		return true;
+		/* 这里是来限制一个Primary 不能当超过 L 个块的时长，但是目前的切换Primary还是 TODO 状态，先不限制*/
+		/* return n == 0 || (n > h && n < h + L); */
 	}
 	
 	private Set<Message> computeC(){
@@ -823,18 +819,15 @@ public class Replica {
 
 
 
-	public void sendTimer(String sIP, int sport, TimeMsg msg, String tag, Logger logger){
+	public void sendTimer(String sIP, int sport, TimeMsg msg, Logger logger){
 		String jsbuff = msg.encoder();
-		// System.out.println("after encoding" + jsbuff);
 		try {
 			NettyClientBootstrap bootstrap = new NettyClientBootstrap(sport, sIP, this.logger);
-//			msg.print(tag, logger);
 			bootstrap.socketChannel.writeAndFlush(jsbuff);
-			// bootstrap.socketChannel.writeAndFlush(clo);
 			bootstrap.eventLoopGroup.shutdownGracefully();
 		} catch (InterruptedException e) {
-			e.printStackTrace();
-			System.out.println("发送失败");
+			System.out.println("打点信息发送失败 " + e.getMessage());
+			logger.error("打点信息发送失败 " + e.getMessage());
 		}
 
 

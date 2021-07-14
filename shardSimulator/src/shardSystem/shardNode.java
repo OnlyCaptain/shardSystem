@@ -1,13 +1,7 @@
 package shardSystem;
 
 import pbftSimulator.PBFTSealer;
-import pbftSimulator.message.CheckPointMsg;
-import pbftSimulator.message.LastReply;
-import pbftSimulator.message.Message;
-import pbftSimulator.message.PrePrepareMsg;
-import pbftSimulator.message.RawTxMessage;
-import pbftSimulator.message.ReplyMsg;
-import pbftSimulator.message.RequestMsg;
+import pbftSimulator.message.*;
 import pbftSimulator.replica.Replica;
 import shardSystem.transaction.Transaction;
 
@@ -69,15 +63,21 @@ public class shardNode extends Replica {
 		Connection conn = connect();
         try {
 			Statement stmt = conn.createStatement();
-			String sql = "CREATE TABLE IF NOT EXISTS transactions (\n" 
-					// + " id integer PRIMARY KEY AUTOINCREMENT,\n" 
+			String sql = "CREATE TABLE IF NOT EXISTS transactions (\n"
 					+ " digest text PRIMARY KEY NOT NULL,\n"
 					+ " sender text NOT NULL,\n"
 					+ " recipient text NOT NULL,\n"
 					+ " timestamp integer NOT NULL,\n"
 					+ " gasPrice real NOT NULL,\n"
 					+ " accountNonce integer NOT NULL,\n"
-					+ " value real NOT NULL\n"
+					+ " value real NOT NULL,\n"
+					+ " Broadcast integer NOT NULL,\n"
+					+ " Monoxide_d1 integer NOT NULL,\n"
+					+ " Monoxide_d2 integer NOT NULL,\n"
+					+ " Metis_d1 integer NOT NULL,\n"
+					+ " Metis_d2 integer NOT NULL,\n"
+					+ " Proposed_d1 integer NOT NULL,\n"
+					+ " Proposed_d2 integer NOT NULL\n"
 					+ " );";
             stmt.execute(sql);
 			logger.info("Connection to SQLite has been established: ".concat(this.url));
@@ -238,7 +238,9 @@ public class shardNode extends Replica {
 	 * @param tx 交易类
 	 */
 	public void txMemory(Connection conn, Transaction tx) {
-		String sql = "INSERT INTO transactions(sender, recipient, value, timestamp, gasPrice, accountNonce, digest) VALUES(?,?,?,?,?,?,?)";
+		String sql = "INSERT INTO transactions(sender,recipient,value,timestamp,gasPrice,accountNonce,"
+				+"digest,Broadcast,Monoxide_d1,Monoxide_d2,Metis_d1,Metis_d2,Proposed_d1,Proposed_d2)"
+				+" VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 		// Connection conn = connect();
         try {
 			PreparedStatement pstmt = conn.prepareStatement(sql);
@@ -250,6 +252,13 @@ public class shardNode extends Replica {
 			pstmt.setDouble(5, tx.getGasPrice());
 			pstmt.setLong(6, tx.getAccountNonce());
 			pstmt.setString(7, tx.getDigest());
+			pstmt.setLong(8,tx.getBroadcast());
+			pstmt.setInt(9,tx.getMonoxide_d1());
+			pstmt.setInt(10,tx.getMonoxide_d2());
+			pstmt.setInt(11,tx.getMetis_d1());
+			pstmt.setInt(12,tx.getMetis_d2());
+			pstmt.setInt(13,tx.getProposed_d1());
+			pstmt.setInt(14,tx.getProposed_d2());
 
             pstmt.executeUpdate();
 			logger.info("Connection to SQLite has been established: ".concat(this.url));
@@ -319,13 +328,19 @@ public class shardNode extends Replica {
 			if(rem != null) {
 				// config.sendMsg(rm, sendTag, this.logger);
 				// this.logger.info("再次确认request的消息结构："+rem.m.get(0));
-				// executeTx();
+
 				ArrayList<Transaction> txs = new ArrayList<>();
 				for (int i = 0; i < rem.m.size(); i ++) {
 					txs.add(new Transaction(rem.m.get(i).toString()));
 				}
+
 				txProcess(txs);
-				// 处理交易
+				// 处理交易，上链
+				if (rem.m.size() > 0 && isPrimary()) {
+					TimeMsg tmsg = new TimeMsg(txs, System.currentTimeMillis(), TimeMsg.CommitTag);
+					sendTimer(config.COLLECTOR_IP, config.COLLECTOR_PORT, tmsg, this.logger);
+				}
+
 				sendMsg(sealerIPs.get(PBFTSealer.getCliId(rem.c)).getIP(), sealerIPs.get(PBFTSealer.getCliId(rem.c)).getPort(), rm, sendTag, this.logger);
 				LastReply llp = lastReplyMap.get(rem.c);
 				if(llp == null) {

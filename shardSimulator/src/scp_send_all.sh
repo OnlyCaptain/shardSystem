@@ -2,11 +2,11 @@
 user="root"
 pwd="NOR4myself!"
 ips=(
-"8.134.61.104" "8.134.54.41" "8.134.71.43" "8.134.54.209" "8.134.56.17" "8.134.69.97" "8.134.59.230"
+"121.43.166.235" "121.43.186.164" "121.196.200.165" "116.62.64.100" "121.196.207.72" "121.43.176.233"
 )
 port=22
 target=/root/
-sendf=./SingleShard.zip
+sendf=./SingleShard
 for ip in ${ips[*]}
 do
 	/usr/bin/expect<<-EOF   #shell中使用expect

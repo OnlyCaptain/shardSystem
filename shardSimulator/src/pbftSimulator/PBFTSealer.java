@@ -375,6 +375,44 @@ public class PBFTSealer {
 		return result;  // 一开始只有一个分片
 	}
 
+	public ArrayList<String> queryShardIDs(Transaction tx) {
+		// 分片规则有三种： origin，monoxide，metis，proposed
+		ArrayList<String> result = new ArrayList<>();
+		String[] keys = config.topos.keySet().toArray(new String[config.SHARDNUM]);
+		int s1, s2;
+		switch (config.sharding_rule) {
+			case "origin":
+				String addr1 = tx.getSender();
+				String slice1 = addr1.substring(addr1.length()-config.SLICENUM, addr1.length());
+				result.add(config.addrShard.get(slice1));
+				String addr2 = tx.getRecipient();
+				String slice2 = addr2.substring(addr2.length()-config.SLICENUM, addr2.length());
+				result.add(config.addrShard.get(slice2));
+				break;
+			case "monoxide":
+				s1 = tx.getMonoxide_d1();
+				s2 = tx.getMonoxide_d2();
+				result.add(keys[s1 % config.SHARDNUM]);
+				result.add(keys[s2 % config.SHARDNUM]);
+				break;
+			case "metis":
+				s1 = tx.getMetis_d1();
+				s2 = tx.getMetis_d2();
+				result.add(keys[s1 % config.SHARDNUM]);
+				result.add(keys[s2 % config.SHARDNUM]);
+				break;
+			case "proposed":
+				s1 = tx.getProposed_d1();
+				s2 = tx.getProposed_d2();
+				result.add(keys[s1 % config.SHARDNUM]);
+				result.add(keys[s2 % config.SHARDNUM]);
+				break;
+			default:
+				System.out.println("Error!!, sharding rule is wrong");
+		}
+		return result;
+	}
+
 
 
 }
@@ -398,14 +436,15 @@ class MyRunnable implements Runnable {
 			try {
 				int i = 0;
 				long endTime = System.currentTimeMillis();
-				while (i < config.BLOCKTXNUM && endTime - beginTime < config.BLOCK_GENERATION_TIME) {
-					// 设置接收者接收消息的时间，这里设定为100s.即100s没收到新消息就会自动关闭
+				while (endTime - beginTime < config.BLOCK_GENERATION_TIME) {
+					endTime = System.currentTimeMillis();
+					// 设置接收者接收消息的时间, 超时没收到新消息就会自动关闭
+					if (i >= config.BLOCKTXNUM)
+						continue;
 					TextMessage message = null;
 					message = (TextMessage) mqListener.consumer.receive(config.BLOCK_GENERATION_TIME - (endTime - beginTime));
 					Transaction tx = null;
-
 					if (null != message) {
-						// this.pbftSealer.logger.debug("收到消息" + message.getText());
 						tx = new Transaction(message.getText());
 						if (null != tx) {
 							txsBuffer.add(tx);

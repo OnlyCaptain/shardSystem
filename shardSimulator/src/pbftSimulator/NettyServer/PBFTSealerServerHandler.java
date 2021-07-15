@@ -72,8 +72,14 @@ public class PBFTSealerServerHandler extends SimpleChannelInboundHandler<String>
                     Map<String, ArrayList<Transaction>> classifi = new HashMap<>();
                     for(int i=0;i<m.size();i++){
                         Transaction tx = new Transaction(m.get(i).toString());
-                        String sendShard = this.sealer.queryShardID( tx.getSender());
-                        String reciShard = this.sealer.queryShardID( tx.getRecipient());
+                        ArrayList<String> shardIDs = this.sealer.queryShardIDs(tx);
+                        if (shardIDs.size() == 0) {
+                            System.out.println("Error!!, 交易没查到分片id");
+                            this.sealer.logger.error("Error!!, 交易没查到分片id"+tx.encoder());
+                            continue;
+                        }
+                        String sendShard = shardIDs.get(0);
+                        String reciShard = shardIDs.get(1);
                         if (!sendShard.equals(this.sealer.shardID) && !reciShard.equals(this.sealer.shardID)) {
                             if (!classifi.keySet().contains(sendShard)) {
                                 classifi.put(sendShard, new ArrayList<Transaction>());

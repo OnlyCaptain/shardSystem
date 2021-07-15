@@ -3,6 +3,8 @@
     "env": "prod",
     "dataPath": "../data/",
     "consensus_protocol": "PBFT",
+    "sharding_rule": "proposed",
+    "RELAY_TX_FORWARD": false,
     "RN": 7,
     "SHARDNODENUM": 7,
     "SHARDNUM": 3,

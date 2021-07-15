@@ -172,14 +172,13 @@ public class Replica {
 	public void buildWorkspace() {
 		File dir = new File(this.curWorkspace);
 		if (dir.exists()) {
-			// System.out.println("Dir OK");
+			 System.out.println("目录已经存在，Dir OK");
 		}
 		else if (dir.mkdirs()) {
 	        System.out.println("创建目录" + curWorkspace + "成功！");
         } else {
             System.out.println("创建目录" + curWorkspace + "失败！");
         }
-		// logger = Logger.getLogger(this.name);  
 		logger = Logger.getLogger(this.name);
 		logger.removeAllAppenders(); 
 		try {

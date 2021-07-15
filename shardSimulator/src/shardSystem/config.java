@@ -43,6 +43,8 @@ public class config {
     public static int PBFTSEALER_PORT;
     public static int COLLECTOR_PORT;
     public static String COLLECTOR_IP;
+    public static String sharding_rule;
+    public static boolean RELAY_TX_FORWARD;
 
     public static Map<String, ArrayList<PairAddress>> topos;
     public static Map<String, String> addrShard;
@@ -85,6 +87,8 @@ public class config {
             PBFTSEALER_PORT = jsonObject.getInt("PBFTSEALER_PORT");
             COLLECTOR_PORT = jsonObject.getInt("COLLECTOR_PORT");
             COLLECTOR_IP = jsonObject.getString("COLLECTOR_IP");
+            sharding_rule = jsonObject.getString("sharding_rule");
+            RELAY_TX_FORWARD = jsonObject.getBoolean("RELAY_TX_FORWARD");
 
             JSONObject jsonTopo = jsonObject.getJSONObject("topo");
             topos  = new HashMap<>();
@@ -137,6 +141,7 @@ public class config {
 
     public static String Print() {
         String jsbuf = name + " | "+env+" | "+dataPath+" | "+consensus_protocol+" | "+
+                sharding_rule + " | " +
                 String.valueOf(RN)+" | "+
                 String.valueOf(SHARDNODENUM)+" | "+
                 String.valueOf(SHARDNUM)+" | "+

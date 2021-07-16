@@ -210,8 +210,9 @@ public class Client {
 			}
 			// 等待下一次发送交易
 			while ( !tx_fin ) {
-				if ((getTimeStamp() - prev_timestamp) >= waittime) {
-					prev_timestamp = getTimeStamp();
+				long cur_timestamp = getTimeStamp();
+				if (( cur_timestamp - prev_timestamp) >= waittime) {
+					prev_timestamp = cur_timestamp;
 					break;
 				} else {
 					// 考虑是否需要sleep: sleep可以减少cpu开销，不sleep可以提高精度

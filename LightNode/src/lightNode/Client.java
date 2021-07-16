@@ -6,6 +6,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
+import static java.lang.Thread.sleep;
 
 import message.TimeMsg;
 import net.sf.json.JSONObject;
@@ -19,7 +20,6 @@ import message.Message;
 import message.RawTxMessage;
 import netty.NettyClientBootstrap;
 import transaction.Transaction;
-import static java.lang.Thread.sleep;
 
 /**
  * @author zhanjzh
@@ -191,13 +191,15 @@ public class Client {
 		long waittime = 1000;   // 两次发送交易的间隔时间，默认是1000ms
 		long prev_timestamp = getTimeStamp();
 		while (start < txs.size()) {
+			boolean tx_fin = false;
 			for (int i=0; i <= txs.size(); i++) {
 				// tx读完了
 				if (i == txs.size()) {
 					ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(start, Math.min(txs.size(), start + txs.size() - 1 - prev_broadcast_index)));
 					client.sendRawTx(tx1);
+					tx_fin = true;
 					break;
-				// 新的
+				// 新的broadcast值
 				} else if (txs[i].Broadcast != txs[prev_broadcast_index].Broadcast) {
 					ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(start, Math.min(txs.size(), start + i - prev_broadcast_index)));
 					client.sendRawTx(tx1);
@@ -207,10 +209,13 @@ public class Client {
 				}
 			}
 			// 等待下一次发送交易
-			while ( true ) {
+			while ( !tx_fin ) {
 				if ((getTimeStamp() - prev_timestamp) < waittime) {
 					prev_timestamp = getTimeStamp();
 					break;
+				} else {
+					// 考虑是否需要sleep: sleep可以减少cpu开销，不sleep可以提高精度
+					//sleep(10);
 				}
 			}
 		 }

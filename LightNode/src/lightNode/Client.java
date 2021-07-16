@@ -210,7 +210,7 @@ public class Client {
 			}
 			// 等待下一次发送交易
 			while ( !tx_fin ) {
-				if ((getTimeStamp() - prev_timestamp) < waittime) {
+				if ((getTimeStamp() - prev_timestamp) >= waittime) {
 					prev_timestamp = getTimeStamp();
 					break;
 				} else {

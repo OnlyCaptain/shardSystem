@@ -19,6 +19,7 @@ import message.Message;
 import message.RawTxMessage;
 import netty.NettyClientBootstrap;
 import transaction.Transaction;
+import static java.lang.Thread.sleep;
 
 /**
  * @author zhanjzh
@@ -183,10 +184,35 @@ public class Client {
 
 		System.out.println(String.format("总共有 %d 条交易", txs.size()));
 		int start = 0;
+		if (txs.size() == 0) {
+			return 0;
+		}
+		int prev_broadcast_index = 0;	// 上一个
+		long waittime = 1000;   // 两次发送交易的间隔时间，默认是1000ms
+		long prev_timestamp = getTimeStamp();
 		while (start < txs.size()) {
-		 	ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(start, Math.min(txs.size(), start+100)));
-		 	client.sendRawTx(tx1);
-		 	start += 100;
+			for (int i=0; i <= txs.size(); i++) {
+				// tx读完了
+				if (i == txs.size()) {
+					ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(start, Math.min(txs.size(), start + txs.size() - 1 - prev_broadcast_index)));
+					client.sendRawTx(tx1);
+					break;
+				// 新的
+				} else if (txs[i].Broadcast != txs[prev_broadcast_index].Broadcast) {
+					ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(start, Math.min(txs.size(), start + i - prev_broadcast_index)));
+					client.sendRawTx(tx1);
+					waittime = (txs[i].Broadcast - txs[prev_broadcast_index].Broadcast) * 1000;
+					start += i - prev_broadcast_index;
+					prev_broadcast_index = i;
+				}
+			}
+			// 等待下一次发送交易
+			while ( true ) {
+				if ((getTimeStamp() - prev_timestamp) < waittime) {
+					prev_timestamp = getTimeStamp();
+					break;
+				}
+			}
 		 }
 	}
 	

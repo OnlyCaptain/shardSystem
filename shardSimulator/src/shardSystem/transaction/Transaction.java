@@ -1,11 +1,10 @@
 package shardSystem.transaction;
 
-import java.util.Comparator;
-
-import com.google.gson.JsonParser;
+import com.google.gson.Gson;
 import lombok.Data;
 import pbftSimulator.Utils;
-import com.google.gson.Gson;
+
+import java.util.Comparator;
 
 @Data
 public class Transaction {
@@ -101,6 +100,118 @@ public class Transaction {
 					.append(String.valueOf(Metis_d2))
 					.append(String.valueOf(Proposed_d1))
 					.append(String.valueOf(Proposed_d2));
+	}
+
+	public String getSender() {
+		return sender;
+	}
+
+	public String getRecipient() {
+		return recipient;
+	}
+
+	public void setSender(String sender) {
+		this.sender = sender;
+	}
+
+	public void setRecipient(String recipient) {
+		this.recipient = recipient;
+	}
+
+	public double getValue() {
+		return value;
+	}
+
+	public void setValue(double value) {
+		this.value = value;
+	}
+
+	public long getBroadcast() {
+		return Broadcast;
+	}
+
+	public void setBroadcast(long broadcast) {
+		Broadcast = broadcast;
+	}
+
+	public int getMonoxide_d1() {
+		return Monoxide_d1;
+	}
+
+	public void setMonoxide_d1(int monoxide_d1) {
+		Monoxide_d1 = monoxide_d1;
+	}
+
+	public int getMonoxide_d2() {
+		return Monoxide_d2;
+	}
+
+	public void setMonoxide_d2(int monoxide_d2) {
+		Monoxide_d2 = monoxide_d2;
+	}
+
+	public int getMetis_d1() {
+		return Metis_d1;
+	}
+
+	public void setMetis_d1(int metis_d1) {
+		Metis_d1 = metis_d1;
+	}
+
+	public int getMetis_d2() {
+		return Metis_d2;
+	}
+
+	public void setMetis_d2(int metis_d2) {
+		Metis_d2 = metis_d2;
+	}
+
+	public int getProposed_d1() {
+		return Proposed_d1;
+	}
+
+	public void setProposed_d1(int proposed_d1) {
+		Proposed_d1 = proposed_d1;
+	}
+
+	public int getProposed_d2() {
+		return Proposed_d2;
+	}
+
+	public void setProposed_d2(int proposed_d2) {
+		Proposed_d2 = proposed_d2;
+	}
+
+	public byte[] getData() {
+		return data;
+	}
+
+	public void setData(byte[] data) {
+		this.data = data;
+	}
+
+	public long getTimestamp() {
+		return timestamp;
+	}
+
+	public void setTimestamp(long timestamp) {
+		this.timestamp = timestamp;
+	}
+
+	public Double getGasPrice() {
+		return gasPrice;
+	}
+
+	public void setGasPrice(Double gasPrice) {
+		this.gasPrice = gasPrice;
+	}
+
+	public long getAccountNonce() {
+		return accountNonce;
+	}
+
+	public void setAccountNonce(long accountNonce) {
+		this.accountNonce = accountNonce;
 	}
 
 	public String toString() {

@@ -1,13 +1,5 @@
 package lightNode;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.concurrent.TimeUnit;
-import static java.lang.Thread.sleep;
-
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import netty.NettyClientBootstrap;
@@ -16,6 +8,12 @@ import pbftSimulator.message.Message;
 import pbftSimulator.message.RawTxMessage;
 import pbftSimulator.message.TimeMsg;
 import shardSystem.transaction.Transaction;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
 
 /**
  * @author zhanjzh
@@ -153,9 +151,11 @@ public class Client {
 					item[i] = item[i].trim();
 					jstmp.addProperty(title[i], item[i].trim());
 				}
-				jsin.addProperty("sender", jstmp.get("sender").getAsString());
-				jsin.addProperty("recipient", jstmp.get("recipient").getAsString());
+				jsin.addProperty("sender", jstmp.get("from").getAsString());
+				jsin.addProperty("recipient", jstmp.get("to").getAsString());
 				jsin.addProperty("value", Double.parseDouble(jstmp.get("value").getAsString()));
+//				jsin.addProperty("Broadcast", Long.parseLong(jstmp.get("Broadcast").getAsString()).intValue());
+				jsin.addProperty("Broadcast", Double.valueOf(jstmp.get("Broadcast").getAsString()).intValue());
 				jsin.addProperty("Monoxide_d1", Double.valueOf(jstmp.get("Monoxide_d1").getAsString()).intValue());
 				jsin.addProperty("Monoxide_d2", Double.valueOf(jstmp.get("Monoxide_d2").getAsString()).intValue());
 				jsin.addProperty("Metis_d1", Double.valueOf(jstmp.get("Metis_d1").getAsString()).intValue());
@@ -181,19 +181,20 @@ public class Client {
 		String priIP = PRI_IP;
 		int priPort = PBFTSEALER_PORT;
 		String txFilePath = args[0];
+//		String txFilePath = "data/systemdata.csv";
 		ArrayList<Transaction> txs = Client.getTxsFromFile(txFilePath);
 		Client client = new Client(curIP, 61080, priIP, priPort);
 
 		System.out.println(String.format("总共有 %d 条交易", txs.size()));
 		int start = 0;
 		if (txs.size() == 0) {
-			return 0;
+			return ;
 		}
 		long waittime = 1000;   // 两次发送交易的间隔时间，默认是1000ms
 		long prev_timestamp = getTimeStamp();
 		while (start < txs.size()) {
 			boolean tx_fin = false;
-			for (int i=0; i <= txs.size(); i++) {
+			for (int i=start; i <= txs.size(); i++) {
 				// tx读完了
 				if (i == txs.size()) {
 					ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(start, txs.size()));
@@ -201,11 +202,13 @@ public class Client {
 					tx_fin = true;
 					break;
 				// 新的broadcast值
-				} else if (txs[i].Broadcast != txs[start].Broadcast) {
+				} else if (txs.get(i).Broadcast != txs.get(start).Broadcast) {
 					ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(start, i));
 					client.sendRawTx(tx1);
-					waittime = (txs[i].Broadcast - txs[start].Broadcast) * 1000;
+					waittime = (txs.get(i).Broadcast - txs.get(start).Broadcast) * 1000;
+//					System.out.println("Broadcast is : " + txs.get(start).Broadcast + " cur time is: " + getTimeStamp());
 					start = i;
+					break;
 				}
 			}
 			// 等待下一次发送交易

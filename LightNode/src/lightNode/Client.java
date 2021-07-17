@@ -187,7 +187,6 @@ public class Client {
 		if (txs.size() == 0) {
 			return 0;
 		}
-		int prev_broadcast_index = 0;	// 上一个
 		long waittime = 1000;   // 两次发送交易的间隔时间，默认是1000ms
 		long prev_timestamp = getTimeStamp();
 		while (start < txs.size()) {
@@ -195,17 +194,16 @@ public class Client {
 			for (int i=0; i <= txs.size(); i++) {
 				// tx读完了
 				if (i == txs.size()) {
-					ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(start, Math.min(txs.size(), start + txs.size() - 1 - prev_broadcast_index)));
+					ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(start, txs.size()));
 					client.sendRawTx(tx1);
 					tx_fin = true;
 					break;
 				// 新的broadcast值
-				} else if (txs[i].Broadcast != txs[prev_broadcast_index].Broadcast) {
-					ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(start, Math.min(txs.size(), start + i - prev_broadcast_index)));
+				} else if (txs[i].Broadcast != txs[start].Broadcast) {
+					ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(start, i));
 					client.sendRawTx(tx1);
-					waittime = (txs[i].Broadcast - txs[prev_broadcast_index].Broadcast) * 1000;
-					start += i - prev_broadcast_index;
-					prev_broadcast_index = i;
+					waittime = (txs[i].Broadcast - txs[start].Broadcast) * 1000;
+					start = i;
 				}
 			}
 			// 等待下一次发送交易

@@ -6,20 +6,12 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.*;
 
-import org.apache.commons.io.FileUtils;
+import com.google.gson.JsonObject;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-
-import net.sf.json.JSON;
-import net.sf.json.JSONArray;
-import net.sf.json.JSONObject;
+import com.google.gson.Gson;
 import pbftSimulator.message.Message;
-import pbftSimulator.replica.Replica;
-import shardSystem.ByztShardNode;
-import shardSystem.OfflineShardNode;
 import shardSystem.config;
-import shardSystem.shardNode;
-import shardSystem.transaction.Transaction;
 
 public class test {
 	
@@ -77,7 +69,7 @@ public class test {
 		
 		Map<String, ArrayList<PairAddress>> topos = new HashMap<> ();
 		// topos.put("0", new ArrayList<PairAddress>());
-		String filepath = "./ArraySimulator/src/IPlists.csv";
+		String filepath = "./shardSimulator/src/IPlists.csv";
 
 		try {
 			BufferedReader reader = new BufferedReader(new FileReader(filepath));//换成你的文件名
@@ -112,7 +104,9 @@ public class test {
 		// 	}
 		// }
 		System.out.println(topos.toString());
-		JSONObject js = JSONObject.fromObject(topos);
+		JsonObject js = new Gson().toJsonTree(topos).getAsJsonObject();
+		// JsonObject js = new JsonParser().parse(string).getAsJsonObject();
+//		JSONObject js = JSONObject.fromObject(topos);
 		System.out.println(js.toString());
 		
 		System.out.println(Utils.getPublicIp());
@@ -122,48 +116,31 @@ public class test {
 		String[] hex = {"0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"};
 		Map<String, ArrayList<String>> addrs = new HashMap<>();
 
-		int n = (int)Math.ceil(16*16 / topos.size()), k = n, curS = 0;
-		// 两位 -> 
-		for (int i = 0; i < 16; i ++) {
-			for (int j = 0; j < 16; j ++) {
-				if (!addrs.keySet().contains(shards[curS]))
-					addrs.put(shards[curS], new ArrayList<String>());
-				addrs.get(shards[curS]).add(hex[i].concat(hex[j]));
-				k --;
-				if (k < 0) {
-					k = n;
-					curS ++;
-				}
-			}
-		}
-		System.out.println(addrs.toString());
-		JSONObject js2 = JSONObject.fromObject(addrs);
-		System.out.println(js2.toString());
-		Map<String, String> addrShard = new HashMap<>();
-
-		try {
-			addrShard = getAddrShard("./src/config.json");
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		System.out.println(addrShard.toString());
-
-
-		// Replica[] reps = new Replica[RN];
-		// for(int i = 0; i < RN; i++) {
-		// 	reps[i] = new shardNode(i, IPs[i], ports[i], netDlys[i], netDlysToClis[i], IPs, ports, clientIPs, clientPorts);
-		// }
-		
-		// //初始化CN个
-		// PBFTSealer[] clis = new PBFTSealer[CN];
-		// for(int i = 0; i < CN; i++) {
-		// 	//客户端的编号设置为负数
-		// 	clis[i] = new PBFTSealer(PBFTSealer.getCliId(i), clientIPs[i], clientPorts[i], netDlysToNodes[i], IPs, ports); 
-		// }
-		
-
-
-
+//		int n = (int)Math.ceil(16*16 / topos.size()), k = n, curS = 0;
+//		// 两位 ->
+//		for (int i = 0; i < 16; i ++) {
+//			for (int j = 0; j < 16; j ++) {
+//				if (!addrs.keySet().contains(shards[curS]))
+//					addrs.put(shards[curS], new ArrayList<String>());
+//				addrs.get(shards[curS]).add(hex[i].concat(hex[j]));
+//				k --;
+//				if (k < 0) {
+//					k = n;
+//					curS ++;
+//				}
+//			}
+//		}
+//		System.out.println(addrs.toString());
+//		JSONObject js2 = JSONObject.fromObject(addrs);
+//		System.out.println(js2.toString());
+//		Map<String, String> addrShard = new HashMap<>();
+//
+//		try {
+//			addrShard = getAddrShard("./src/config.json");
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		}
+//		System.out.println(addrShard.toString());
 	}
 
 	/**
@@ -174,29 +151,30 @@ public class test {
 		return System.currentTimeMillis();
 	}
 
-	public static ArrayList<Transaction> getTxsFromFile(String filepath) {
-		ArrayList<Transaction> result = new ArrayList<Transaction>();
-		try {
-			BufferedReader reader = new BufferedReader(new FileReader(filepath));//换成你的文件名
-			String title[] = reader.readLine().split(",");    // 文件头，用来做 json 的索引
-			for (int i = 0; i < title.length; i ++) title[i] = title[i].trim();
-
-			String line = null;
-			while((line=reader.readLine())!=null){
-				JSONObject jstmp = new JSONObject();
-				String item[] = line.split(",");//CSV格式文件为逗号分隔符文件，这里根据逗号切分
-				for (int i = 0; i < item.length; i ++) {
-					item[i] = item[i].trim();
-					jstmp.element(title[i], item[i].trim());
-				}
-				result.add(new Transaction(jstmp.toString()));
-			}
-			reader.close();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return result;
-	}
+//	public static ArrayList<Transaction> getTxsFromFile(String filepath) {
+//		ArrayList<Transaction> result = new ArrayList<Transaction>();
+//		try {
+//			BufferedReader reader = new BufferedReader(new FileReader(filepath));//换成你的文件名
+//			String title[] = reader.readLine().split(",");    // 文件头，用来做 json 的索引
+//			for (int i = 0; i < title.length; i ++) title[i] = title[i].trim();
+//
+//			String line = null;
+//			while((line=reader.readLine())!=null){
+//				JsonObject jstmp = new JsonObject();
+////				JSONObject jstmp = new JSONObject();
+//				String item[] = line.split(",");//CSV格式文件为逗号分隔符文件，这里根据逗号切分
+//				for (int i = 0; i < item.length; i ++) {
+//					item[i] = item[i].trim();
+//					jstmp.addProperty(title[i], item[i].trim());
+//				}
+//				result.add(new Transaction(jstmp.toString()));
+//			}
+//			reader.close();
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		return result;
+//	}
 
 	/**
 	 * 生成IP数组，后续需要改成从配置文件中读取
@@ -321,27 +299,4 @@ public class test {
 		}
 		return num;
 	}
-	
-	public static Map<String, String> getAddrShard(String fileName) throws IOException {
-
-		File file=new File(fileName);
-		String content= FileUtils.readFileToString(file,"UTF-8");
-
-		JSONObject jsonObject = JSONObject.fromObject(content);
-		JSONObject jsonTopo = jsonObject.getJSONObject("addrShard");
-
-		Map<String, String> addrShard  = new HashMap<> ();
-
-		for (int i = 0; i < SHARDNUM; i ++) {
-
-			String shardID = String.valueOf(i);
-			JSONArray jsonShard = jsonTopo.getJSONArray(shardID);
-			for (int j = 0; j < jsonShard.size(); j ++) {
-				String shardJ = jsonShard.getString(j);
-				addrShard.put(shardJ, shardID);
-			}
-		}
-		return addrShard;
-	}
-
 }

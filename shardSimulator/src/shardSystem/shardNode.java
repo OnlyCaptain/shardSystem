@@ -1,5 +1,6 @@
 package shardSystem;
 
+import com.google.gson.Gson;
 import pbftSimulator.PBFTSealer;
 import pbftSimulator.message.*;
 import pbftSimulator.replica.Replica;
@@ -28,7 +29,6 @@ public class shardNode extends Replica {
 
 	public String name;
 	public String url;    // 数据库 url
-	public Queue<Transaction> txPending;
 
 	public shardNode(String shardID, int id, String IP, int port) {
 		super(NAME, shardID, id, IP, port);
@@ -37,8 +37,9 @@ public class shardNode extends Replica {
 		System.out.println(this.curWorkspace);
 		url = "jdbc:sqlite:".concat(this.curWorkspace).concat(this.name).concat("-sqlite.db");
 		createDB();
-		txPending = new PriorityQueue<>(Transaction.cmp);
-		
+		this.logger.info(String.format("我是第 %s 分片的第 %d 号节点，ip地址：%s, 端口号 %d", this.shardID, this.id, this.IP, this.port));
+		if (isPrimary())
+			this.logger.info("我是primary");
 	}
 
 	/**
@@ -84,15 +85,6 @@ public class shardNode extends Replica {
 
         } catch (SQLException e) {
             this.logger.error("创建数据库出错"+e.getMessage());
-        } finally {
-			logger.info("创建数据库完成");
-            try {
-                if (conn != null) {
-                    conn.close();
-                }
-            } catch (SQLException ex) {
-                System.out.println(ex.getMessage());
-            }
         }
     }
 
@@ -101,19 +93,14 @@ public class shardNode extends Replica {
 	 * @param tx
 	 * @return
 	 */
-	public boolean isExecuted(Transaction tx) {
-		boolean executedFlag = false;
+	public boolean isExecuted(Connection conn, Transaction tx) {
 		String sql = "SELECT * FROM transactions where digest = ?";
 
-		Connection conn = connect();
         try {
 			PreparedStatement pstmt = conn.prepareStatement(sql);
-			// Statement stmt = conn.createStatement();
 			pstmt.setString(1, tx.getDigest());
-            // 
 			ResultSet rs = pstmt.executeQuery();
 			while (rs.next()) {
-				executedFlag = true;
 				this.logger.info("这个交易已经被执行过："+rs.getString("sender")
 							+rs.getString("recipient")
 							+rs.getDouble("value")
@@ -121,19 +108,12 @@ public class shardNode extends Replica {
 							+rs.getLong("gasPrice")
 							+rs.getLong("accountNonce")
 							);
+				return true;
 			}
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        } finally {
-            try {
-                if (conn != null) {
-                    conn.close();
-                }
-            } catch (SQLException ex) {
-                System.out.println(ex.getMessage());
-            }
+            System.out.println("这里查询失败："+e.getMessage());
         }
-		return executedFlag;
+		return false;
 	}
 
 	/**
@@ -142,64 +122,76 @@ public class shardNode extends Replica {
 	 * @param txs 交易类的数组
 	 */
 	public void txProcess(ArrayList<Transaction> txs) {
+		Connection conn = this.connect();
+		System.out.println("调用执行交易函数, 交易数" + txs.size());
+
 		// 收集跨分片交易
 		Map<String, ArrayList<Transaction>> crossTx = new HashMap<>();
 		for (int i = 0; i < txs.size(); i ++) {
 			Transaction tx = txs.get(i);
-			String sendShard = queryShardID(tx.getSender());
-			String reciShard = queryShardID(tx.getRecipient());
-			
+
 			if (!validateTx(tx)) {
 				logger.warn("this is a invalid transaction. "+tx.toString());
 				continue;
 			}
-			if (isExecuted(tx)) {
-				// logger.warn("")
+
+			if (isExecuted(conn, tx)) {
+//				System.out.println("执行过啦");
 				continue;
 			}
-			// txPending.add(tx);
+			txMemory(conn, tx);
+
+			String sendShard = "null", reciShard = "null";
 			// 这里可能需要判断是哪个地方的交易，然后再转发 relay Transaction。
 			// 考虑到 Primary 的存在，可以把转发部分交给Primary。
-			try {
-				if (isPrimary()) {
-					if (!sendShard.equals(this.shardID) && !reciShard.equals(this.shardID)) {
-						this.logger.error("收到了错误的交易，打包区块的时候没写好");
-						this.logger.error(String.format("sender: %s, recipient: %s, sendSHARD: %s, reciSHARD: %s", tx.getSender(), tx.getRecipient(), sendShard, reciShard));
-					} else if (!sendShard.equals(this.shardID) && reciShard.equals(this.shardID)) {
-						this.logger.debug("这个是relay tx的后半部分，停止转发");
-					} else if (sendShard.equals(this.shardID) && !reciShard.equals(this.shardID)) {
-						this.logger.debug("这个是relay tx的前半部分，需要转发");
-						if (!crossTx.keySet().contains(reciShard)) {
-							crossTx.put(reciShard, new ArrayList<Transaction>());
-						}
-						ArrayList<Transaction> buf = crossTx.get(reciShard);
-						buf.add(tx);
-					} else {
-						this.logger.debug("存在片内交易");
+			if (config.RELAY_TX_FORWARD) {
+				try {
+					ArrayList<String> shardIDs = this.queryShardIDs(tx);
+					if (shardIDs.size() == 0) {
+						System.out.println("Error!!, 交易没查到分片id");
+						this.logger.error("Error!!, 交易没查到分片id"+tx.toString());
+						continue;
 					}
+					sendShard = shardIDs.get(0);
+					reciShard = shardIDs.get(1);
+					if (isPrimary()) {
+						if (!sendShard.equals(this.shardID) && !reciShard.equals(this.shardID)) {
+							this.logger.error("收到了错误的交易，打包区块的时候没写好");
+							this.logger.error(String.format("transaction: %s", tx.encoder()));
+						} else if (!sendShard.equals(this.shardID) && reciShard.equals(this.shardID)) {
+							this.logger.debug("这个是relay tx的后半部分，停止转发");
+						} else if (sendShard.equals(this.shardID) && !reciShard.equals(this.shardID)) {
+							this.logger.debug("这个是relay tx的前半部分，需要转发");
+							if (!crossTx.keySet().contains(reciShard)) {
+								crossTx.put(reciShard, new ArrayList<Transaction>());
+							}
+							ArrayList<Transaction> buf = crossTx.get(reciShard);
+							buf.add(tx);
+						} else {
+							this.logger.debug("存在片内交易");
+						}
+					}
+				} catch (NullPointerException e) {
+					System.out.println(e.getMessage());
+					System.out.println(String.format("发送分片：%s 接收分片: %s 本分片: %s",sendShard, reciShard, this.shardID));
 				}
-			} catch (NullPointerException e) {
-				System.out.println(e.getMessage());
-				System.out.println(String.format("发送分片：%s 接收分片: %s 本分片: %s",sendShard, reciShard, this.shardID));
-			}
-			// 以下是存交易
-			Connection conn = connect();
-			txMemory(conn, tx);
-			try {
-				if (conn != null) {
-					conn.close();
-				}
-			} catch (SQLException ex) {
-				System.out.println(ex.getMessage());
 			}
 		}
-		for (Map.Entry<String, ArrayList<Transaction>> entry : crossTx.entrySet()) { 
-			this.logger.debug(String.format("在分片%s 中，属于分片 %s 的跨分片交易有：%d 条", this.shardID, entry.getKey(), entry.getValue().size()));
-		}  
-                    
-		for (Map.Entry<String, ArrayList<Transaction>> entry : crossTx.entrySet()) { 
-			sendCrossTx(entry.getValue(), entry.getKey());
-		} 
+
+		if (config.RELAY_TX_FORWARD) {
+			for (Map.Entry<String, ArrayList<Transaction>> entry : crossTx.entrySet()) {
+				this.logger.debug(String.format("在分片%s 中，属于分片 %s 的跨分片交易有：%d 条", this.shardID, entry.getKey(), entry.getValue().size()));
+			}
+			for (Map.Entry<String, ArrayList<Transaction>> entry : crossTx.entrySet()) {
+				sendCrossTx(entry.getValue(), entry.getKey());
+			}
+		}
+		try {
+			if (conn != null)
+				conn.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 	/**
@@ -224,6 +216,45 @@ public class shardNode extends Replica {
 		return result;  // 一开始只有一个分片
 	}
 
+	public ArrayList<String> queryShardIDs(Transaction tx) {
+		// 分片规则有三种： origin，monoxide，metis，proposed
+		ArrayList<String> result = new ArrayList<>();
+		String[] keys = config.topos.keySet().toArray(new String[config.SHARDNUM]);
+		int s1, s2;
+		switch (config.sharding_rule) {
+			case "origin":
+				String addr1 = tx.getSender();
+				String slice1 = addr1.substring(addr1.length()-config.SLICENUM, addr1.length());
+				result.add(config.addrShard.get(slice1));
+				String addr2 = tx.getRecipient();
+				String slice2 = addr2.substring(addr2.length()-config.SLICENUM, addr2.length());
+				result.add(config.addrShard.get(slice2));
+				break;
+			case "monoxide":
+				s1 = tx.getMonoxide_d1();
+				s2 = tx.getMonoxide_d2();
+				result.add(keys[s1 % config.SHARDNUM]);
+				result.add(keys[s2 % config.SHARDNUM]);
+				break;
+			case "metis":
+				s1 = tx.getMetis_d1();
+				s2 = tx.getMetis_d2();
+				result.add(keys[s1 % config.SHARDNUM]);
+				result.add(keys[s2 % config.SHARDNUM]);
+				break;
+			case "proposed":
+				s1 = tx.getProposed_d1();
+				s2 = tx.getProposed_d2();
+				result.add(keys[s1 % config.SHARDNUM]);
+				result.add(keys[s2 % config.SHARDNUM]);
+				break;
+			default:
+				System.out.println("Error!!, sharding rule is wrong");
+		}
+		return result;
+	}
+
+
 	/**
 	 * 发送跨分片交易的后半段
 	 */
@@ -241,7 +272,6 @@ public class shardNode extends Replica {
 		String sql = "INSERT INTO transactions(sender,recipient,value,timestamp,gasPrice,accountNonce,"
 				+"digest,Broadcast,Monoxide_d1,Monoxide_d2,Metis_d1,Metis_d2,Proposed_d1,Proposed_d2)"
 				+" VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
-		// Connection conn = connect();
         try {
 			PreparedStatement pstmt = conn.prepareStatement(sql);
 			// Statement stmt = conn.createStatement();
@@ -261,10 +291,10 @@ public class shardNode extends Replica {
 			pstmt.setInt(14,tx.getProposed_d2());
 
             pstmt.executeUpdate();
-			logger.info("Connection to SQLite has been established: ".concat(this.url));
+			logger.info("insert finished: ");
 
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            System.out.println(this.name + "这里插入失败 " + tx.getDigest() + e.getMessage() + tx.encoder());
         }
 	}
 	
@@ -273,7 +303,6 @@ public class shardNode extends Replica {
 	 */
 	public void printTx() {
 		String sql = "select * from transactions";
-
 		Connection conn = connect();
         try {
 			Statement stmt = conn.createStatement();
@@ -291,14 +320,6 @@ public class shardNode extends Replica {
 
         } catch (SQLException e) {
             System.out.println(e.getMessage());
-        } finally {
-            try {
-                if (conn != null) {
-                    conn.close();
-                }
-            } catch (SQLException ex) {
-                System.out.println(ex.getMessage());
-            }
         }
 	}
 
@@ -312,7 +333,7 @@ public class shardNode extends Replica {
 		return true;
 	}
 
-	
+	@Override
 	public void execute(Message msg, long time) {
 		PrePrepareMsg mm = (PrePrepareMsg)msg;
 		RequestMsg rem = null;
@@ -326,17 +347,10 @@ public class shardNode extends Replica {
 			lastRepNum++;
 			setTimer(lastRepNum+1, time);
 			if(rem != null) {
-				// config.sendMsg(rm, sendTag, this.logger);
-				// this.logger.info("再次确认request的消息结构："+rem.m.get(0));
-
-				ArrayList<Transaction> txs = new ArrayList<>();
-				for (int i = 0; i < rem.m.size(); i ++) {
-					txs.add(new Transaction(rem.m.get(i).toString()));
-				}
-
+				ArrayList<Transaction> txs = rem.txs;
 				txProcess(txs);
 				// 处理交易，上链
-				if (rem.m.size() > 0 && isPrimary()) {
+				if (rem.txs.size() > 0 && isPrimary()) {
 					TimeMsg tmsg = new TimeMsg(txs, System.currentTimeMillis(), TimeMsg.CommitTag);
 					sendTimer(config.COLLECTOR_IP, config.COLLECTOR_PORT, tmsg, this.logger);
 				}

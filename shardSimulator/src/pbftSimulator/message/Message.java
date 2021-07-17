@@ -3,13 +3,16 @@ package pbftSimulator.message;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonParser;
+import lombok.Data;
 import org.apache.log4j.Logger;
 
-import net.sf.json.JSON;
-import net.sf.json.JSONObject;
 import pbftSimulator.Simulator;
 import shardSystem.config;
 
+@Data
 public class Message {
 	
 	public static final int TRANSACTION = 8;
@@ -102,142 +105,6 @@ public class Message {
         }
         return super.equals(obj);
     }
-    
-    public int getType() {
-		return type;
-	}
-
-	public void setType(int type) {
-		this.type = type;
-	}
-
-	public int getSndId() {
-		return sndId;
-	}
-
-	public void setSndId(int sndId) {
-		this.sndId = sndId;
-	}
-
-	public int getRcvId() {
-		return rcvId;
-	}
-
-	public void setRcvId(int rcvId) {
-		this.rcvId = rcvId;
-	}
-
-	public long getRcvtime() {
-		return rcvtime;
-	}
-
-	public void setRcvtime(long rcvtime) {
-		this.rcvtime = rcvtime;
-	}
-
-	public long getLen() {
-		return len;
-	}
-
-	public void setLen(long len) {
-		this.len = len;
-	}
-	
-	public String getClientId() {
-		return clientId;
-	}
-
-	public void setClientId(String clientId) {
-		this.clientId = clientId;
-	}
-
-	public static int getRequest() {
-		return REQUEST;
-	}
-
-	public static int getPreprepare() {
-		return PREPREPARE;
-	}
-
-	public static int getPrepare() {
-		return PREPARE;
-	}
-
-	public static int getCommit() {
-		return COMMIT;
-	}
-
-	public static int getReply() {
-		return REPLY;
-	}
-
-	public static int getCheckpoint() {
-		return CHECKPOINT;
-	}
-
-	public static int getViewchange() {
-		return VIEWCHANGE;
-	}
-
-	public static int getNewview() {
-		return NEWVIEW;
-	}
-
-	public static int getTimeout() {
-		return TIMEOUT;
-	}
-
-	public static int getClitimeout() {
-		return CLITIMEOUT;
-	}
-
-	public static long getPrqmsglen() {
-		return PRQMSGLEN;
-	}
-
-	public static long getReqmsglen() {
-		return REQMSGLEN;
-	}
-
-	public static long getPprmsglen() {
-		return PPRMSGLEN;
-	}
-
-	public static long getPremsglen() {
-		return PREMSGLEN;
-	}
-
-	public static long getCommsglen() {
-		return COMMSGLEN;
-	}
-
-	public static long getRepmsglen() {
-		return REPMSGLEN;
-	}
-
-	public static long getCkpmsgbaselen() {
-		return CKPMSGBASELEN;
-	}
-
-	public static long getVchmsgbaselen() {
-		return VCHMSGBASELEN;
-	}
-
-	public static long getNevmsgbaselen() {
-		return NEVMSGBASELEN;
-	}
-
-	public static long getLastreplen() {
-		return LASTREPLEN;
-	}
-
-	public static long getTimmsglen() {
-		return TIMMSGLEN;
-	}
-
-	public static long getCltmsglen() {
-		return CLTMSGLEN;
-	}
 
 	public static Comparator<Message> getCmp() {
 		return cmp;
@@ -248,10 +115,9 @@ public class Message {
         return str.hashCode();
     }
 
-	public boolean ifTimeOut(long time) {
-		if (Math.abs(rcvtime-time) >= config.TIMEOUT) 
-			return true;
-		return false;
+    public String encoder() {
+		String str = new Gson().toJson(this);
+		return str;
 	}
     
     public String toString() {
@@ -261,34 +127,12 @@ public class Message {
 				+sndId+";接收者id:"+rcvId+";消息接收时间戳:"+rcvtime+";";
     }
 
-	/**
-	 * 对消息进行编码，用于网络通信
-	 * @return 编码的字符串，格式采用JSON
-	 */
-	public String encoder() {
-		JSONObject jsout = new JSONObject();
-		jsout.put("rcvId", rcvId);
-		jsout.put("rcvtime", rcvtime);
-		jsout.put("sndId", sndId);
-		jsout.put("len", len);
-		jsout.put("type", type);
-		return jsout.toString();
-	}
-
-	public Message decoder(String jsin) throws Exception {
-		Message output = new Message(0,0,0);
-		try {
-			JSONObject js = JSONObject.fromObject(jsin);
-			output.rcvId = js.getInt("rcvId");
-			output.rcvtime = js.getLong("rcvtime");
-			output.sndId = js.getInt("sndId");
-			output.len = js.getLong("len");
-			output.type = js.getInt("type");
-		} catch (Exception e) {
-			System.out.println("json 转换失败"+e.getMessage());
-			return null;
-		} 
-		return output;
+	public static void main(String[] args) {
+		Message m = new Message(0,0,1);
+		System.out.println("before " + m.encoder());
+		String str = m.encoder();
+		Message m2 = new Gson().fromJson(str, Message.class);
+		System.out.println("after " + m2.encoder());
 	}
 
 }

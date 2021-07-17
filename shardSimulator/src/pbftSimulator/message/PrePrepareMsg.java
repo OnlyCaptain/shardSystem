@@ -1,27 +1,23 @@
 package pbftSimulator.message;
 
-import net.sf.json.JSONObject;
+import com.google.gson.Gson;
 
 public class PrePrepareMsg extends Message {
-	
-	public int v;				
-	
-	public int n;			
-	
-	public Message m;
-	
+	public int v;
+	public int n;
+	public RequestMsg m;
 	public int i;
 
 	public PrePrepareMsg() {
+		super(0,0,0);
 		v = 0;
 		n = 0;
-		m = new Message();
+		m = new RequestMsg();
 		i = 0;
 	}
 
-	//消息结构
 	//<RREPREPARE, v, n, m, i>:v表示视图编号;n表示序列号;m表示request消息;i表示节点id
-	public PrePrepareMsg(int v, int n, Message m, int i, int sndId, int rcvId, long rcvtime) {
+	public PrePrepareMsg(int v, int n, RequestMsg m, int i, int sndId, int rcvId, long rcvtime) {
 		super(sndId, rcvId, rcvtime);
 		this.type = PREPREPARE;
 		this.len = PPRMSGLEN;
@@ -62,50 +58,17 @@ public class PrePrepareMsg extends Message {
 
 	@Override
 	public String encoder() {
-		JSONObject jsout = new JSONObject();
-		jsout.put("rcvId", rcvId);
-		jsout.put("rcvtime", rcvtime);
-		jsout.put("sndId", sndId);
-		jsout.put("len", len);
-		jsout.put("type", type);
-		jsout.put("v", v);
-		jsout.put("n", n);
-		if (m == null)
-			jsout.put("m", "null");
-		else jsout.put("m", m.encoder());
-		jsout.put("i", i);
-		return jsout.toString();
+		String str = new Gson().toJson(this);
+		return str;
 	}
 
-	@Override
-	public PrePrepareMsg decoder(String jsin) throws Exception {
-		PrePrepareMsg output = new PrePrepareMsg();
-		try {
-			JSONObject js = JSONObject.fromObject(jsin);
-			output.rcvId = js.getInt("rcvId");
-			output.rcvtime = js.getLong("rcvtime");
-			output.sndId = js.getInt("sndId");
-			output.len = js.getLong("len");
-			output.type = js.getInt("type");
-			output.v = js.getInt("v");
-			output.n = js.getInt("n");
-
-			output.m = new RequestMsg();
-			String r = js.getJSONObject("m").toString();
-			// System.out.println("in Preprepare"+r);
-			if (r.equals("null")) {
-				System.out.println("Error in preprepareMsg.decoder()");
-				output.m = new RequestMsg();
-			}
-			else {
-				output.m = output.m.decoder(r);
-			} 
-
-			output.i = js.getInt("i");
-		} catch (Exception e) {
-			System.out.println("json 转换失败"+e.getMessage());
-			return null;
-		}
-		return output;
+	public static void main(String[] args) {
+		String str = "{\"v\":0,\"n\":1,\"m\":{\"o\":\"Message\",\"t\":0,\"c\":-1,\"txs\":[{\"sender\":\"0x1dcb8d1f0fcc8cbc8c2d76528e877f915e299fbe\",\"recipient\":\"0x52f791ee5e11186fc120eab36dd80277f6a630bb\",\"value\":2.57822111E17,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193990,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x1dcb8d1f0fcc8cbc8c2d76528e877f915e299fbe\",\"recipient\":\"0x7c5080988c6d91d090c23d54740f856c69450b29\",\"value\":1.49602397E16,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193990,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x1dcb8d1f0fcc8cbc8c2d76528e877f915e299fbe\",\"recipient\":\"0xbaef66124e137eb5ee0de1bbab5a30002508a1bf\",\"value\":2.0188628E19,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193990,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0xa21e0cf3793cf75d63930696158e4474af8383ba\",\"recipient\":\"0x556ca325c21e450b2aff86d9c8ef0fa371971c97\",\"value\":5.0E20,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193990,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x1dcb8d1f0fcc8cbc8c2d76528e877f915e299fbe\",\"recipient\":\"0x58850ab9442c06379dffbf52e3eaa035f5d5e092\",\"value\":7.8565998E16,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193990,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x53cb54cb1d5731faaa81e8a68dd948f43fa6c822\",\"recipient\":\"0xdfd637da23ed86d86eb0d86b93090bd3ead1c760\",\"value\":1.5E19,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193990,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0xa21e0cf3793cf75d63930696158e4474af8383ba\",\"recipient\":\"0x556ca325c21e450b2aff86d9c8ef0fa371971c97\",\"value\":5.0E20,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193990,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x790b8a3ce86e707ed0ed32bf89b3269692a23cc1\",\"recipient\":\"0x4d67f4f0db45b3b5a3424b39ed8d972f710381d5\",\"value\":4.99E19,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193990,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x556ca325c21e450b2aff86d9c8ef0fa371971c97\",\"recipient\":\"0x32be343b94f860124dc4fee278fdcbd38c102d88\",\"value\":1.0999987999999999E21,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193991,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x608f4b86321a68453f9adf6f06f7fc3e621739ad\",\"recipient\":\"0x32be343b94f860124dc4fee278fdcbd38c102d88\",\"value\":4.9998642E18,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193991,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x0b6435ddf12093801c9d3e069f9bdf7fe2906080\",\"recipient\":\"0x32be343b94f860124dc4fee278fdcbd38c102d88\",\"value\":4.4999779999999997E20,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193991,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x4d67f4f0db45b3b5a3424b39ed8d972f710381d5\",\"recipient\":\"0x32be343b94f860124dc4fee278fdcbd38c102d88\",\"value\":4.9898815000000004E19,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193991,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x1dcb8d1f0fcc8cbc8c2d76528e877f915e299fbe\",\"recipient\":\"0x02aca973fdea473c380f2cfba7760220d2cb38ea\",\"value\":3.0707301E19,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193991,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x2910543af39aba0cd09dbb2d50200b3e800a63d2\",\"recipient\":\"0x2f86ba8019945f39ede131d38d4d8780884da553\",\"value\":1.899995E21,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193991,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x1dcb8d1f0fcc8cbc8c2d76528e877f915e299fbe\",\"recipient\":\"0x7c5080988c6d91d090c23d54740f856c69450b29\",\"value\":1.31579598E16,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193991,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x6b925dd5d8ed6132ab6d0860b82c44e1a51f1fee\",\"recipient\":\"0x38a1e9fe529f4c7876e70e85d6b337a7334688d1\",\"value\":1.8E20,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193991,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x1dcb8d1f0fcc8cbc8c2d76528e877f915e299fbe\",\"recipient\":\"0xc517a1cef7630dc7febd59e9f7fb80f56eacb21e\",\"value\":5.0408886E18,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193991,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x1dcb8d1f0fcc8cbc8c2d76528e877f915e299fbe\",\"recipient\":\"0x58850ab9442c06379dffbf52e3eaa035f5d5e092\",\"value\":1.10668379E17,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193991,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x2910543af39aba0cd09dbb2d50200b3e800a63d2\",\"recipient\":\"0xfd7c9117bbeb649d9b37b3d3c9917f7c12f526b3\",\"value\":4.5956645E20,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193991,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x2910543af39aba0cd09dbb2d50200b3e800a63d2\",\"recipient\":\"0xfd7c9117bbeb649d9b37b3d3c9917f7c12f526b3\",\"value\":4.1444154E20,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193991,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x2f86ba8019945f39ede131d38d4d8780884da553\",\"recipient\":\"0x32be343b94f860124dc4fee278fdcbd38c102d88\",\"value\":1.8999938E21,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193991,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0xfd7c9117bbeb649d9b37b3d3c9917f7c12f526b3\",\"recipient\":\"0x32be343b94f860124dc4fee278fdcbd38c102d88\",\"value\":8.740067999999999E20,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193991,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x02aca973fdea473c380f2cfba7760220d2cb38ea\",\"recipient\":\"0x32be343b94f860124dc4fee278fdcbd38c102d88\",\"value\":3.0706123E19,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193991,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0xc517a1cef7630dc7febd59e9f7fb80f56eacb21e\",\"recipient\":\"0x32be343b94f860124dc4fee278fdcbd38c102d88\",\"value\":5.03971E18,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193991,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x1dcb8d1f0fcc8cbc8c2d76528e877f915e299fbe\",\"recipient\":\"0x58850ab9442c06379dffbf52e3eaa035f5d5e092\",\"value\":1.29440831E17,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193991,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0xc47aaa860008be6f65b58c6c6e02a84e666efe31\",\"recipient\":\"0x9630db4398d754a15e7e3a395269d2e884c5ec59\",\"value\":5.973077E20,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193991,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x2910543af39aba0cd09dbb2d50200b3e800a63d2\",\"recipient\":\"0xaca1c2275abd87b31518221c1fa80e9d34151a71\",\"value\":1.17999546E21,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193991,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0xc47aaa860008be6f65b58c6c6e02a84e666efe31\",\"recipient\":\"0x797d1f2d60538013574734dbd6e4ef70fd81e695\",\"value\":3.0499383E20,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193991,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x5b034036ae40b7c5d7bbbf041d07b7f76e200039\",\"recipient\":\"0x3cd73157c6a0ab907b9dfe60f75c74bb99d98e7b\",\"value\":1.73E20,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193991,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x38a1e9fe529f4c7876e70e85d6b337a7334688d1\",\"recipient\":\"0x32be343b94f860124dc4fee278fdcbd38c102d88\",\"value\":1.799988E20,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193992,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x9630db4398d754a15e7e3a395269d2e884c5ec59\",\"recipient\":\"0x32be343b94f860124dc4fee278fdcbd38c102d88\",\"value\":5.973065E20,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193992,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x797d1f2d60538013574734dbd6e4ef70fd81e695\",\"recipient\":\"0x32be343b94f860124dc4fee278fdcbd38c102d88\",\"value\":3.0499263E20,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193992,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x1dcb8d1f0fcc8cbc8c2d76528e877f915e299fbe\",\"recipient\":\"0x7c5080988c6d91d090c23d54740f856c69450b29\",\"value\":1.85314889E16,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193992,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x1dcb8d1f0fcc8cbc8c2d76528e877f915e299fbe\",\"recipient\":\"0x9894f83b1fbb900de13a8779989ed5e508754145\",\"value\":1.39072802E16,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193992,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x1dcb8d1f0fcc8cbc8c2d76528e877f915e299fbe\",\"recipient\":\"0x58850ab9442c06379dffbf52e3eaa035f5d5e092\",\"value\":1.2311766E17,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193992,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x1dcb8d1f0fcc8cbc8c2d76528e877f915e299fbe\",\"recipient\":\"0x10c4712a317a10f60fe9347b199400d6baa89558\",\"value\":2.02311967E18,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193992,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x9894f83b1fbb900de13a8779989ed5e508754145\",\"recipient\":\"0xfbb1b73c4f0bda4f67dca266ce6ef42f520fbb98\",\"value\":1.12748801E17,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193992,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x0bd4cde622a0c41f9c81a3b3fab5a5bdcad21528\",\"recipient\":\"0xdd3eda6db1bbec156b35df3c03fbd93d2c34493b\",\"value\":4.45000008E18,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193992,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0xaca1c2275abd87b31518221c1fa80e9d34151a71\",\"recipient\":\"0x32be343b94f860124dc4fee278fdcbd38c102d88\",\"value\":1.1799943E21,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193992,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x3cd73157c6a0ab907b9dfe60f75c74bb99d98e7b\",\"recipient\":\"0x32be343b94f860124dc4fee278fdcbd38c102d88\",\"value\":1.7299885E20,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193992,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x7c5080988c6d91d090c23d54740f856c69450b29\",\"recipient\":\"0x32be343b94f860124dc4fee278fdcbd38c102d88\",\"value\":5.5147118E16,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193992,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0xdd3eda6db1bbec156b35df3c03fbd93d2c34493b\",\"recipient\":\"0x32be343b94f860124dc4fee278fdcbd38c102d88\",\"value\":4.44885137E18,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193992,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x608f4b86321a68453f9adf6f06f7fc3e621739ad\",\"recipient\":\"0x32be343b94f860124dc4fee278fdcbd38c102d88\",\"value\":4.9988516E18,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193992,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x2910543af39aba0cd09dbb2d50200b3e800a63d2\",\"recipient\":\"0x3668a45e28edd089fcbe31209de076cef5f06501\",\"value\":6.99995E20,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193992,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x608f4b86321a68453f9adf6f06f7fc3e621739ad\",\"recipient\":\"0x32be343b94f860124dc4fee278fdcbd38c102d88\",\"value\":4.9999725E18,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193992,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x3668a45e28edd089fcbe31209de076cef5f06501\",\"recipient\":\"0x32be343b94f860124dc4fee278fdcbd38c102d88\",\"value\":6.999937E20,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193992,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x1dcb8d1f0fcc8cbc8c2d76528e877f915e299fbe\",\"recipient\":\"0x7c5080988c6d91d090c23d54740f856c69450b29\",\"value\":2.82321601E16,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193992,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x6ee8aad7e0a065d8852d7c3b9a6e5fdc4bf50c00\",\"recipient\":\"0xe85e34f0dbcec14908203c5d7695fd17e0578ab5\",\"value\":1.999E19,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193992,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x1dcb8d1f0fcc8cbc8c2d76528e877f915e299fbe\",\"recipient\":\"0x58850ab9442c06379dffbf52e3eaa035f5d5e092\",\"value\":2.4272439E17,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193992,\"gasPrice\":0.0,\"accountNonce\":0},{\"sender\":\"0x2910543af39aba0cd09dbb2d50200b3e800a63d2\",\"recipient\":\"0x8f8741b77dd1833bc0ee23d94ef14920cb9882b3\",\"value\":9.995E18,\"Broadcast\":0,\"Monoxide_d1\":0,\"Monoxide_d2\":0,\"Metis_d1\":0,\"Metis_d2\":0,\"Proposed_d1\":0,\"Proposed_d2\":0,\"timestamp\":1626455193992,\"gasPrice\":0.0,\"accountNonce\":0}],\"type\":0,\"sndId\":-1,\"rcvId\":0,\"rcvtime\":0,\"len\":100,\"clientId\":\"-01\"},\"i\":0,\"type\":1,\"sndId\":0,\"rcvId\":0,\"rcvtime\":0,\"len\":104,\"clientId\":\"000\"}\n";
+		PrePrepareMsg pre = new Gson().fromJson(str, PrePrepareMsg.class);
+		System.out.println(pre.encoder());
+		System.out.println(pre.m.encoder());
+		System.out.println();
+		PrePrepareMsg pre2 = new Gson().fromJson(pre.encoder(), PrePrepareMsg.class);
+		System.out.println(pre2.encoder());
 	}
 }

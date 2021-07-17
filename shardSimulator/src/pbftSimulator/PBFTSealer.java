@@ -9,6 +9,9 @@ import java.util.concurrent.Semaphore;
 import javax.jms.JMSException;
 import javax.jms.TextMessage;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import pbftSimulator.MQ.MqListener;
 import pbftSimulator.NettyClient.NettyClientBootstrap;
 import pbftSimulator.NettyServer.PBFTSealerServerHandler;
@@ -37,8 +40,6 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
-import net.sf.json.JSONArray;
-import net.sf.json.JSONObject;
 
 import java.io.File;
 import java.io.IOException;
@@ -68,14 +69,6 @@ public class PBFTSealer {
 
 	public String txPoolName;
 
-//	public Map<String, String> addrShard;
-//	public Map<String, ArrayList<PairAddress>> topos;  // 这个东西，应该有如下的结构：
-	/** 
-	 * topos: {
-	 * 	 "0": [ {ip:.., port:.., id:...}, {}, ... ]
-	 * 	 "1": [ {ip:.., port:.., id:...}, {}, ... ]
-	 * }
-	*/
 
 	public Semaphore lastBlockEnd;
 
@@ -124,7 +117,6 @@ public class PBFTSealer {
         } else {
             System.out.println("创建目录" + curWorkspace + "失败！");
         }
-		// logger = Logger.getLogger(this.name);  
 		logger = Logger.getLogger(this.name);
 		logger.removeAllAppenders(); 
 		try {
@@ -207,15 +199,15 @@ public class PBFTSealer {
 			time++;
 		}
 		int priId = v % config.RN;
-		JSONArray txStr = new JSONArray();
+		JsonArray txStr = new JsonArray();
 		for (int i = 0; i < txs.size(); i ++) {
-			txStr.add(txs.get(i));
+			JsonObject innerObject = new Gson().toJsonTree(txs.get(i)).getAsJsonObject();
+			txStr.add(innerObject);
 		}
+		this.logger.debug("the tx this time is "+new Gson().toJson(txStr));
 		
 		Message requestMsg = new RequestMsg("Message", txStr, time, id, id, priId, time);
 
-		// config.sendMsg(requestMsg, sendTag, this.logger);
-		// this.logger.info("正在向")
 		sendMsg(replicaAddrs.get(priId).getIP(), replicaAddrs.get(priId).getPort(), requestMsg, sendTag, this.logger);
 		reqStats.put(time, PROCESSING);
 		reqMsgs.put(time, requestMsg);
@@ -338,13 +330,14 @@ public class PBFTSealer {
 	 */
 	public void sendMsg(String sIP, int sport, Message msg, String tag, Logger logger) {
 		String jsbuff = msg.encoder();
+		this.logger.debug(String.format("I send to %s %d", sIP, sport));
 		try {
 			NettyClientBootstrap bootstrap = new NettyClientBootstrap(sport, sIP, this.logger);
 			msg.print(tag, logger);
 			bootstrap.socketChannel.writeAndFlush(jsbuff);
 			// 关闭连接
 			bootstrap.eventLoopGroup.shutdownGracefully();
-		} catch (InterruptedException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
@@ -375,6 +368,44 @@ public class PBFTSealer {
 		return result;  // 一开始只有一个分片
 	}
 
+	public ArrayList<String> queryShardIDs(Transaction tx) {
+		// 分片规则有三种： origin，monoxide，metis，proposed
+		ArrayList<String> result = new ArrayList<>();
+		String[] keys = config.topos.keySet().toArray(new String[config.SHARDNUM]);
+		int s1, s2;
+		switch (config.sharding_rule) {
+			case "origin":
+				String addr1 = tx.getSender();
+				String slice1 = addr1.substring(addr1.length()-config.SLICENUM, addr1.length());
+				result.add(config.addrShard.get(slice1));
+				String addr2 = tx.getRecipient();
+				String slice2 = addr2.substring(addr2.length()-config.SLICENUM, addr2.length());
+				result.add(config.addrShard.get(slice2));
+				break;
+			case "monoxide":
+				s1 = tx.getMonoxide_d1();
+				s2 = tx.getMonoxide_d2();
+				result.add(keys[s1 % config.SHARDNUM]);
+				result.add(keys[s2 % config.SHARDNUM]);
+				break;
+			case "metis":
+				s1 = tx.getMetis_d1();
+				s2 = tx.getMetis_d2();
+				result.add(keys[s1 % config.SHARDNUM]);
+				result.add(keys[s2 % config.SHARDNUM]);
+				break;
+			case "proposed":
+				s1 = tx.getProposed_d1();
+				s2 = tx.getProposed_d2();
+				result.add(keys[s1 % config.SHARDNUM]);
+				result.add(keys[s2 % config.SHARDNUM]);
+				break;
+			default:
+				System.out.println("Error!!, sharding rule is wrong");
+		}
+		return result;
+	}
+
 
 
 }
@@ -398,15 +429,16 @@ class MyRunnable implements Runnable {
 			try {
 				int i = 0;
 				long endTime = System.currentTimeMillis();
-				while (i < config.BLOCKTXNUM && endTime - beginTime < config.BLOCK_GENERATION_TIME) {
-					// 设置接收者接收消息的时间，这里设定为100s.即100s没收到新消息就会自动关闭
+				while (endTime - beginTime < config.BLOCK_GENERATION_TIME) {
+					endTime = System.currentTimeMillis();
+					// 设置接收者接收消息的时间, 超时没收到新消息就会自动关闭
+					if (i >= config.BLOCKTXNUM)
+						continue;
 					TextMessage message = null;
 					message = (TextMessage) mqListener.consumer.receive(config.BLOCK_GENERATION_TIME - (endTime - beginTime));
 					Transaction tx = null;
-
 					if (null != message) {
-						// this.pbftSealer.logger.debug("收到消息" + message.getText());
-						tx = new Transaction(message.getText());
+						tx = new Gson().fromJson(message.getText(), Transaction.class);
 						if (null != tx) {
 							txsBuffer.add(tx);
 						} 

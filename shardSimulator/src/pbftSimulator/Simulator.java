@@ -4,7 +4,8 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.util.*;
 
-import net.sf.json.JSONObject;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import shardSystem.config;
 import shardSystem.shardNode;
 import shardSystem.transaction.Transaction;
@@ -95,13 +96,27 @@ public class Simulator {
 
 			String line = null;
 			while((line=reader.readLine())!=null){
-				JSONObject jstmp = new JSONObject();
+				JsonObject jstmp = new JsonObject();
+				JsonObject jsin = new JsonObject();
 				String item[] = line.split(",");//CSV格式文件为逗号分隔符文件，这里根据逗号切分
 				for (int i = 0; i < item.length; i ++) {
 					item[i] = item[i].trim();
-					jstmp.element(title[i], item[i].trim());
+					jstmp.addProperty(title[i], item[i].trim());
 				}
-				result.add(new Transaction(jstmp.toString()));
+				jsin.addProperty("sender", jstmp.get("sender").getAsString());
+				jsin.addProperty("recipient", jstmp.get("recipient").getAsString());
+				jsin.addProperty("value", Double.parseDouble(jstmp.get("value").getAsString()));
+				jsin.addProperty("Monoxide_d1", Double.valueOf(jstmp.get("Monoxide_d1").getAsString()).intValue());
+				jsin.addProperty("Monoxide_d2", Double.valueOf(jstmp.get("Monoxide_d2").getAsString()).intValue());
+				jsin.addProperty("Metis_d1", Double.valueOf(jstmp.get("Metis_d1").getAsString()).intValue());
+				jsin.addProperty("Metis_d2", Double.valueOf(jstmp.get("Metis_d2").getAsString()).intValue());
+				jsin.addProperty("Proposed_d1", Double.valueOf(jstmp.get("Proposed_d1").getAsString()).intValue());
+				jsin.addProperty("Proposed_d2", Double.valueOf(jstmp.get("Proposed_d2").getAsString()).intValue());
+				jsin.addProperty("timestamp", System.currentTimeMillis());
+				jsin.addProperty("gasPrice", 0);
+				jsin.addProperty("accountNonce", 0);
+				Transaction innerTx = new Gson().fromJson(jsin,Transaction.class);
+				result.add(innerTx);
 			}
 			reader.close();
 		} catch (Exception e) {
@@ -109,6 +124,7 @@ public class Simulator {
 		}
 		return result;
 	}
+
 
 	/**
 	 * 生成IP数组，后续需要改成从配置文件中读取

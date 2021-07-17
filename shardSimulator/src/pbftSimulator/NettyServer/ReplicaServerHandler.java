@@ -1,10 +1,12 @@
 package pbftSimulator.NettyServer;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.ReferenceCountUtil;
-import net.sf.json.JSONObject;
 import pbftSimulator.message.*;
 import pbftSimulator.replica.Replica;
 
@@ -28,28 +30,25 @@ public class ReplicaServerHandler extends SimpleChannelInboundHandler<String> {
     protected void messageReceived(ChannelHandlerContext channelHandlerContext, String jsbuff) throws Exception {
         Message baseMsg = null; 
         try {
-            JSONObject js = JSONObject.fromObject(jsbuff);
-            int type = js.getInt("type");
+            JsonObject js = new JsonParser().parse(jsbuff).getAsJsonObject();
+            int type = js.get("type").getAsInt();
+//            System.out.println(String.format("收到了 %d 类消息：%s", type, jsbuff));
             switch (type) {
                 case Message.REQUEST:
-                    this.replica.logger.debug(replica.name+" receive Request");
-                    baseMsg = new RequestMsg();
-                    baseMsg = baseMsg.decoder(jsbuff);
+                    baseMsg = new Gson().fromJson(jsbuff, RequestMsg.class);
+                    this.replica.logger.debug(replica.name+" receive Request" + baseMsg.encoder());
                     break;
                 case Message.PREPREPARE:
-                    this.replica.logger.debug(replica.name+" receive PrePrepare");
-                    baseMsg = new PrePrepareMsg();
-                    baseMsg = baseMsg.decoder(jsbuff);
+                    baseMsg = new Gson().fromJson(jsbuff, PrePrepareMsg.class);
+                    this.replica.logger.debug(replica.name+" receive PrePrepare" + baseMsg.encoder());
                     break;
                 case Message.PREPARE:
-                    this.replica.logger.debug(replica.name+" receive Prepare");
-                    baseMsg = new PrepareMsg();
-                    baseMsg = baseMsg.decoder(jsbuff);
+                    baseMsg = new Gson().fromJson(jsbuff, PrepareMsg.class);
+                    this.replica.logger.debug(replica.name+" receive Prepare" + baseMsg.encoder());
                     break;
                 case Message.COMMIT:
-                    this.replica.logger.debug(replica.name+" receive commit");
-                    baseMsg = new CommitMsg();
-                    baseMsg = baseMsg.decoder(jsbuff);
+                    baseMsg = new Gson().fromJson(jsbuff, CommitMsg.class);
+                    this.replica.logger.debug(replica.name+" receive commit" + baseMsg.encoder());
                     break;
                 case Message.VIEWCHANGE:
                     break;

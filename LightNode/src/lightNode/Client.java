@@ -200,8 +200,10 @@ public class Client {
 					ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(start, txs.size()));
 					client.sendRawTx(tx1);
 					tx_fin = true;
+//					System.out.println("Broadcast is : " + txs.get(start).Broadcast + " cur time is: " + getTimeStamp());
+					start = i;
 					break;
-				// 新的broadcast值
+					// 新的broadcast值
 				} else if (txs.get(i).Broadcast != txs.get(start).Broadcast) {
 					ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(start, i));
 					client.sendRawTx(tx1);

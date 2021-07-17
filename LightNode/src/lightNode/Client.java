@@ -6,6 +6,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
+import static java.lang.Thread.sleep;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -185,13 +186,40 @@ public class Client {
 
 		System.out.println(String.format("总共有 %d 条交易", txs.size()));
 		int start = 0;
-		int begin = 0, limit = 3000;
-		while (start < txs.size()) {
-			if (start > limit) break;
-		 	ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(start, Math.min(txs.size(), start+100)));
-		 	client.sendRawTx(tx1);
-		 	start += 100;
+		if (txs.size() == 0) {
+			return 0;
 		}
+		long waittime = 1000;   // 两次发送交易的间隔时间，默认是1000ms
+		long prev_timestamp = getTimeStamp();
+		while (start < txs.size()) {
+			boolean tx_fin = false;
+			for (int i=0; i <= txs.size(); i++) {
+				// tx读完了
+				if (i == txs.size()) {
+					ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(start, txs.size()));
+					client.sendRawTx(tx1);
+					tx_fin = true;
+					break;
+				// 新的broadcast值
+				} else if (txs[i].Broadcast != txs[start].Broadcast) {
+					ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(start, i));
+					client.sendRawTx(tx1);
+					waittime = (txs[i].Broadcast - txs[start].Broadcast) * 1000;
+					start = i;
+				}
+			}
+			// 等待下一次发送交易
+			while ( !tx_fin ) {
+				long cur_timestamp = getTimeStamp();
+				if (( cur_timestamp - prev_timestamp) >= waittime) {
+					prev_timestamp = cur_timestamp;
+					break;
+				} else {
+					// 考虑是否需要sleep: sleep可以减少cpu开销，不sleep可以提高精度
+					//sleep(10);
+				}
+			}
+		 }
 	}
 	
 };

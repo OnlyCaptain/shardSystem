@@ -3,7 +3,7 @@ package transaction;
 import java.util.Comparator;
 
 import net.sf.json.JSONObject;
-import lightNode.Utils;
+import collector.Utils;
 
 public class Transaction {
 
@@ -220,6 +220,10 @@ public class Transaction {
 		jsout.put("Proposed_d1",Proposed_d1);
 		jsout.put("Proposed_d2",Proposed_d2);
 		return jsout.toString();
+	}
+
+	public static void main(String[] args) {
+
 	}
 
 }

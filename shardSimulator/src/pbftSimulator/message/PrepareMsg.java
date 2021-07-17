@@ -1,16 +1,13 @@
 package pbftSimulator.message;
 
-import net.sf.json.JSONObject;
-import pbftSimulator.Utils;
+import com.google.gson.Gson;
+import lombok.Data;
 
+@Data
 public class PrepareMsg extends Message {
-	
-	public int v;				
-	
-	public int n;			
-	
+	public int v;
+	public int n;
 	public String d;
-	
 	public int i;
 
 	public PrepareMsg() {
@@ -20,11 +17,9 @@ public class PrepareMsg extends Message {
 		this.v = 0;
 		this.n = 0;
 		this.i = 0;
-		// this.d = Utils.getMD5Digest(this.toString());
 		this.d = "";
 	}
 
-	//消息结构
 	//<PREPARE, v, n, d, i>:v表示视图编号;n表示序列号;d表示request消息的摘要;i表示节点id
 	public PrepareMsg(int v, int n, String d, int i, int sndId, int rcvId, long rcvtime) {
 		super(sndId, rcvId, rcvtime);
@@ -59,38 +54,7 @@ public class PrepareMsg extends Message {
 
 	@Override
 	public String encoder() {
-		JSONObject jsout = new JSONObject();
-		jsout.put("rcvId", rcvId);
-		jsout.put("rcvtime", rcvtime);
-		jsout.put("sndId", sndId);
-		jsout.put("len", len);
-		jsout.put("type", type);
-		jsout.put("v", v);
-		jsout.put("n", n);
-		jsout.put("d", d);
-		jsout.put("i", i);
-		return jsout.toString();
-
-	}
-
-	@Override
-	public PrepareMsg decoder(String jsin) throws Exception {
-		PrepareMsg output = new PrepareMsg();
-		try {
-			JSONObject js = JSONObject.fromObject(jsin);
-			output.rcvId = js.getInt("rcvId");
-			output.rcvtime = js.getLong("rcvtime");
-			output.sndId = js.getInt("sndId");
-			output.len = js.getLong("len");
-			output.type = js.getInt("type");
-			output.v = js.getInt("v");
-			output.n = js.getInt("n");
-			output.d = js.getString("d");
-			output.i = js.getInt("i");
-		} catch (Exception e) {
-			System.out.println("json 转换失败"+e.getMessage());
-			return null;
-		}
-		return output;
+		String str = new Gson().toJson(this);
+		return str;
 	}
 }

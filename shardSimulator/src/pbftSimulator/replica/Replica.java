@@ -1,5 +1,6 @@
 package pbftSimulator.replica;
 
+import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -384,8 +385,6 @@ public class Replica {
 		if(reqStats.containsKey(msg) && reqStats.get(msg) == STABLE) {
 			long recTime = msg.rcvtime;
 			Message replyMsg = new ReplyMsg(v, t, c, id, "result", id, c, recTime);
-//			config.sendMsg(replyMsg, sendTag, this.logger);
-			// sendMsg(this.IP, sport, msg, tag, logger);
 			return;
 		}
 		if(!reqStats.containsKey(msg)) {
@@ -416,6 +415,7 @@ public class Replica {
 				// this.logger.debug("after constructing: "+ prePrepareMsg.encoder());
 				addMessageToCache(prePrepareMsg);
 				// config.sendMsgToOthers(prePrepareMsg, id, sendTag, this.logger);
+				this.logger.debug("构造的 preprepare： " + prePrepareMsg.encoder());
 				sendMsgToOthers(prePrepareMsg, sendTag, logger);
 			}
 		}
@@ -778,7 +778,7 @@ public class Replica {
 	 */
 	public void sendMsg(String sIP, int sport, Message msg, String tag, Logger logger) {
 		String jsbuff = msg.encoder();
-		// System.out.println("after encoding" + jsbuff);
+//		 System.out.println("after encoding " + jsbuff);
 		try {
 			NettyClientBootstrap bootstrap = new NettyClientBootstrap(sport, sIP, this.logger);
 			msg.print(tag, logger);
@@ -788,7 +788,7 @@ public class Replica {
 			// bootstrap.socketChannel.writeAndFlush(clo);
 //			关闭连接
 			bootstrap.eventLoopGroup.shutdownGracefully();
-		} catch (InterruptedException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 			System.out.println("发送失败");
 		}
@@ -827,6 +827,8 @@ public class Replica {
 		} catch (InterruptedException e) {
 			System.out.println("打点信息发送失败 " + e.getMessage());
 			logger.error("打点信息发送失败 " + e.getMessage());
+		} catch (Exception e) {
+			System.out.println(String.format("链接失败 %s %d %s", sIP, sport, e.getMessage()));
 		}
 
 

@@ -1,13 +1,15 @@
 package shardSystem;
 
-import net.sf.json.JSONArray;
-import net.sf.json.JSONObject;
-import org.apache.commons.io.FileUtils;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import org.apache.log4j.Level;
 import pbftSimulator.PairAddress;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -55,79 +57,81 @@ public class config {
         String content = "{}";
         try {
             File file=new File(configPath);
-            content = FileUtils.readFileToString(file,"UTF-8");
+            content = new String(Files.readAllBytes(Paths.get(configPath)));
 
-            JSONObject jsonObject = JSONObject.fromObject(content);
-            name = jsonObject.getString("name");
-            env = jsonObject.getString("env");
-            dataPath = jsonObject.getString("dataPath");
-            consensus_protocol = jsonObject.getString("consensus_protocol");
-            RN = jsonObject.getInt("RN");
-            SHARDNODENUM = jsonObject.getInt("SHARDNODENUM");
-            SHARDNUM = jsonObject.getInt("SHARDNUM");
-            FN = jsonObject.getInt("FN");
-            CN = jsonObject.getInt("CN");
-            INFLIGHT = jsonObject.getInt("INFLIGHT");
-            REQNUM = jsonObject.getInt("REQNUM");
-            TIMEOUT = jsonObject.getInt("TIMEOUT");
-            CLITIMEOUT = jsonObject.getInt("CLITIMEOUT");
-            BASEDLYBTWRP = jsonObject.getInt("BASEDLYBTWRP");
-            DLYRNGBTWRP = jsonObject.getInt("DLYRNGBTWRP");
-            BASEDLYBTWRPANDCLI = jsonObject.getInt("BASEDLYBTWRPANDCLI");
-            DLYRNGBTWRPANDCLI = jsonObject.getInt("DLYRNGBTWRPANDCLI");
-            BANDWIDTH = jsonObject.getInt("BANDWIDTH");
-            FACTOR = jsonObject.getDouble("FACTOR");
-            COLLAPSEDELAY = jsonObject.getInt("COLLAPSEDELAY");
-            SHOWDETAILINFO = jsonObject.getBoolean("SHOWDETAILINFO");
-            BLOCKTXNUM = jsonObject.getInt("BLOCKTXNUM");
-            SLICENUM = jsonObject.getInt("SLICENUM");
-            REQTXSIZE = jsonObject.getInt("REQTXSIZE");
-            BLOCK_GENERATION_TIME = jsonObject.getInt("BLOCK_GENERATION_TIME");
-            REPLICA_PORT = jsonObject.getInt("REPLICA_PORT");
-            PBFTSEALER_PORT = jsonObject.getInt("PBFTSEALER_PORT");
-            COLLECTOR_PORT = jsonObject.getInt("COLLECTOR_PORT");
-            COLLECTOR_IP = jsonObject.getString("COLLECTOR_IP");
-            sharding_rule = jsonObject.getString("sharding_rule");
-            RELAY_TX_FORWARD = jsonObject.getBoolean("RELAY_TX_FORWARD");
+            JsonObject jsonObject = new JsonParser().parse(content).getAsJsonObject();
+            name = jsonObject.get("name").getAsString();
+            env = jsonObject.get("env").getAsString();
+            dataPath = jsonObject.get("dataPath").getAsString();
+            consensus_protocol = jsonObject.get("consensus_protocol").getAsString();
+            RN = jsonObject.get("RN").getAsInt();
+            SHARDNODENUM = jsonObject.get("SHARDNODENUM").getAsInt();
+            SHARDNUM = jsonObject.get("SHARDNUM").getAsInt();
+            FN = jsonObject.get("FN").getAsInt();
+            CN = jsonObject.get("CN").getAsInt();
+            INFLIGHT = jsonObject.get("INFLIGHT").getAsInt();
+            REQNUM = jsonObject.get("REQNUM").getAsInt();
+            TIMEOUT = jsonObject.get("TIMEOUT").getAsInt();
+            CLITIMEOUT = jsonObject.get("CLITIMEOUT").getAsInt();
+            BASEDLYBTWRP = jsonObject.get("BASEDLYBTWRP").getAsInt();
+            DLYRNGBTWRP = jsonObject.get("DLYRNGBTWRP").getAsInt();
+            BASEDLYBTWRPANDCLI = jsonObject.get("BASEDLYBTWRPANDCLI").getAsInt();
+            DLYRNGBTWRPANDCLI = jsonObject.get("DLYRNGBTWRPANDCLI").getAsInt();
+            BANDWIDTH = jsonObject.get("BANDWIDTH").getAsInt();
+            FACTOR = jsonObject.get("FACTOR").getAsDouble();
+            COLLAPSEDELAY = jsonObject.get("COLLAPSEDELAY").getAsInt();
+            SHOWDETAILINFO = jsonObject.get("SHOWDETAILINFO").getAsBoolean();
+            BLOCKTXNUM = jsonObject.get("BLOCKTXNUM").getAsInt();
+            SLICENUM = jsonObject.get("SLICENUM").getAsInt();
+            REQTXSIZE = jsonObject.get("REQTXSIZE").getAsInt();
+            BLOCK_GENERATION_TIME = jsonObject.get("BLOCK_GENERATION_TIME").getAsInt();
+            REPLICA_PORT = jsonObject.get("REPLICA_PORT").getAsInt();
+            PBFTSEALER_PORT = jsonObject.get("PBFTSEALER_PORT").getAsInt();
+            COLLECTOR_PORT = jsonObject.get("COLLECTOR_PORT").getAsInt();
+            COLLECTOR_IP = jsonObject.get("COLLECTOR_IP").getAsString();
+            sharding_rule = jsonObject.get("sharding_rule").getAsString();
+            RELAY_TX_FORWARD = jsonObject.get("RELAY_TX_FORWARD").getAsBoolean();
 
-            JSONObject jsonTopo = jsonObject.getJSONObject("topo");
+
+            JsonObject jsonTopo = jsonObject.get("topo").getAsJsonObject();
             topos  = new HashMap<>();
             int topoSize, topoEach;
+            String keys[] = jsonTopo.keySet().toArray(new String[SHARDNUM]);
             topoSize = jsonTopo.size();
-            topoEach = jsonTopo.getJSONArray(jsonTopo.keys().next().toString()).size();
+            topoEach = jsonTopo.get(keys[0]).getAsJsonArray().size();
 
             assert(topoSize * topoEach == SHARDNODENUM * SHARDNUM);
 
-            Iterator<String> topoKeys = jsonTopo.keys();
+            Iterator<String> topoKeys = jsonTopo.keySet().iterator();
             while (topoKeys.hasNext()) {
                 String shardID = topoKeys.next();
-                JSONArray jsonShard = jsonTopo.getJSONArray(shardID);
+                JsonArray jsonShard = jsonTopo.get(shardID).getAsJsonArray();
                 topos.put(shardID, new ArrayList<PairAddress>());
                 for (int j = 0; j < SHARDNODENUM; j ++) {
-                    JSONObject shardJ = jsonShard.getJSONObject(j);
-                    topos.get(shardID).add(new PairAddress(j, shardJ.getString("IP"), shardJ.getInt("port")));
+                    JsonObject shardJ = jsonShard.get(j).getAsJsonObject();
+                    topos.get(shardID).add(new PairAddress(j, shardJ.get("IP").getAsString(), shardJ.get("port").getAsInt()));
                 }
             }
 
-            JSONObject jsonAddr = jsonObject.getJSONObject("addrShard");
+            JsonObject jsonAddr = jsonObject.get("addrShard").getAsJsonObject();
             addrShard  = new HashMap<> ();
-            Iterator<String> addrKeys = jsonAddr.keys();
+            Iterator<String> addrKeys = jsonAddr.keySet().iterator();
             while (addrKeys.hasNext()) {
                 String shardID = addrKeys.next();
-                JSONArray jsonShard = jsonAddr.getJSONArray(shardID);
+                JsonArray jsonShard = jsonAddr.get(shardID).getAsJsonArray();
                 for (int j = 0; j < jsonShard.size(); j ++) {
-                    String shardJ = jsonShard.getString(j);
+                    String shardJ = jsonShard.get(j).getAsString();
                     addrShard.put(shardJ, shardID);
                 }
             }
 
             if (env.equals("dev")) {
-                JSONObject PBFTSealers = jsonObject.getJSONObject("PBFTSealers");
+                JsonObject PBFTSealers = jsonObject.get("PBFTSealers").getAsJsonObject();
                 PBFTSealer_ports = new HashMap<> ();
-                Iterator<String> sealerKeys = PBFTSealers.keys();
+                Iterator<String> sealerKeys = PBFTSealers.keySet().iterator();
                 while (sealerKeys.hasNext()) {
                     String shardID = sealerKeys.next();
-                    PBFTSealer_ports.put(shardID, PBFTSealers.getInt(shardID));
+                    PBFTSealer_ports.put(shardID, PBFTSealers.get(shardID).getAsInt());
                 }
             }
 

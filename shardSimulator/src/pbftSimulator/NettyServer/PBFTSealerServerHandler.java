@@ -1,11 +1,14 @@
 package pbftSimulator.NettyServer;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.ReferenceCountUtil;
-import net.sf.json.JSONArray;
-import net.sf.json.JSONObject;
+
 import pbftSimulator.MQ.MqSender;
 import pbftSimulator.PBFTSealer;
 import pbftSimulator.message.Message;
@@ -51,27 +54,26 @@ public class PBFTSealerServerHandler extends SimpleChannelInboundHandler<String>
         
         Message baseMsg = null; 
         try {
-            JSONObject js = JSONObject.fromObject(jsbuff);
-            int type = js.getInt("type");
+            JsonObject js= new JsonParser().parse(jsbuff).getAsJsonObject();
+            int type = js.get("type").getAsInt();
+
             switch (type) {
                 case Message.REPLY:
                     this.sealer.logger.debug(this.sealer.name+" receive Reply");
-                    baseMsg = new ReplyMsg();
-                    baseMsg = baseMsg.decoder(jsbuff);
+                    baseMsg = new Gson().fromJson(jsbuff, ReplyMsg.class);
                     break;
                 case Message.CLITIMEOUT:
                     this.sealer.logger.debug(this.sealer.name+" receive Timeout");
-                    baseMsg = new TimeOutMsg();
-                    baseMsg = baseMsg.decoder(jsbuff);
+                    baseMsg = new Gson().fromJson(jsbuff, CliTimeOutMsg.class);
                     break;
                 case Message.TRANSACTION:
-
-                    RawTxMessage rawTxMessage = new RawTxMessage(jsbuff);
-                    JSONArray m = rawTxMessage.getM();
+                    RawTxMessage rawTxMessage = new Gson().fromJson(jsbuff, RawTxMessage.class);
+                    JsonArray m = rawTxMessage.getTxs();
                     // 划分出属于本分片的交易与不属于本分片的交易
                     Map<String, ArrayList<Transaction>> classifi = new HashMap<>();
                     for(int i=0;i<m.size();i++){
-                        Transaction tx = new Transaction(m.get(i).toString());
+                        Transaction tx = new Gson().fromJson(m.get(i), Transaction.class);
+                        this.sealer.logger.info("解包：" + tx.encoder());
                         ArrayList<String> shardIDs = this.sealer.queryShardIDs(tx);
                         if (shardIDs.size() == 0) {
                             System.out.println("Error!!, 交易没查到分片id");

@@ -7,18 +7,14 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
-import message.TimeMsg;
-import net.sf.json.JSONObject;
-import org.apache.log4j.FileAppender;
-import org.apache.log4j.Layout;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.apache.log4j.PatternLayout;
-
-import message.Message;
-import message.RawTxMessage;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import netty.NettyClientBootstrap;
-import transaction.Transaction;
+import org.apache.log4j.*;
+import pbftSimulator.message.Message;
+import pbftSimulator.message.RawTxMessage;
+import pbftSimulator.message.TimeMsg;
+import shardSystem.transaction.Transaction;
 
 /**
  * @author zhanjzh
@@ -30,8 +26,11 @@ public class Client {
 //	public static final int PBFTSEALER_PORT = 58052;  // prod
 	public static final int PBFTSEALER_PORT = 62458;  // dev
 	public static final int TIMEOUT = 500;					//节点超时设定(毫秒)
-	public static final String COLLECTOR_IP = "127.0.0.1";
-	public static final String PRI_IP = "127.0.0.1";
+//	public static final String COLLECTOR_IP = "127.0.0.1";  // prod
+	public static final String COLLECTOR_IP = "127.0.0.1";  // dev
+//	public static final String PRI_IP = "112.74.34.239";    // prod
+	public static final String PRI_IP = "127.0.0.1";    // dev
+
 	public static final int COLLECTOR_PORT = 57050;
 	private static final Level LOGLEVEL = Level.INFO;
 
@@ -95,8 +94,11 @@ public class Client {
 		long time = getTimeStamp();
 		TimeMsg tmsg = new TimeMsg(txs, time, TimeMsg.SendTag);
 		System.out.println("正在发送记录时间的包");
-		sendTimer(Client.COLLECTOR_IP, Client.COLLECTOR_PORT, tmsg, this.logger);
+//		sendTimer(Client.COLLECTOR_IP, Client.COLLECTOR_PORT, tmsg, this.logger);
 		System.out.println(tmsg.encoder());
+		TimeMsg test = new Gson().fromJson(tmsg.encoder(), TimeMsg.class);
+		System.out.println(test.encoder());
+		System.out.println(rt.encoder());
 	}
 
 	public static long getTimeStamp() {
@@ -133,7 +135,7 @@ public class Client {
 			e.printStackTrace();
 		}
 	}
-	
+
 	public static ArrayList<Transaction> getTxsFromFile(String filepath) {
 		ArrayList<Transaction> result = new ArrayList<Transaction>();
 		try {
@@ -143,26 +145,27 @@ public class Client {
 
 			String line = null;
 			while((line=reader.readLine())!=null){
-				JSONObject jstmp = new JSONObject();
-				JSONObject jsin = new JSONObject();
+				JsonObject jstmp = new JsonObject();
+				JsonObject jsin = new JsonObject();
 				String item[] = line.split(",");//CSV格式文件为逗号分隔符文件，这里根据逗号切分
 				for (int i = 0; i < item.length; i ++) {
 					item[i] = item[i].trim();
-					jstmp.element(title[i], item[i].trim());
+					jstmp.addProperty(title[i], item[i].trim());
 				}
-				jsin.put("sender", jstmp.getString("sender"));
-				jsin.put("recipient", jstmp.getString("recipient"));
-				jsin.put("value", Double.parseDouble(jstmp.getString("value")));
-				jsin.put("Monoxide_d1", Double.valueOf(jstmp.getString("Monoxide_d1")).intValue());
-				jsin.put("Monoxide_d2", Double.valueOf(jstmp.getString("Monoxide_d2")).intValue());
-				jsin.put("Metis_d1", Double.valueOf(jstmp.getString("Metis_d1")).intValue());
-				jsin.put("Metis_d2", Double.valueOf(jstmp.getString("Metis_d2")).intValue());
-				jsin.put("Proposed_d1", Double.valueOf(jstmp.getString("Proposed_d1")).intValue());
-				jsin.put("Proposed_d2", Double.valueOf(jstmp.getString("Proposed_d2")).intValue());
-				jsin.put("timestamp", System.currentTimeMillis());
-				jsin.put("gasPrice", 0);
-				jsin.put("accountNonce", 0);
-				result.add(new Transaction(jsin.toString()));
+				jsin.addProperty("sender", jstmp.get("sender").getAsString());
+				jsin.addProperty("recipient", jstmp.get("recipient").getAsString());
+				jsin.addProperty("value", Double.parseDouble(jstmp.get("value").getAsString()));
+				jsin.addProperty("Monoxide_d1", Double.valueOf(jstmp.get("Monoxide_d1").getAsString()).intValue());
+				jsin.addProperty("Monoxide_d2", Double.valueOf(jstmp.get("Monoxide_d2").getAsString()).intValue());
+				jsin.addProperty("Metis_d1", Double.valueOf(jstmp.get("Metis_d1").getAsString()).intValue());
+				jsin.addProperty("Metis_d2", Double.valueOf(jstmp.get("Metis_d2").getAsString()).intValue());
+				jsin.addProperty("Proposed_d1", Double.valueOf(jstmp.get("Proposed_d1").getAsString()).intValue());
+				jsin.addProperty("Proposed_d2", Double.valueOf(jstmp.get("Proposed_d2").getAsString()).intValue());
+				jsin.addProperty("timestamp", System.currentTimeMillis());
+				jsin.addProperty("gasPrice", 0);
+				jsin.addProperty("accountNonce", 0);
+				Transaction innerTx = new Gson().fromJson(jsin,Transaction.class);
+				result.add(innerTx);
 			}
 			reader.close();
 		} catch (Exception e) {
@@ -170,7 +173,6 @@ public class Client {
 		}
 		return result;
 	}
-	
 	public static void main(String[] args) throws InterruptedException {
 
 		String curIP = Utils.getPublicIp();
@@ -183,11 +185,13 @@ public class Client {
 
 		System.out.println(String.format("总共有 %d 条交易", txs.size()));
 		int start = 0;
+		int begin = 0, limit = 3000;
 		while (start < txs.size()) {
+			if (start > limit) break;
 		 	ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(start, Math.min(txs.size(), start+100)));
 		 	client.sendRawTx(tx1);
 		 	start += 100;
-		 }
+		}
 	}
 	
 };

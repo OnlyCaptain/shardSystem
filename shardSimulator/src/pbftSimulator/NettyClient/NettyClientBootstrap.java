@@ -35,15 +35,11 @@ public class NettyClientBootstrap {
      * @param host 服务端地址
      * @throws InterruptedException
      */
-    public NettyClientBootstrap(int port, String host, Logger logger) throws InterruptedException {
+    public NettyClientBootstrap(int port, String host, Logger logger) throws Exception {
         this.port = port;
         this.host = host;
         this.logger = logger;
-        try {
-            start();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        start();
     }
 
     /**
@@ -51,7 +47,7 @@ public class NettyClientBootstrap {
      * 其中 NettyClientHandler Client “接收消息”的代码。
      * @throws InterruptedException
      */
-    private void start() throws InterruptedException {
+    private void start() throws Exception {
         eventLoopGroup=new NioEventLoopGroup();
         Bootstrap bootstrap=new Bootstrap();
         bootstrap.channel(NioSocketChannel.class);

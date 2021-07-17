@@ -51,6 +51,7 @@ public class RawTxMessage extends Message {
 
 		RawTxMessage rt2 = new Gson().fromJson(rt.encoder(), RawTxMessage.class);
 		System.out.println(rt2.toString());
+		System.out.println(rt2.getLen());
 	}
 
 	public JsonArray getTxs() {

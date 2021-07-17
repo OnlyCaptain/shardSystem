@@ -1,12 +1,13 @@
 package netty;
 
 import collector.Collector;
+import com.google.gson.Gson;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.ReferenceCountUtil;
-import message.TimeMsg;
-import net.sf.json.JSONObject;
+import pbftSimulator.message.TimeMsg;
+
 
 public class CollectorServerHandler extends SimpleChannelInboundHandler<String> {
     private Collector collector;
@@ -17,6 +18,7 @@ public class CollectorServerHandler extends SimpleChannelInboundHandler<String> 
 
     public CollectorServerHandler(Collector collector) {
 		super();
+		System.out.println("创建collector监听");
         this.collector = collector;
 	}
     
@@ -24,11 +26,13 @@ public class CollectorServerHandler extends SimpleChannelInboundHandler<String> 
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         NettyChannelMap.remove((SocketChannel)ctx.channel());
     }
+
     @Override
     protected void messageReceived(ChannelHandlerContext channelHandlerContext, String jsbuff) throws Exception {
+        System.out.println("收到消息"+jsbuff);
         TimeMsg baseMsg = null;
         try {
-            baseMsg = new TimeMsg(jsbuff);
+            baseMsg = new Gson().fromJson(jsbuff, TimeMsg.class);
             if (baseMsg == null) {
                 this.collector.logger.error("出错啦这里是Replica后端"+jsbuff);
                 return;

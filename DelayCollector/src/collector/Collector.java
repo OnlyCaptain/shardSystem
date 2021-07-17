@@ -1,12 +1,7 @@
 package collector;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.sql.*;
-import java.util.ArrayList;
-import java.util.concurrent.TimeUnit;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
@@ -16,15 +11,15 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
-import message.TimeMsg;
-import net.sf.json.JSONArray;
+
 import netty.CollectorServerHandler;
 import org.apache.log4j.*;
+import pbftSimulator.message.TimeMsg;
+import shardSystem.transaction.Transaction;
 
-import message.Message;
-import message.RawTxMessage;
-import netty.NettyClientBootstrap;
-import transaction.Transaction;
+import java.io.File;
+import java.io.IOException;
+import java.sql.*;
 
 /**
  * @author zhanjzh
@@ -33,7 +28,7 @@ import transaction.Transaction;
  */
 public class Collector {
 	
-	public static final int COLLECTOR_PORT = 57050;
+	public static final int COLLECTOR_PORT = 7894;
 	private static final Level LOGLEVEL = Level.INFO;
 	
 	public String IP;
@@ -44,9 +39,7 @@ public class Collector {
 	public String name;
 	public String url;    // 数据库 url
 
-	public EventLoopGroup boss;
-	public EventLoopGroup worker;
-	private static Connection conn = null;
+	private Connection conn = null;
 	
 	
 	public Collector(String IP, int port) {
@@ -61,23 +54,20 @@ public class Collector {
 
 		url = "jdbc:sqlite:".concat(this.curWorkspace).concat(this.name).concat("-sqlite.db");
 		createDB();
-	}
-
-	public void start() {
 		try {
 			bind();
 		} catch (InterruptedException e) { e.printStackTrace(); }
 	}
 
-	public void stop() {
-		try {
-			// Shut down all event loops to terminate all threads.
-			boss.shutdownGracefully();
-			worker.shutdownGracefully();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
+//	public void stop() {
+//		try {
+//			// Shut down all event loops to terminate all threads.
+//			boss.shutdownGracefully();
+//			worker.shutdownGracefully();
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//	}
 
 	/**
 	 * Connect to node database
@@ -103,7 +93,6 @@ public class Collector {
 		try {
 			Statement stmt = conn.createStatement();
 			String sql = "CREATE TABLE IF NOT EXISTS transactionsTime (\n"
-					// + " id integer PRIMARY KEY AUTOINCREMENT,\n"
 					+ " digest text PRIMARY KEY NOT NULL,\n"
 					+ " sender text NOT NULL,\n"
 					+ " recipient text NOT NULL,\n"
@@ -164,7 +153,6 @@ public class Collector {
 	 * @param tmsg 交易时间信息
 	 */
 	public synchronized void txMemory(TimeMsg tmsg) {
-//		Connection conn = this.connect();
 		if (conn == null) {
 			conn = connect();
 		}
@@ -172,7 +160,7 @@ public class Collector {
 		String recordCommit = "INSERT INTO transactionsTime(sender,recipient,value,timestamp,gasPrice,accountNonce,digest,commitTime,Broadcast,Monoxide_d1,Monoxide_d2,Metis_d1,Metis_d2,Proposed_d1,Proposed_d2) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 		String updateCommit = "update transactionsTime set commitTime=? where digest=?";
 		String queryExist = "SELECT digest FROM transactionsTime where digest = ?";
-		JSONArray txs = tmsg.getTxs();
+		JsonArray txs = tmsg.getTxs();
 
 		String tag = tmsg.getTag();
 		Long time = tmsg.getTime();
@@ -180,7 +168,7 @@ public class Collector {
 		switch (tag) {
 			case TimeMsg.SendTag: {
 				for (int i = 0; i < txs.size(); i ++) {
-					Transaction tx = new Transaction(txs.get(i).toString());
+					Transaction tx = new Gson().fromJson(txs.get(i).toString(), Transaction.class);
 					try {
 						PreparedStatement pstmt = conn.prepareStatement(queryExist);
 						pstmt.setString(1, tx.getDigest());
@@ -215,7 +203,7 @@ public class Collector {
 			}
 			case TimeMsg.CommitTag: {
 				for (int i = 0; i < txs.size(); i ++) {
-					Transaction tx = new Transaction(txs.get(i).toString());
+					Transaction tx = new Gson().fromJson(txs.get(i).toString(), Transaction.class);
 					try {
 						PreparedStatement pstmt = conn.prepareStatement(queryExist);
 						pstmt.setString(1, tx.getDigest());
@@ -226,27 +214,27 @@ public class Collector {
 							pstmt.setLong(1, time);
 							pstmt.setString(2, tx.getDigest());
 							pstmt.executeUpdate();
+							continue;
 						}
-						else {
-							System.out.println("记录中");
-							pstmt = conn.prepareStatement(recordCommit);
-							pstmt.setString(1, tx.getSender());
-							pstmt.setString(2, tx.getRecipient());
-							pstmt.setDouble(3, tx.getValue());
-							pstmt.setLong(4, tx.getTimestamp());
-							pstmt.setDouble(5, tx.getGasPrice());
-							pstmt.setLong(6, tx.getAccountNonce());
-							pstmt.setString(7, tx.getDigest());
-							pstmt.setLong(8, time);
-							pstmt.setLong(9,tx.getBroadcast());
-							pstmt.setInt(10,tx.getMonoxide_d1());
-							pstmt.setInt(11,tx.getMonoxide_d2());
-							pstmt.setInt(12,tx.getMetis_d1());
-							pstmt.setInt(13,tx.getMetis_d2());
-							pstmt.setInt(14,tx.getProposed_d1());
-							pstmt.setInt(15,tx.getProposed_d2());
-							pstmt.executeUpdate();
-						}
+						System.out.println("记录中");
+						pstmt = conn.prepareStatement(recordCommit);
+						pstmt.setString(1, tx.getSender());
+						pstmt.setString(2, tx.getRecipient());
+						pstmt.setDouble(3, tx.getValue());
+						pstmt.setLong(4, tx.getTimestamp());
+						pstmt.setDouble(5, tx.getGasPrice());
+						pstmt.setLong(6, tx.getAccountNonce());
+						pstmt.setString(7, tx.getDigest());
+						pstmt.setLong(8, time);
+						pstmt.setLong(9,tx.getBroadcast());
+						pstmt.setInt(10,tx.getMonoxide_d1());
+						pstmt.setInt(11,tx.getMonoxide_d2());
+						pstmt.setInt(12,tx.getMetis_d1());
+						pstmt.setInt(13,tx.getMetis_d2());
+						pstmt.setInt(14,tx.getProposed_d1());
+						pstmt.setInt(15,tx.getProposed_d2());
+						pstmt.executeUpdate();
+
 						logger.info("commit记录中...");
 					} catch (SQLException e) {
 						System.out.println(e.getMessage());
@@ -265,8 +253,8 @@ public class Collector {
 	 * @throws InterruptedException
 	 */
 	private void bind() throws InterruptedException {
-		boss=new NioEventLoopGroup();
-		worker=new NioEventLoopGroup();
+		EventLoopGroup boss=new NioEventLoopGroup();
+		EventLoopGroup worker=new NioEventLoopGroup();
 		ServerBootstrap bootstrap=new ServerBootstrap();
 		bootstrap.group(boss,worker);
 		bootstrap.channel(NioServerSocketChannel.class);
@@ -274,6 +262,7 @@ public class Collector {
 		bootstrap.option(ChannelOption.TCP_NODELAY, true);
 		bootstrap.childOption(ChannelOption.SO_KEEPALIVE, true);
 		bootstrap.childHandler(new ChannelInitializer<SocketChannel>() {
+
 			@Override
 			protected void initChannel(SocketChannel socketChannel) throws Exception {
 				ChannelPipeline p = socketChannel.pipeline();
@@ -282,19 +271,18 @@ public class Collector {
 				p.addLast(new CollectorServerHandler(Collector.this));
 			}
 		});
-		ChannelFuture f= bootstrap.bind(this.port).sync();
+		ChannelFuture f= bootstrap.bind(port).sync();
+		f.channel().closeFuture().sync();
 		if(f.isSuccess()){
-			System.out.println("Collector server start---------------");
-			System.out.println(String.format("%s listen in port %d, IP %s", this.name, this.port, this.IP));
+			System.out.println("server start---------------");
 		}
 	}
 
-	public static void main(String[] args) throws InterruptedException {
+	public static void main(String[] args) {
 
 		String curIP = Utils.getPublicIp();
 		System.out.println("Local HostAddress "+curIP);   // ip
 		Collector collector = new Collector(curIP, Collector.COLLECTOR_PORT);
-		collector.start();
 	}
 	
-};
+}

@@ -3,10 +3,12 @@ package pbftSimulator.message;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import lombok.Data;
 import shardSystem.transaction.Transaction;
 
 import java.util.ArrayList;
 
+@Data
 public class TimeMsg {
 
 	public final static String SendTag = "send";

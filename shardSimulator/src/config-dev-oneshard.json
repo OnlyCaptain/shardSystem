@@ -22,7 +22,7 @@
     "FACTOR": 1.005,				
     "COLLAPSEDELAY": 10000,			
     "SHOWDETAILINFO": true,		
-    "BLOCKTXNUM": 1000,
+    "BLOCKTXNUM": 300,
     "SLICENUM": 2,    
     "REQTXSIZE": 50,
     "BLOCK_GENERATION_TIME": 8000,

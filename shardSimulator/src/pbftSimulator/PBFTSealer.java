@@ -93,15 +93,6 @@ public class PBFTSealer {
 		StringBuffer buf = new StringBuffer("./workspace/");
 		curWorkspace = buf.append(this.name).append("/").toString();
 		buildWorkspace();
-
-		// 开启服务端
-		try {
-			bind();
-		} catch (InterruptedException e) { e.printStackTrace(); }
-
-		// 开启监听TxPool的线程
-		Thread t = new Thread(new MyRunnable(this));
-		t.start();
 	}
 	
 	/**
@@ -134,6 +125,17 @@ public class PBFTSealer {
 		} catch (IOException e) {  
 			e.printStackTrace();  
 		}
+	}
+
+	public void start() {
+		// 开启服务端
+		try {
+			bind();
+		} catch (InterruptedException e) { e.printStackTrace(); }
+
+		// 开启监听TxPool的线程
+		Thread t = new Thread(new MyRunnable(this));
+		t.start();
 	}
 
 	/**

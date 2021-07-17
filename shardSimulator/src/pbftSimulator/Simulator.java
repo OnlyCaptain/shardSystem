@@ -38,7 +38,8 @@ public class Simulator {
 					String curShardID = shardKeys.next();
 					for (int id = 0; id < topos.get(curShardID).size(); id ++) {
 						PairAddress curPair = topos.get(curShardID).get(id);
-						systemReplicas[ind++] = new shardNode(curShardID, id, curPair.getIP(), curPair.getPort());
+//						systemReplicas[ind] = new shardNode(curShardID, id, curPair.getIP(), curPair.getPort());
+						new Thread(new shardNode(curShardID, id, curPair.getIP(), curPair.getPort())).start();
 					}
 				}
 				break;
@@ -70,13 +71,12 @@ public class Simulator {
 				System.out.println(String.format("这是第 %s 个分片的 %d 号节点", thisMachineShardID, currentID));
 				ArrayList<PairAddress> curShardIPs = topos.get(thisMachineShardID);
 				PairAddress curPair = topos.get(thisMachineShardID).get(currentID);
-				shardNode currentReplica = new shardNode(thisMachineShardID, currentID, curPair.getIP(), curPair.getPort());
+				new Thread(new shardNode(thisMachineShardID, currentID, curPair.getIP(), curPair.getPort())).start();
 				break;
 			}
 			default:
 				System.out.println("Wrong env config, check it.");
 		}
-
 	}
 
 	/**

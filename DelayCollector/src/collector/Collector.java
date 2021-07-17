@@ -12,6 +12,7 @@ import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
 
+import io.netty.util.concurrent.GenericFutureListener;
 import netty.CollectorServerHandler;
 import org.apache.log4j.*;
 import pbftSimulator.message.TimeMsg;
@@ -28,7 +29,7 @@ import java.sql.*;
  */
 public class Collector {
 	
-	public static final int COLLECTOR_PORT = 7894;
+	public static final int COLLECTOR_PORT = 57050;
 	private static final Level LOGLEVEL = Level.INFO;
 	
 	public String IP;
@@ -38,6 +39,9 @@ public class Collector {
 
 	public String name;
 	public String url;    // 数据库 url
+
+	public EventLoopGroup boss;
+	public EventLoopGroup worker;
 
 	private Connection conn = null;
 	
@@ -54,20 +58,23 @@ public class Collector {
 
 		url = "jdbc:sqlite:".concat(this.curWorkspace).concat(this.name).concat("-sqlite.db");
 		createDB();
+	}
+
+	public void stop() {
+		try {
+			// Shut down all event loops to terminate all threads.
+			boss.shutdownGracefully();
+			worker.shutdownGracefully();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void start() {
 		try {
 			bind();
 		} catch (InterruptedException e) { e.printStackTrace(); }
 	}
-
-//	public void stop() {
-//		try {
-//			// Shut down all event loops to terminate all threads.
-//			boss.shutdownGracefully();
-//			worker.shutdownGracefully();
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//		}
-//	}
 
 	/**
 	 * Connect to node database
@@ -253,8 +260,8 @@ public class Collector {
 	 * @throws InterruptedException
 	 */
 	private void bind() throws InterruptedException {
-		EventLoopGroup boss=new NioEventLoopGroup();
-		EventLoopGroup worker=new NioEventLoopGroup();
+		boss=new NioEventLoopGroup();
+		worker=new NioEventLoopGroup();
 		ServerBootstrap bootstrap=new ServerBootstrap();
 		bootstrap.group(boss,worker);
 		bootstrap.channel(NioServerSocketChannel.class);
@@ -262,7 +269,6 @@ public class Collector {
 		bootstrap.option(ChannelOption.TCP_NODELAY, true);
 		bootstrap.childOption(ChannelOption.SO_KEEPALIVE, true);
 		bootstrap.childHandler(new ChannelInitializer<SocketChannel>() {
-
 			@Override
 			protected void initChannel(SocketChannel socketChannel) throws Exception {
 				ChannelPipeline p = socketChannel.pipeline();
@@ -271,18 +277,19 @@ public class Collector {
 				p.addLast(new CollectorServerHandler(Collector.this));
 			}
 		});
-		ChannelFuture f= bootstrap.bind(port).sync();
+		ChannelFuture f= bootstrap.bind(this.port).sync();
 		f.channel().closeFuture().sync();
 		if(f.isSuccess()){
-			System.out.println("server start---------------");
+			System.out.println("Collector server start---------------");
+			System.out.println(String.format("%s listen in port %d, IP %s", this.name, this.port, this.IP));
 		}
 	}
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws InterruptedException {
 
 		String curIP = Utils.getPublicIp();
 		System.out.println("Local HostAddress "+curIP);   // ip
 		Collector collector = new Collector(curIP, Collector.COLLECTOR_PORT);
+		collector.start();
 	}
-	
 }

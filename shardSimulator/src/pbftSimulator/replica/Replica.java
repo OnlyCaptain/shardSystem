@@ -36,7 +36,7 @@ import pbftSimulator.NettyServer.ReplicaServerHandler;
 import pbftSimulator.message.*;
 import shardSystem.config;
 
-public class Replica {
+public class Replica implements Runnable {
 	
 	public static final int K = 10;						//发送checkpoint消息的周期
 	public static final int L = 30;						//L = 高水位 - 低水位		(一般取L>=K*2)
@@ -127,14 +127,22 @@ public class Replica {
 		// 定义当前Replica的工作目录
 		curWorkspace = "./workspace/".concat(this.name).concat("/");
 		buildWorkspace();
-		try {
-			bind();
-		} catch (InterruptedException e) { e.printStackTrace(); }
 
 		if (isPrimary()) {
 			System.out.println(String.format("分片 %s 的打包器建立在端口 %d 上", shardID, sealerIPs.get(0).getPort()));
 			this.pbftSealer = new PBFTSealer(this.shardID, PBFTSealer.getCliId(0), sealerIPs.get(0).getIP(), sealerIPs.get(0).getPort());
 		}
+	}
+
+	@Override
+	public void run() {
+		if (isPrimary()) {
+			this.pbftSealer.start();
+		}
+		try {
+			bind();
+		} catch (InterruptedException e) { e.printStackTrace(); }
+
 	}
 
 	/**
@@ -162,6 +170,7 @@ public class Replica {
             }
         });
         ChannelFuture f= bootstrap.bind(port).sync();
+		f.channel().closeFuture().sync();
 		if(f.isSuccess()){
             System.out.println("server start---------------");
         }
@@ -830,8 +839,6 @@ public class Replica {
 		} catch (Exception e) {
 			System.out.println(String.format("链接失败 %s %d %s", sIP, sport, e.getMessage()));
 		}
-
-
 	}
 
 }

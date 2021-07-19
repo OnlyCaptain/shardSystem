@@ -29,7 +29,7 @@ public class CollectorServerHandler extends SimpleChannelInboundHandler<String> 
 
     @Override
     protected void messageReceived(ChannelHandlerContext channelHandlerContext, String jsbuff) throws Exception {
-        System.out.println("收到消息"+jsbuff);
+//        System.out.println("收到消息"+jsbuff);
         TimeMsg baseMsg = null;
         try {
             baseMsg = new Gson().fromJson(jsbuff, TimeMsg.class);

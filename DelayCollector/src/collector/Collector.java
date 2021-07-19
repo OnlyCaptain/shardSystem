@@ -174,6 +174,7 @@ public class Collector {
 
 		switch (tag) {
 			case TimeMsg.SendTag: {
+				this.logger.info("收到 sendTag 包");
 				for (int i = 0; i < txs.size(); i ++) {
 					Transaction tx = new Gson().fromJson(txs.get(i).toString(), Transaction.class);
 					try {
@@ -201,6 +202,7 @@ public class Collector {
 						pstmt.setInt(14,tx.getProposed_d1());
 						pstmt.setInt(15,tx.getProposed_d2());
 						pstmt.executeUpdate();
+						System.out.print("send 记录中... | ");
 						logger.info("send记录中...");
 					} catch (SQLException e) {
 						System.out.println(e.getMessage());
@@ -209,6 +211,7 @@ public class Collector {
 				break;
 			}
 			case TimeMsg.CommitTag: {
+				this.logger.info("收到 commitTag ");
 				for (int i = 0; i < txs.size(); i ++) {
 					Transaction tx = new Gson().fromJson(txs.get(i).toString(), Transaction.class);
 					try {

@@ -7,6 +7,7 @@ import org.apache.log4j.*;
 import pbftSimulator.message.Message;
 import pbftSimulator.message.RawTxMessage;
 import pbftSimulator.message.TimeMsg;
+import shardSystem.config;
 import shardSystem.transaction.Transaction;
 
 import java.io.BufferedReader;
@@ -22,15 +23,6 @@ import java.util.ArrayList;
  */
 public class Client {
 
-//	public static final int PBFTSEALER_PORT = 58052;  // prod
-	public static final int PBFTSEALER_PORT = 62458;  // dev
-	public static final int TIMEOUT = 500;					//节点超时设定(毫秒)
-//	public static final String COLLECTOR_IP = "127.0.0.1";  // prod
-	public static final String COLLECTOR_IP = "127.0.0.1";  // dev
-//	public static final String PRI_IP = "112.74.34.239";    // prod
-	public static final String PRI_IP = "127.0.0.1";    // dev
-
-	public static final int COLLECTOR_PORT = 57050;
 	private static final Level LOGLEVEL = Level.INFO;
 
 	public String IP;
@@ -47,7 +39,6 @@ public class Client {
 	
 	
 	public Client(String IP, int port, String priIP, int priPort) {
-		// TODO Auto-generated constructor stub
 		this.IP = IP;
 		this.port = port;
 		this.priIP = priIP;
@@ -93,10 +84,12 @@ public class Client {
 		long time = getTimeStamp();
 		TimeMsg tmsg = new TimeMsg(txs, time, TimeMsg.SendTag);
 		System.out.println("正在发送记录时间的包");
-//		sendTimer(Client.COLLECTOR_IP, Client.COLLECTOR_PORT, tmsg, this.logger);
-		System.out.println(tmsg.encoder());
+		try {
+			sendTimer(config.COLLECTOR_IP, config.COLLECTOR_PORT, tmsg, this.logger);
+		} catch (Exception e) {}
+//		System.out.println(tmsg.encoder());
 		TimeMsg test = new Gson().fromJson(tmsg.encoder(), TimeMsg.class);
-		System.out.println(test.encoder());
+//		System.out.println(test.encoder());
 		System.out.println(rt.encoder());
 	}
 
@@ -151,8 +144,8 @@ public class Client {
 					item[i] = item[i].trim();
 					jstmp.addProperty(title[i], item[i].trim());
 				}
-				jsin.addProperty("sender", jstmp.get("from").getAsString());
-				jsin.addProperty("recipient", jstmp.get("to").getAsString());
+				jsin.addProperty("sender", jstmp.get("sender").getAsString());
+				jsin.addProperty("recipient", jstmp.get("recipient").getAsString());
 				jsin.addProperty("value", Double.parseDouble(jstmp.get("value").getAsString()));
 //				jsin.addProperty("Broadcast", Long.parseLong(jstmp.get("Broadcast").getAsString()).intValue());
 				jsin.addProperty("Broadcast", Double.valueOf(jstmp.get("Broadcast").getAsString()).intValue());
@@ -175,11 +168,18 @@ public class Client {
 		return result;
 	}
 	public static void main(String[] args) throws InterruptedException {
-
+		config.reInit("/Users/zhanjianzhou/javaP/shardSystem/shardSimulator/src/config-dev-oneshard.json");
+//		config.reInit("/Users/zhanjianzhou/javaP/shardSystem/shardSimulator/src/config.json");
+		System.out.println(config.Print());
 		String curIP = Utils.getPublicIp();
 		System.out.println("Local HostAddress "+curIP);   // ip
-		String priIP = PRI_IP;
-		int priPort = PBFTSEALER_PORT;
+		System.out.println(config.topos.toString());
+		String priIP = config.topos.get("0").get(0).getIP();
+		int priPort;
+		if (config.env.equals("prod"))
+			priPort = config.PBFTSEALER_PORT;
+		else
+			priPort = config.PBFTSealer_ports.get("0");
 		String txFilePath = args[0];
 //		String txFilePath = "data/systemdata.csv";
 		ArrayList<Transaction> txs = Client.getTxsFromFile(txFilePath);
@@ -192,21 +192,28 @@ public class Client {
 		}
 		long waittime = 1000;   // 两次发送交易的间隔时间，默认是1000ms
 		long prev_timestamp = getTimeStamp();
+		int blocksize = 100;
 		while (start < txs.size()) {
 			boolean tx_fin = false;
 			for (int i=start; i <= txs.size(); i++) {
 				// tx读完了
 				if (i == txs.size()) {
-					ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(start, txs.size()));
-					client.sendRawTx(tx1);
+					for (int j = start; j < i; j += blocksize) {
+						ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(j, Math.min(txs.size(),j+blocksize)));
+						client.sendRawTx(tx1);
+						System.out.println(tx1.size());
+					}
 					tx_fin = true;
 //					System.out.println("Broadcast is : " + txs.get(start).Broadcast + " cur time is: " + getTimeStamp());
 					start = i;
 					break;
 					// 新的broadcast值
 				} else if (txs.get(i).Broadcast != txs.get(start).Broadcast) {
-					ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(start, i));
-					client.sendRawTx(tx1);
+					for (int j = start; j < i; j += blocksize) {
+						ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(j, j+blocksize));
+						client.sendRawTx(tx1);
+						System.out.println(tx1.size());
+					}
 					waittime = (txs.get(i).Broadcast - txs.get(start).Broadcast) * 1000;
 //					System.out.println("Broadcast is : " + txs.get(start).Broadcast + " cur time is: " + getTimeStamp());
 					start = i;

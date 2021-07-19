@@ -7,7 +7,7 @@
     "RELAY_TX_FORWARD": false,
     "RN": 7,
     "SHARDNODENUM": 7,
-    "SHARDNUM": 1,
+    "SHARDNUM": 3,
     "FN": 2,
     "CN": 1,
     "INFLIGHT": 2000,
@@ -22,7 +22,7 @@
     "FACTOR": 1.005,
     "COLLAPSEDELAY": 10000,
     "SHOWDETAILINFO": true,
-    "BLOCKTXNUM": 50,
+    "BLOCKTXNUM": 750,
     "SLICENUM": 2,
     "REQTXSIZE": 50,
     "BLOCK_GENERATION_TIME": 8000,
@@ -30,6 +30,7 @@
     "PBFTSEALER_PORT": 58052,
     "COLLECTOR_PORT": 57050,
     "COLLECTOR_IP": "127.0.0.1",
+    "MESSAGE_SIZE": 500,
 
 
     "topo":	{

@@ -29,9 +29,11 @@ public class shardNode extends Replica {
 
 	public String name;
 	public String url;    // 数据库 url
+	public int blockNum;
 
 	public shardNode(String shardID, int id, String IP, int port) {
 		super(NAME, shardID, id, IP, port);
+		blockNum = 0;
 
 		this.name = "shard_".concat(shardID).concat("_").concat(NAME).concat(String.valueOf(id));
 		System.out.println(this.curWorkspace);
@@ -348,12 +350,15 @@ public class shardNode extends Replica {
 			setTimer(lastRepNum+1, time);
 			if(rem != null) {
 				ArrayList<Transaction> txs = rem.txs;
+				System.out.print("正在上链中... ");
 				txProcess(txs);
+				this.blockNum ++;   // 块上链 + 1；
 				// 处理交易，上链
 				if (rem.txs.size() > 0 && isPrimary()) {
 					TimeMsg tmsg = new TimeMsg(txs, System.currentTimeMillis(), TimeMsg.CommitTag);
 					sendTimer(config.COLLECTOR_IP, config.COLLECTOR_PORT, tmsg, this.logger);
 				}
+				System.out.println(String.format("块上链成功，交易数：%d, 这是第 %d 个块", txs.size(), this.blockNum));
 
 				sendMsg(sealerIPs.get(PBFTSealer.getCliId(rem.c)).getIP(), sealerIPs.get(PBFTSealer.getCliId(rem.c)).getPort(), rm, sendTag, this.logger);
 				LastReply llp = lastReplyMap.get(rem.c);

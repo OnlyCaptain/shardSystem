@@ -46,7 +46,9 @@ public class RawTxMessage extends Message {
 	public static void main(String[] args) {
 		Transaction tx1 = new Transaction("send", "recip", 1.11, null, 0, 100.0, 0, 0, 0, 0, 0, 0, 0, 0);
 		// Transaction tx1 = new Transaction("send", "recip", 1.11, null, 0, 100, 0);
-		RawTxMessage rt = new RawTxMessage(new Transaction[] {tx1});
+		ArrayList<Transaction> txs = new ArrayList<>();
+		txs.add(tx1);
+		RawTxMessage rt = new RawTxMessage(txs);
 		System.out.println(rt.encoder());
 
 		RawTxMessage rt2 = new Gson().fromJson(rt.encoder(), RawTxMessage.class);

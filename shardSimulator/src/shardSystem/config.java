@@ -47,6 +47,7 @@ public class config {
     public static String COLLECTOR_IP;
     public static String sharding_rule;
     public static boolean RELAY_TX_FORWARD;
+    public static int MESSAGE_SIZE;
 
     public static Map<String, ArrayList<PairAddress>> topos;
     public static Map<String, String> addrShard;
@@ -91,6 +92,7 @@ public class config {
             COLLECTOR_IP = jsonObject.get("COLLECTOR_IP").getAsString();
             sharding_rule = jsonObject.get("sharding_rule").getAsString();
             RELAY_TX_FORWARD = jsonObject.get("RELAY_TX_FORWARD").getAsBoolean();
+            MESSAGE_SIZE = jsonObject.get("MESSAGE_SIZE").getAsInt();
 
 
             JsonObject jsonTopo = jsonObject.get("topo").getAsJsonObject();
@@ -168,6 +170,7 @@ public class config {
                 String.valueOf(REQTXSIZE)+" | "+
                 String.valueOf(BLOCK_GENERATION_TIME)+" | "+
                 String.valueOf(REPLICA_PORT)+" | "+
+                String.valueOf(MESSAGE_SIZE) + " | " +
                 String.valueOf(PBFTSEALER_PORT) + "\n" +
                 topos.toString() + "\n" +
                 addrShard.toString();
@@ -178,9 +181,9 @@ public class config {
         return jsbuf;
     }
 
-    static {
-        Init("shardSimulator/src/config-dev.json");
-    }
+//    static {
+//        Init("shardSimulator/src/config-dev.json");
+//    }
 
     public static void reInit(String configPath) {
         Init(configPath);

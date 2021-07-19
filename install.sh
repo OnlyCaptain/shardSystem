@@ -1,7 +1,8 @@
 # 开启activemq
 systemctl stop firewalld.service
 source /etc/profile;
-/etc/init.d/activemq star start
+#/etc/init.d/activemq star start
+/opt/apache-activemq/bin/activemq stop
 
 # 开启服务
 systemctl stop firewalld.service
@@ -10,7 +11,7 @@ cd shardSimulator
 rm -rf workspace
 kill `netstat -anp | grep 60635 | awk '{split($7,b,"/"); print b[1]}' | sed -n '1p'`
 kill `netstat -anp | grep 58052 | awk '{split($7,b,"/"); print b[1]}' | sed -n '1p'`
-java -jar pbftSimulator.jar ./config.json
+java -jar shardSimulator.jar ./config.json
 
 # 开启collector
 systemctl stop firewalld.service

@@ -192,7 +192,7 @@ public class Replica implements Runnable {
 		logger = Logger.getLogger(this.name);
 		logger.removeAllAppenders(); 
 		try {
-			Layout layout = new PatternLayout("%-d{yyyy-MM-dd HH:mm:ss} [ %l:%r ms ] %n[%p] %m%n");
+			Layout layout = new PatternLayout("%-d{yyyy-MM-dd HH:mm:ss} [ %l:%r ms ] [%p] %m%n");
 			FileAppender appender = new FileAppender(layout, this.curWorkspace.concat(this.name).concat(".log"));
 			appender.setAppend(false);
 			logger.setLevel(config.LOGLEVEL);
@@ -275,6 +275,7 @@ public class Replica implements Runnable {
 	}
 	
 	public void execute(Message msg, long time) {
+		this.logger.info ("正在执行 execute");
 		PrePrepareMsg mm = (PrePrepareMsg)msg;
 		RequestMsg rem = null;
 		ReplyMsg rm = null;

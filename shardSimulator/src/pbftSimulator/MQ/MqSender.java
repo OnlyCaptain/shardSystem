@@ -39,6 +39,7 @@ public class MqSender {
             producer = session.createProducer(destination);
             // 设置不持久化，此处学习，实际根据项目决定
             producer.setDeliveryMode(DeliveryMode.NON_PERSISTENT);
+//            producer.setDeliveryMode(DeliveryMode.PERSISTENT);
 
         } catch (Exception e) {
             e.printStackTrace();

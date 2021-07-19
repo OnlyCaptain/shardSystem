@@ -1,9 +1,6 @@
 package pbftSimulator;
 
-import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.Semaphore;
 
 import javax.jms.JMSException;
@@ -13,6 +10,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import pbftSimulator.MQ.MqListener;
+import pbftSimulator.MQ.MqSender;
 import pbftSimulator.NettyClient.NettyClientBootstrap;
 import pbftSimulator.NettyServer.PBFTSealerServerHandler;
 import pbftSimulator.message.CliTimeOutMsg;
@@ -111,7 +109,7 @@ public class PBFTSealer {
 		logger = Logger.getLogger(this.name);
 		logger.removeAllAppenders(); 
 		try {
-			Layout layout = new PatternLayout("%-d{yyyy-MM-dd HH:mm:ss} [ %l:%r ms ] %n[%p] %m%n");
+			Layout layout = new PatternLayout("%-d{yyyy-MM-dd HH:mm:ss} [ %l:%r ms ] [%p] %m%n");
 			FileAppender appender = new FileAppender(layout, this.curWorkspace.concat(this.name).concat(".log"));
 			appender.setAppend(false);
 			logger.setLevel(config.LOGLEVEL);
@@ -132,7 +130,6 @@ public class PBFTSealer {
 		try {
 			bind();
 		} catch (InterruptedException e) { e.printStackTrace(); }
-
 		// 开启监听TxPool的线程
 		Thread t = new Thread(new MyRunnable(this));
 		t.start();
@@ -350,7 +347,87 @@ public class PBFTSealer {
 	public void sendToOtherShard(ArrayList<Transaction> txs, String targetShard) {
 		RawTxMessage rt = new RawTxMessage(txs);
 		String targetIP = config.topos.get(targetShard).get(0).getIP();
-		this.sendMsg(targetIP, config.PBFTSEALER_PORT, rt, sendTag, this.logger);
+		int port = config.PBFTSEALER_PORT;
+		if (config.env.equals("dev")) {
+			port = config.PBFTSealer_ports.get(targetShard);
+		}
+		this.sendMsg(targetIP, port, rt, sendTag, this.logger);
+	}
+
+
+	public synchronized void receiveTransactions(RawTxMessage rawTxMessage) {
+		JsonArray m = rawTxMessage.getTxs();
+		Map<String, ArrayList<Transaction>> classifi = new HashMap<>();
+		Iterator<String> shardIter = config.topos.keySet().iterator();
+		while (shardIter.hasNext()) {
+			classifi.put(shardIter.next(), new ArrayList<Transaction>());
+		}
+		for(int i=0;i<m.size();i++){
+			Transaction tx = new Gson().fromJson(m.get(i), Transaction.class);
+			this.logger.info("解包：" + tx.encoder());
+			ArrayList<String> shardIDs = this.queryShardIDs(tx);
+			if (shardIDs.size() == 0) {
+				System.out.println("Error!!, 交易没查到分片id");
+				this.logger.error("Error!!, 交易没查到分片id"+tx.encoder());
+				continue;
+			}
+			String sendShard = shardIDs.get(0);
+			String reciShard = shardIDs.get(1);
+//			System.out.println(String.format("here send: %s reci: %s, %d %s", sendShard,reciShard,shardIDs.size(), new Gson().toJson(tx)));
+			switch (tx.getRelayFlag()) {
+				case 0: {
+					tx.setRelayFlag(2);
+					if (sendShard.equals(reciShard)) {
+						classifi.get(sendShard).add(tx);
+					} else {
+						classifi.get(sendShard).add(tx);
+						classifi.get(reciShard).add(tx);
+					}
+				} break;
+				case 2: {
+					if (sendShard.equals(this.shardID) || reciShard.equals(this.shardID))
+						classifi.get(this.shardID).add(tx);
+				}
+
+			}
+		}
+		int cur = 0, noCur = 0;
+		for (Map.Entry<String, ArrayList<Transaction>> entry : classifi.entrySet()) {
+			if (entry.getKey().equals(this.shardID)) cur = entry.getValue().size();
+			else noCur += entry.getValue().size();
+		}
+		this.logger.debug(String.format("在分片%s 中，属于本分片的交易共有：%d 条,不属于本分片的交易有：%d 条", this.shardID, cur, noCur));
+		System.out.println(String.format("在分片%s 中，属于本分片的交易共有：%d 条,不属于本分片的交易有：%d 条", this.shardID, cur, noCur));
+
+		//将本shard的Tx放入消息队列
+		MqSender mqSender = new MqSender(this.txPoolName);
+		ArrayList<Transaction> thisShardTxs = classifi.get(this.shardID);
+		if (thisShardTxs.size() != 0) {
+			for (Transaction thisShradTx : thisShardTxs) {
+				try {
+					mqSender.sendMessage(mqSender.session, mqSender.producer, thisShradTx.encoder());
+				} catch (Exception e) {
+					logger.error(e.getMessage());
+					e.printStackTrace();
+				}
+			}
+		}
+		this.logger.debug("发送完MQ");
+		this.logger.debug("正在将classifi 转发给其他分片");
+		//将其他shard的Tx发送到其PBFTSealer
+		for(String shard : classifi.keySet()) {
+			if(shard.equals(shardID)){
+				continue;
+			}else{
+				ArrayList<Transaction> txs = classifi.get(shard);
+				for (int i = 0; i < txs.size(); i += config.MESSAGE_SIZE) {
+					ArrayList<Transaction> tx1 = new ArrayList<>(txs.subList(i, Math.min(txs.size(),i+config.MESSAGE_SIZE)));
+					System.out.println(String.format("%s Sending to shardID %s %d tx ", this.shardID, shard, tx1.size()));
+					sendToOtherShard(tx1, shard);
+				}
+			}
+		}
+		this.logger.debug("发送成功");
 	}
 
 	/**
@@ -374,6 +451,9 @@ public class PBFTSealer {
 		// 分片规则有三种： origin，monoxide，metis，proposed
 		ArrayList<String> result = new ArrayList<>();
 		String[] keys = config.topos.keySet().toArray(new String[config.SHARDNUM]);
+//		for (String i:keys) System.out.print(i+",");
+//		System.out.println();
+
 		int s1, s2;
 		switch (config.sharding_rule) {
 			case "origin":
@@ -399,8 +479,11 @@ public class PBFTSealer {
 			case "proposed":
 				s1 = tx.getProposed_d1();
 				s2 = tx.getProposed_d2();
+//				System.out.println(String.format("Here s1,s2 = %d,%d", s1, s2));
 				result.add(keys[s1 % config.SHARDNUM]);
 				result.add(keys[s2 % config.SHARDNUM]);
+//				System.out.println(String.format("Here shard1 shard2 = %s,%s", result.get(0), result.get(1)));
+
 				break;
 			default:
 				System.out.println("Error!!, sharding rule is wrong");
@@ -443,7 +526,7 @@ class MyRunnable implements Runnable {
 						tx = new Gson().fromJson(message.getText(), Transaction.class);
 						if (null != tx) {
 							txsBuffer.add(tx);
-						} 
+						}
 					}
 					else {
 						this.pbftSealer.logger.debug("超过系统设置的出块时间"+config.BLOCK_GENERATION_TIME+"ms, 还没有收集到足够的交易，停止收集，出块");
@@ -455,6 +538,7 @@ class MyRunnable implements Runnable {
 				count ++;
 				this.pbftSealer.sendRequest(txsBuffer);
 				System.out.println(String.format("这里是分片 %s 的第 %d 个块", this.pbftSealer.shardID, count)+"In here, txsBuffer.size = "+txsBuffer.size());
+				this.pbftSealer.logger.info(String.format("这里是分片 %s 的第 %d 个块", this.pbftSealer.shardID, count)+"In here, txsBuffer.size = "+txsBuffer.size());
 				// Thread.sleep(7000);
 			} catch (JMSException e) {
 				System.out.println(e.getMessage());

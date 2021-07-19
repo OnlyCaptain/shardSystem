@@ -2,7 +2,7 @@
 user="root"
 pwd="NOR4myself!"
 ips=(
-"39.108.93.8"
+"39.108.233.28"
 )
 port=22
 target=/root/

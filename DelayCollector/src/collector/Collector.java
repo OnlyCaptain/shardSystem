@@ -183,6 +183,7 @@ public class Collector {
 						ResultSet rs = pstmt.executeQuery();
 						if (rs.next()) {
 							System.out.println("这个交易已经被 发 过一次");
+							this.logger.info("这个交易已经被 发 过一次");
 							continue;
 						}
 						pstmt = conn.prepareStatement(recordSend);
@@ -202,7 +203,6 @@ public class Collector {
 						pstmt.setInt(14,tx.getProposed_d1());
 						pstmt.setInt(15,tx.getProposed_d2());
 						pstmt.executeUpdate();
-						System.out.print("send 记录中... | ");
 						logger.info("send记录中...");
 					} catch (SQLException e) {
 						System.out.println(e.getMessage());
@@ -220,13 +220,14 @@ public class Collector {
 						ResultSet rs = pstmt.executeQuery();
 						if (rs.next()) {
 							System.out.println("这个交易被记录了");
+							this.logger.info("这个交易被记录了");
 							pstmt = conn.prepareStatement(updateCommit);
 							pstmt.setLong(1, time);
 							pstmt.setString(2, tx.getDigest());
 							pstmt.executeUpdate();
 							continue;
 						}
-						System.out.println("记录中");
+						this.logger.info("记录中");
 						pstmt = conn.prepareStatement(recordCommit);
 						pstmt.setString(1, tx.getSender());
 						pstmt.setString(2, tx.getRecipient());

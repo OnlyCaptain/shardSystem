@@ -1,4 +1,4 @@
-package pbftSimulator;
+package shardSystem;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -12,6 +12,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.stream.JsonWriter;
 import org.apache.log4j.Level;
+import pbftSimulator.PairAddress;
 import shardSystem.config;
 
 

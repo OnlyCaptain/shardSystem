@@ -367,7 +367,8 @@ public class PBFTSealer {
 	public synchronized void receiveTransactions(RawTxMessage rawTxMessage) {
 		JsonArray m = rawTxMessage.getTxs();
 		List<Transaction> txs = new Gson().fromJson(m, new TypeToken<ArrayList<Transaction>>(){}.getType());
-		MqSender mqSender = new MqSender(this.txPoolBuffName);
+		this.logger.info("[Receive], transaction size="+m.size());
+		//MqSender mqSender = new MqSender(this.txPoolBuffName);
 		for(int i=0;i<m.size();i++){
 			try {
 //				mqSender.sendMessage(mqSender.session, mqSender.producer, txs.get(i).encoder());
@@ -506,6 +507,7 @@ class ConsumerTx implements Runnable {
 
 	@Override
 	public void run() {
+		this.pbftSealer.logger.info("[method]=ConsumerTx, begin running");
 		MqListener mqListener = new MqListener(this.pbftSealer.txPoolBuffName);
 		while (true) {
 			try {

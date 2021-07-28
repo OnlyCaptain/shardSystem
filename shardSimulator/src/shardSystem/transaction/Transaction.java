@@ -8,6 +8,7 @@ import java.util.Comparator;
 
 @Data
 public class Transaction {
+    public String txId;
 	public String sender;
 	public String recipient;
 	public double value;
@@ -15,8 +16,10 @@ public class Transaction {
 	public long Broadcast;
 	public int Monoxide_d1;
 	public int Monoxide_d2;
-	public int Metis_d1;
-	public int Metis_d2;
+//	public int Metis_d1;
+//	public int Metis_d2;
+    public int LBF_d1;
+    public int LBF_d2;
 	public int Proposed_d1;
 	public int Proposed_d2;
 
@@ -38,6 +41,7 @@ public class Transaction {
 	};
 
 	public Transaction() {
+	    this.txId = "0";
 		this.sender = "0x000";
 		this.recipient = "0x000";
 		this.value = 0.0;
@@ -49,26 +53,14 @@ public class Transaction {
 		this.Broadcast = 0;
 		this.Monoxide_d1 = 0;
 		this.Monoxide_d2 = 0;
-		this.Metis_d1 = 0;
-		this.Metis_d2 = 0;
+//		this.Metis_d1 = 0;
+//		this.Metis_d2 = 0;
+        this.LBF_d1 = 0;
+        this.LBF_d2 = 0;
 		this.Proposed_d1 = 0;
 		this.Proposed_d2 = 0;
 		this.relayFlag = 0;
-		StringBuffer content = new StringBuffer();
-		content = content.append(sender)
-				.append(recipient)
-				.append(String.valueOf(timestamp))
-				.append(String.valueOf(value))
-				.append(data)
-				.append(String.valueOf(gasPrice))
-				.append(String.valueOf(accountNonce))
-				.append(String.valueOf(Broadcast))
-				.append(String.valueOf(Monoxide_d1))
-				.append(String.valueOf(Monoxide_d2))
-				.append(String.valueOf(Metis_d1))
-				.append(String.valueOf(Metis_d2))
-				.append(String.valueOf(Proposed_d1))
-				.append(String.valueOf(Proposed_d2));
+
 	}
 	
 	public Transaction(String sender, String recipient, double value, byte[] data,
@@ -84,29 +76,15 @@ public class Transaction {
 		this.Broadcast = Broadcast;
 		this.Monoxide_d1 = Monoxide_d1;
 		this.Monoxide_d2 = Monoxide_d2;
-		this.Metis_d1 = Metis_d1;
-		this.Metis_d2 = Metis_d2;
+		this.LBF_d1 = Metis_d1;
+		this.LBF_d2 = Metis_d2;
 		this.Proposed_d1 = Proposed_d1;
 		this.Proposed_d2 = Proposed_d2;
 		this.gasPrice = gasPrice;
 		this.accountNonce = accountNonce;
 		this.relayFlag = 0;
 
-		StringBuffer content = new StringBuffer();
-		content = content.append(sender)
-					.append(recipient)
-					.append(String.valueOf(timestamp))
-					.append(String.valueOf(value))
-					.append(data)
-					.append(String.valueOf(gasPrice))
-					.append(String.valueOf(accountNonce))
-					.append(String.valueOf(Broadcast))
-					.append(String.valueOf(Monoxide_d1))
-					.append(String.valueOf(Monoxide_d2))
-					.append(String.valueOf(Metis_d1))
-					.append(String.valueOf(Metis_d2))
-					.append(String.valueOf(Proposed_d1))
-					.append(String.valueOf(Proposed_d2));
+;
 	}
 
 	public String toString() {
@@ -120,7 +98,23 @@ public class Transaction {
 	}
 
 	public String getDigest() {
-		return Utils.getMD5Digest(this.toString());
+		StringBuffer content = new StringBuffer();
+		content = content.append(txId)
+				.append(sender)
+				.append(recipient)
+				.append(String.valueOf(value))
+				.append(String.valueOf(Broadcast))
+				.append(String.valueOf(timestamp))
+				.append(String.valueOf(Monoxide_d1))
+				.append(String.valueOf(Monoxide_d2))
+				.append(String.valueOf(Proposed_d1))
+				.append(String.valueOf(Proposed_d2))
+				.append(String.valueOf(LBF_d1))
+				.append(String.valueOf(LBF_d2))
+				.append(data)
+				.append(String.valueOf(gasPrice))
+				.append(String.valueOf(accountNonce));
+		return Utils.getMD5Digest(content.toString());
 	}
 
 	public static void main(String[] args) {
@@ -131,6 +125,8 @@ public class Transaction {
 		System.out.println("解码之后重新构造："+tx2.toString());
 		System.out.println(tx1.getDigest());
 		System.out.println(tx2.getDigest());
+		tx2.setTxId("2");
+		System.out.println("After setting txId = 2, tx2.getDigest() = " + tx2.getDigest());
 		System.out.println("测试 data 注解：" + tx2.getSender());
 	}
 }

@@ -3,7 +3,7 @@
     "env": "prod",
     "dataPath": "../data/",
 	"consensus_protocol": "PBFT",
-    "sharding_rule": "proposed",
+    "sharding_rule": "monoxide",
     "RELAY_TX_FORWARD": false,
     "RN": 7,
     "SHARDNODENUM": 7,

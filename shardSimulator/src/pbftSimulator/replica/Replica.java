@@ -833,7 +833,8 @@ public class Replica implements Runnable {
 		String jsbuff = msg.encoder()+"\t";
 		try {
 			NettyClientBootstrap bootstrap = new NettyClientBootstrap(sport, sIP, this.logger);
-			bootstrap.socketChannel.writeAndFlush(jsbuff);
+			ChannelFuture future = bootstrap.socketChannel.writeAndFlush(jsbuff);
+			future.await();
 			bootstrap.eventLoopGroup.shutdownGracefully();
 		} catch (InterruptedException e) {
 			System.out.println("打点信息发送失败 " + e.getMessage());

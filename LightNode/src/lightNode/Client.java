@@ -3,6 +3,7 @@ package lightNode;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 //import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFuture;
 import netty.NettyClientBootstrap;
 import org.apache.log4j.*;
 import pbftSimulator.message.Message;
@@ -17,10 +18,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.lang.reflect.Array;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 /**
  * @author zhanjzh
@@ -30,7 +29,7 @@ import java.util.Map;
 public class Client {
 
 	private static final Level LOGLEVEL = Level.INFO;
-	private static final int TPS_SECOND = 1000;
+	private static final int TPS_SECOND = 500;
 
 	public String IP;
 	public int port;
@@ -106,9 +105,9 @@ public class Client {
 				result.add(keys[s1 % config.SHARDNUM]);
 				result.add(keys[s2 % config.SHARDNUM]);
 				break;
-			case "metis":
-				s1 = tx.getMetis_d1();
-				s2 = tx.getMetis_d2();
+			case "lbf":
+				s1 = tx.getLBF_d1();
+				s2 = tx.getLBF_d2();
 				result.add(keys[s1 % config.SHARDNUM]);
 				result.add(keys[s2 % config.SHARDNUM]);
 				break;
@@ -221,7 +220,8 @@ public class Client {
 		System.out.println(String.format("I send to %s %d", sIP, sport));
 		try {
 			NettyClientBootstrap bootstrap = new NettyClientBootstrap(sport, sIP, this.logger);
-			bootstrap.socketChannel.writeAndFlush(jsbuff);
+			ChannelFuture future = bootstrap.socketChannel.writeAndFlush(jsbuff);
+			future.await();
 			bootstrap.eventLoopGroup.shutdownGracefully();
 		} catch (Exception e) {
 			this.logger.error(e);
@@ -231,6 +231,7 @@ public class Client {
 
 	public static ArrayList<Transaction> getTxsFromFile(String filepath) {
 		ArrayList<Transaction> result = new ArrayList<Transaction>();
+		long uniq_id = 0;
 		try {
 			BufferedReader reader = new BufferedReader(new FileReader(filepath));//换成你的文件名
 			String title[] = reader.readLine().split(",");    // 文件头，用来做 json 的索引
@@ -245,6 +246,8 @@ public class Client {
 					item[i] = item[i].trim();
 					jstmp.addProperty(title[i], item[i].trim());
 				}
+				jsin.addProperty("txId", String.valueOf(uniq_id));
+				uniq_id ++;
 				jsin.addProperty("sender", jstmp.get("sender").getAsString());
 				jsin.addProperty("recipient", jstmp.get("recipient").getAsString());
 				jsin.addProperty("value", Double.parseDouble(jstmp.get("value").getAsString()));
@@ -252,13 +255,13 @@ public class Client {
 				jsin.addProperty("Broadcast", Double.valueOf(jstmp.get("Broadcast").getAsString()).intValue());
 				jsin.addProperty("Monoxide_d1", Double.valueOf(jstmp.get("Monoxide_d1").getAsString()).intValue());
 				jsin.addProperty("Monoxide_d2", Double.valueOf(jstmp.get("Monoxide_d2").getAsString()).intValue());
-				jsin.addProperty("Metis_d1", Double.valueOf(jstmp.get("Metis_d1").getAsString()).intValue());
-				jsin.addProperty("Metis_d2", Double.valueOf(jstmp.get("Metis_d2").getAsString()).intValue());
+				jsin.addProperty("LBF_d1", Double.valueOf(jstmp.get("LBF_d1").getAsString()).intValue());
+				jsin.addProperty("LBF_d2", Double.valueOf(jstmp.get("LBF_d2").getAsString()).intValue());
 				jsin.addProperty("Proposed_d1", Double.valueOf(jstmp.get("Proposed_d1").getAsString()).intValue());
 				jsin.addProperty("Proposed_d2", Double.valueOf(jstmp.get("Proposed_d2").getAsString()).intValue());
 				jsin.addProperty("timestamp", System.currentTimeMillis());
-				jsin.addProperty("gasPrice", 0);
-				jsin.addProperty("accountNonce", 0);
+				jsin.addProperty("gasPrice", 11);
+				jsin.addProperty("accountNonce", 11);
 				Transaction innerTx = new Gson().fromJson(jsin,Transaction.class);
 				result.add(innerTx);
 			}
@@ -301,6 +304,7 @@ public class Client {
 		}
 
 		long netWorkDelay = 0;
+		long begin_time = System.currentTimeMillis();
 		long waittime = 1000;   // 两次发送交易的间隔时间，默认是1000ms
 		long prev_timestamp = getTimeStamp(), cur_timestamp = prev_timestamp;
 		for (int i = 0; i < txs_tps.size(); i ++) {
@@ -312,6 +316,11 @@ public class Client {
 			System.out.println(String.format("sleep: %d", cur_timestamp-prev_timestamp));
 			prev_timestamp = cur_timestamp;
 		}
+		long end_time = System.currentTimeMillis();
+		SimpleDateFormat sdf2 = new SimpleDateFormat("yyyy 年 MM 月 dd 日 HH 时 mm 分 ss 秒");
+		String beginT = sdf2.format(new Date(Long.parseLong(String.valueOf(begin_time))));
+		String endT = sdf2.format(new Date(Long.parseLong(String.valueOf(end_time))));
+		System.out.println(String.format("开始于： %s  结束于： %s ", beginT, endT));
 	}
 	
 };

@@ -68,6 +68,7 @@ public class shardNode extends Replica {
 			Statement stmt = conn.createStatement();
 			String sql = "CREATE TABLE IF NOT EXISTS transactions (\n"
 					+ " digest text PRIMARY KEY NOT NULL,\n"
+					+ " txId text NOT NULL,\n"
 					+ " sender text NOT NULL,\n"
 					+ " recipient text NOT NULL,\n"
 					+ " timestamp integer NOT NULL,\n"
@@ -78,8 +79,8 @@ public class shardNode extends Replica {
 					+ " Broadcast integer NOT NULL,\n"
 					+ " Monoxide_d1 integer NOT NULL,\n"
 					+ " Monoxide_d2 integer NOT NULL,\n"
-					+ " Metis_d1 integer NOT NULL,\n"
-					+ " Metis_d2 integer NOT NULL,\n"
+					+ " LBF_d1 integer NOT NULL,\n"
+					+ " LBF_d2 integer NOT NULL,\n"
 					+ " Proposed_d1 integer NOT NULL,\n"
 					+ " Proposed_d2 integer NOT NULL\n"
 					+ " );";
@@ -140,6 +141,8 @@ public class shardNode extends Replica {
 
 			if (isExecuted(conn, tx)) {
 //				System.out.println("执行过啦");
+                logger.info(String.format("存在交易已经执行过：%s", tx.encoder()));
+                System.out.println(String.format("存在交易已经执行过：%s", tx.encoder()));
 				continue;
 			}
 			txMemory(conn, tx);
@@ -239,9 +242,9 @@ public class shardNode extends Replica {
 				result.add(keys[s1 % config.SHARDNUM]);
 				result.add(keys[s2 % config.SHARDNUM]);
 				break;
-			case "metis":
-				s1 = tx.getMetis_d1();
-				s2 = tx.getMetis_d2();
+			case "lbf":
+				s1 = tx.getLBF_d1();
+				s2 = tx.getLBF_d2();
 				result.add(keys[s1 % config.SHARDNUM]);
 				result.add(keys[s2 % config.SHARDNUM]);
 				break;
@@ -272,27 +275,28 @@ public class shardNode extends Replica {
 	 * @param tx 交易类
 	 */
 	public void txMemory(Connection conn, Transaction tx) {
-		String sql = "INSERT INTO transactions(sender,recipient,value,timestamp,gasPrice,accountNonce,"
-				+"digest,Broadcast,Monoxide_d1,Monoxide_d2,Metis_d1,Metis_d2,Proposed_d1,Proposed_d2,commitTime)"
-				+" VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+		String sql = "INSERT INTO transactions(txId, sender,recipient,value,timestamp,gasPrice,accountNonce,"
+				+"digest,Broadcast,Monoxide_d1,Monoxide_d2,LBF_d1,LBF_d2,Proposed_d1,Proposed_d2,commitTime)"
+				+" VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
         try {
 			PreparedStatement pstmt = conn.prepareStatement(sql);
 			// Statement stmt = conn.createStatement();
-			pstmt.setString(1, tx.getSender());
-			pstmt.setString(2, tx.getRecipient());
-			pstmt.setDouble(3, tx.getValue());
-			pstmt.setLong(4, tx.getTimestamp());
-			pstmt.setDouble(5, tx.getGasPrice());
-			pstmt.setLong(6, tx.getAccountNonce());
-			pstmt.setString(7, tx.getDigest());
-			pstmt.setLong(8,tx.getBroadcast());
-			pstmt.setInt(9,tx.getMonoxide_d1());
-			pstmt.setInt(10,tx.getMonoxide_d2());
-			pstmt.setInt(11,tx.getMetis_d1());
-			pstmt.setInt(12,tx.getMetis_d2());
-			pstmt.setInt(13,tx.getProposed_d1());
-			pstmt.setInt(14,tx.getProposed_d2());
-			pstmt.setLong(15, System.currentTimeMillis());
+			pstmt.setString(1, tx.getTxId());
+			pstmt.setString(2, tx.getSender());
+			pstmt.setString(3, tx.getRecipient());
+			pstmt.setDouble(4, tx.getValue());
+			pstmt.setLong(5, tx.getTimestamp());
+			pstmt.setDouble(6, tx.getGasPrice());
+			pstmt.setLong(7, tx.getAccountNonce());
+			pstmt.setString(8, tx.getDigest());
+			pstmt.setLong(9,tx.getBroadcast());
+			pstmt.setInt(10,tx.getMonoxide_d1());
+			pstmt.setInt(11,tx.getMonoxide_d2());
+			pstmt.setInt(12,tx.getLBF_d1());
+			pstmt.setInt(13,tx.getLBF_d2());
+			pstmt.setInt(14,tx.getProposed_d1());
+			pstmt.setInt(15,tx.getProposed_d2());
+			pstmt.setLong(16, System.currentTimeMillis());
 
             pstmt.executeUpdate();
 			logger.info("insert finished: ");

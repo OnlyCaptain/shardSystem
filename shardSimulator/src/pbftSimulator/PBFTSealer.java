@@ -378,7 +378,7 @@ public class PBFTSealer implements Runnable{
 	}
 
 
-	public void receiveTransactions(RawTxMessage rawTxMessage) {
+	public synchronized void receiveTransactions(RawTxMessage rawTxMessage) {
 		JsonArray m = rawTxMessage.getTxs();
 		List<Transaction> txs = new Gson().fromJson(m, new TypeToken<ArrayList<Transaction>>(){}.getType());
 		this.logger.info("[Receive], transaction size="+m.size());
@@ -417,9 +417,9 @@ public class PBFTSealer implements Runnable{
 				result.add(keys[s1 % config.SHARDNUM]);
 				result.add(keys[s2 % config.SHARDNUM]);
 				break;
-			case "metis":
-				s1 = tx.getMetis_d1();
-				s2 = tx.getMetis_d2();
+			case "lbf":
+				s1 = tx.getLBF_d1();
+				s2 = tx.getLBF_d2();
 				result.add(keys[s1 % config.SHARDNUM]);
 				result.add(keys[s2 % config.SHARDNUM]);
 				break;

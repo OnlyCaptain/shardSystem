@@ -25,7 +25,7 @@ public class MqSender {
         // 构造ConnectionFactory实例对象，此处采用ActiveMq的实现jar
         connectionFactory = new ActiveMQConnectionFactory(
                 ActiveMQConnection.DEFAULT_USER,
-                ActiveMQConnection.DEFAULT_PASSWORD, "tcp://127.0.0.1:61616?jms.useAsyncSend=true");
+                ActiveMQConnection.DEFAULT_PASSWORD, "tcp://127.0.0.1:61616");
         try { // 构造从工厂得到连接对象
             connection = connectionFactory.createConnection();
             // 启动

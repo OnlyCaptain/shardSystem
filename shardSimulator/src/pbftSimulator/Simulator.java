@@ -40,6 +40,10 @@ public class Simulator {
 						PairAddress curPair = topos.get(curShardID).get(id);
 //						systemReplicas[ind] = new shardNode(curShardID, id, curPair.getIP(), curPair.getPort());
 						new Thread(new shardNode(curShardID, id, curPair.getIP(), curPair.getPort())).start();
+						if (id == 0) {
+							System.out.println(String.format("分片 %s 的打包器建立在端口 %d 上", curShardID, config.PBFTSealer_ports.get(curShardID)));
+							new Thread(new PBFTSealer(curShardID, PBFTSealer.getCliId(0), curIP, config.PBFTSealer_ports.get(curShardID))).start();
+						}
 					}
 				}
 				break;
@@ -72,6 +76,11 @@ public class Simulator {
 				ArrayList<PairAddress> curShardIPs = topos.get(thisMachineShardID);
 				PairAddress curPair = topos.get(thisMachineShardID).get(currentID);
 				new Thread(new shardNode(thisMachineShardID, currentID, curPair.getIP(), curPair.getPort())).start();
+
+				if (currentID == 0) {
+					System.out.println(String.format("分片 %s 的打包器建立在端口 %d 上", thisMachineShardID, config.PBFTSEALER_PORT));
+					new Thread(new PBFTSealer(thisMachineShardID, PBFTSealer.getCliId(0), curIP, config.PBFTSEALER_PORT)).start();
+				}
 				break;
 			}
 			default:

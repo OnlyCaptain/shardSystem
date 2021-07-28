@@ -172,8 +172,8 @@ public class config {
                 String.valueOf(REPLICA_PORT)+" | "+
                 String.valueOf(MESSAGE_SIZE) + " | " +
                 String.valueOf(PBFTSEALER_PORT) + "\n" +
-                topos.toString() + "\n" +
-                addrShard.toString();
+                topos.toString() + "\n";
+                //addrShard.toString();
         if (env.equals("dev")) {
             jsbuf = jsbuf + "\n" +
                     PBFTSealer_ports.toString();

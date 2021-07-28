@@ -28,7 +28,7 @@ public class CollectorServerHandler extends SimpleChannelInboundHandler<String> 
     }
 
     @Override
-    protected void messageReceived(ChannelHandlerContext channelHandlerContext, String jsbuff) throws Exception {
+    protected void channelRead0(ChannelHandlerContext channelHandlerContext, String jsbuff) throws Exception {
 //        System.out.println("收到消息"+jsbuff);
         TimeMsg baseMsg = null;
         try {

@@ -74,6 +74,7 @@ public class shardNode extends Replica {
 					+ " gasPrice real NOT NULL,\n"
 					+ " accountNonce integer NOT NULL,\n"
 					+ " value real NOT NULL,\n"
+					+ " commitTime integer,\n"
 					+ " Broadcast integer NOT NULL,\n"
 					+ " Monoxide_d1 integer NOT NULL,\n"
 					+ " Monoxide_d2 integer NOT NULL,\n"
@@ -272,8 +273,8 @@ public class shardNode extends Replica {
 	 */
 	public void txMemory(Connection conn, Transaction tx) {
 		String sql = "INSERT INTO transactions(sender,recipient,value,timestamp,gasPrice,accountNonce,"
-				+"digest,Broadcast,Monoxide_d1,Monoxide_d2,Metis_d1,Metis_d2,Proposed_d1,Proposed_d2)"
-				+" VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+				+"digest,Broadcast,Monoxide_d1,Monoxide_d2,Metis_d1,Metis_d2,Proposed_d1,Proposed_d2,commitTime)"
+				+" VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
         try {
 			PreparedStatement pstmt = conn.prepareStatement(sql);
 			// Statement stmt = conn.createStatement();
@@ -291,6 +292,7 @@ public class shardNode extends Replica {
 			pstmt.setInt(12,tx.getMetis_d2());
 			pstmt.setInt(13,tx.getProposed_d1());
 			pstmt.setInt(14,tx.getProposed_d2());
+			pstmt.setLong(15, System.currentTimeMillis());
 
             pstmt.executeUpdate();
 			logger.info("insert finished: ");
@@ -354,10 +356,10 @@ public class shardNode extends Replica {
 				txProcess(txs);
 				this.blockNum ++;   // 块上链 + 1；
 				// 处理交易，上链
-				if (rem.txs.size() > 0 && isPrimary()) {
-					TimeMsg tmsg = new TimeMsg(txs, System.currentTimeMillis(), TimeMsg.CommitTag);
-					sendTimer(config.COLLECTOR_IP, config.COLLECTOR_PORT, tmsg, this.logger);
-				}
+				//if (rem.txs.size() > 0 && isPrimary()) {
+				//	TimeMsg tmsg = new TimeMsg(txs, System.currentTimeMillis(), TimeMsg.CommitTag);
+				//	sendTimer(config.COLLECTOR_IP, config.COLLECTOR_PORT, tmsg, this.logger);
+				//}
 				System.out.println(String.format("块上链成功，交易数：%d, 这是第 %d 个块", txs.size(), this.blockNum));
 
 				sendMsg(sealerIPs.get(PBFTSealer.getCliId(rem.c)).getIP(), sealerIPs.get(PBFTSealer.getCliId(rem.c)).getPort(), rm, sendTag, this.logger);

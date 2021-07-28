@@ -1,6 +1,7 @@
 package pbftSimulator;
 
 import java.lang.reflect.Array;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.Semaphore;
 
@@ -11,6 +12,11 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.DelimiterBasedFrameDecoder;
+import io.netty.handler.codec.string.StringDecoder;
+import io.netty.handler.codec.string.StringEncoder;
 import pbftSimulator.MQ.MqListener;
 import pbftSimulator.MQ.MqSender;
 import pbftSimulator.NettyClient.NettyClientBootstrap;
@@ -44,7 +50,7 @@ import io.netty.handler.codec.serialization.ObjectEncoder;
 import java.io.File;
 import java.io.IOException;
 
-public class PBFTSealer {
+public class PBFTSealer implements Runnable{
 	
 	public static final int PROCESSING = 0;		//没有收到f+1个reply
 	public static final int STABLE = 1;			//已经收到了f+1个reply
@@ -125,23 +131,28 @@ public class PBFTSealer {
 			logger.addAppender(appender);
 			logger.info("Create log file ".concat(this.name));
 			
-		} catch (SecurityException e) {  
+		} catch (SecurityException e) {
+		    logger.error(e);
 			e.printStackTrace();  
 		} catch (IOException e) {  
 			e.printStackTrace();  
 		}
 	}
 
-	public void start() {
+	public void run() {
+
+		// 开启监听TxPool的线程
+		//Thread consumerTx = new Thread(new ConsumerTx(this));
+		//consumerTx.start();
+		Thread proposer = new Thread(new Proposer(this));
+		proposer.start();
 		// 开启服务端
 		try {
 			bind();
-		} catch (InterruptedException e) { e.printStackTrace(); }
-		// 开启监听TxPool的线程
-		Thread consumerTx = new Thread(new ConsumerTx(this));
-		Thread proposer = new Thread(new Proposer(this));
-		consumerTx.start();
-		proposer.start();
+		} catch (InterruptedException e) {
+			logger.error(e);
+			e.printStackTrace();
+		}
 	}
 
 	/**
@@ -156,25 +167,28 @@ public class PBFTSealer {
         bootstrap.group(boss,worker);
         bootstrap.channel(NioServerSocketChannel.class);
         bootstrap.option(ChannelOption.SO_BACKLOG, 128);
-        bootstrap.option(ChannelOption.TCP_NODELAY, true);
-        bootstrap.childOption(ChannelOption.SO_KEEPALIVE, true);
+        bootstrap.childOption(ChannelOption.TCP_NODELAY, true);
+        bootstrap.childOption(ChannelOption.SO_KEEPALIVE, false);
         bootstrap.childHandler(new ChannelInitializer<SocketChannel>() {
 
 			@Override
             protected void initChannel(SocketChannel socketChannel) throws Exception {
                 ChannelPipeline p = socketChannel.pipeline();
-                p.addLast(new ObjectEncoder());
-                p.addLast(new ObjectDecoder(ClassResolvers.cacheDisabled(null)));
+				ByteBuf delimiter = Unpooled.copiedBuffer("\t".getBytes());
+				p.addLast(new DelimiterBasedFrameDecoder(1000*2048,delimiter));
+                p.addLast(new StringEncoder());
+                p.addLast(new StringDecoder());
                 p.addLast(new PBFTSealerServerHandler(PBFTSealer.this));
             }
         });
         ChannelFuture f= bootstrap.bind(this.port).sync();
+        f.channel().closeFuture().sync();
 		if(f.isSuccess()){
-            System.out.println("Client server start---------------");
+            System.out.println("PBFT 服务器启动---------------");
         }
     }
 
-	public synchronized void msgProcess(Message msg) {
+	public void msgProcess(Message msg) {
 		msg.print(receiveTag, this.logger);
 		switch(msg.type) {
 			case Message.REPLY:
@@ -200,7 +214,7 @@ public class PBFTSealer {
 			this.lastBlockEnd.acquire();
 			this.logger.info("等待上一个块完成");
 		} catch (InterruptedException e) {
-			this.logger.info("等待上一个块完成");
+			this.logger.error("等待上一个块完成", e);
 		}
 		this.logger.info("正在发送消息");
 		while(reqStats.containsKey(time)) {
@@ -337,15 +351,15 @@ public class PBFTSealer {
 	 * @param logger
 	 */
 	public void sendMsg(String sIP, int sport, Message msg, String tag, Logger logger) {
-		String jsbuff = msg.encoder();
-		this.logger.debug(String.format("I send to %s %d", sIP, sport));
+		String jsbuff = msg.encoder() + "\t";
+		this.logger.debug(String.format("I send to %s %d %d", sIP, sport, jsbuff.getBytes(StandardCharsets.UTF_8).length));
 		try {
 			NettyClientBootstrap bootstrap = new NettyClientBootstrap(sport, sIP, this.logger);
-			msg.print(tag, logger);
-			bootstrap.socketChannel.writeAndFlush(jsbuff);
-			// 关闭连接
+			ChannelFuture future = bootstrap.socketChannel.writeAndFlush(jsbuff);
+			future.await();
 			bootstrap.eventLoopGroup.shutdownGracefully();
 		} catch (Exception e) {
+			this.logger.error(e);
 			e.printStackTrace();
 		}
 	}
@@ -364,7 +378,7 @@ public class PBFTSealer {
 	}
 
 
-	public synchronized void receiveTransactions(RawTxMessage rawTxMessage) {
+	public void receiveTransactions(RawTxMessage rawTxMessage) {
 		JsonArray m = rawTxMessage.getTxs();
 		List<Transaction> txs = new Gson().fromJson(m, new TypeToken<ArrayList<Transaction>>(){}.getType());
 		this.logger.info("[Receive], transaction size="+m.size());
@@ -373,39 +387,20 @@ public class PBFTSealer {
 			try {
 //				mqSender.sendMessage(mqSender.session, mqSender.producer, txs.get(i).encoder());
 //				System.out.println("缓存交易" + txs.get(i).encoder());
-				this.mqSenderPoolBuff.sendMessage(mqSenderPoolBuff.session, mqSenderPoolBuff.producer, txs.get(i).encoder());
+				this.mqSenderPool.sendMessage(this.mqSenderPool.session, this.mqSenderPool.producer, txs.get(i).encoder());
+				//this.mqSenderPoolBuff.sendMessage(mqSenderPoolBuff.session, mqSenderPoolBuff.producer, txs.get(i).encoder());
 			} catch (Exception e) {
-				logger.error(e.getMessage());
+				logger.error("MQ出错",e);
 				e.printStackTrace();
 			}
 		}
-		this.logger.debug("发送完MQ");
-	}
-
-	/**
-	 * 根据地址查询该地址所在的分片。
-	 * TODO
-	 * @param addr 表示查询的地址（账户地址）
-	 * @return	返回对应的分片ID
-	 */
-	public String queryShardID(String addr) {
-		// 查询的规则有两种方式：
-		String result;
-		// 1. 根据尾数 mod
-		String slice = addr.substring(addr.length()-config.SLICENUM, addr.length());
-		result = config.addrShard.get(slice);
-		// 2. 根据地址数据库查询
-		// TODO
-		return result;  // 一开始只有一个分片
+		this.logger.debug("[method] = receiveTransactions, 发送到"+this.txPoolName);
 	}
 
 	public ArrayList<String> queryShardIDs(Transaction tx) {
 		// 分片规则有三种： origin，monoxide，metis，proposed
 		ArrayList<String> result = new ArrayList<>();
 		String[] keys = config.topos.keySet().toArray(new String[config.SHARDNUM]);
-//		for (String i:keys) System.out.print(i+",");
-//		System.out.println();
-
 		int s1, s2;
 		switch (config.sharding_rule) {
 			case "origin":
@@ -431,20 +426,14 @@ public class PBFTSealer {
 			case "proposed":
 				s1 = tx.getProposed_d1();
 				s2 = tx.getProposed_d2();
-//				System.out.println(String.format("Here s1,s2 = %d,%d", s1, s2));
 				result.add(keys[s1 % config.SHARDNUM]);
 				result.add(keys[s2 % config.SHARDNUM]);
-//				System.out.println(String.format("Here shard1 shard2 = %s,%s", result.get(0), result.get(1)));
-
 				break;
 			default:
 				System.out.println("Error!!, sharding rule is wrong");
 		}
 		return result;
 	}
-
-
-
 }
 
 class Proposer implements Runnable {
@@ -493,87 +482,75 @@ class Proposer implements Runnable {
 				this.pbftSealer.logger.info(String.format("这里是分片 %s 的第 %d 个块", this.pbftSealer.shardID, count)+"In here, txsBuffer.size = "+txsBuffer.size());
 				// Thread.sleep(7000);
 			} catch (JMSException e) {
-				System.out.println(e.getMessage());
+				this.pbftSealer.logger.error(e);
+				System.out.println(e.getStackTrace());
 			} 
         }
 	}
 };
 
-class ConsumerTx implements Runnable {
-	public PBFTSealer pbftSealer;
-	public ConsumerTx(PBFTSealer pbftSealer) {
-		this.pbftSealer = pbftSealer;
-	}
-
-	@Override
-	public void run() {
-		this.pbftSealer.logger.info("[method]=ConsumerTx, begin running");
-		MqListener mqListener = new MqListener(this.pbftSealer.txPoolBuffName);
-		while (true) {
-			try {
-				TextMessage message = (TextMessage) mqListener.consumer.receive(0);
-				Transaction tx = null;
-				if (null != message) {
-					tx = new Gson().fromJson(message.getText(), Transaction.class);
-//					System.out.println(message.getText());
-//					System.out.println(tx.encoder());
-				} else {
-					continue;
-				}
-				ArrayList<String> shardIDs = this.pbftSealer.queryShardIDs(tx);
-				if (shardIDs.size() == 0) {
-					System.out.println("Error!!, 交易没查到分片id");
-					this.pbftSealer.logger.error("Error!!, 交易没查到分片id" + tx.encoder());
-				}
-				String sendShard = shardIDs.get(0);
-				String reciShard = shardIDs.get(1);
-				Map<String, ArrayList<Transaction>> classifi = new HashMap<>();
-				Iterator<String> shardIter = config.topos.keySet().iterator();
-				while (shardIter.hasNext()) {
-					classifi.put(shardIter.next(), new ArrayList<Transaction>());
-				}
-				switch (tx.getRelayFlag()) {
-					case 0: {
-						tx.setRelayFlag(2);
-						if (sendShard.equals(reciShard)) {
-							classifi.get(sendShard).add(tx);
-						} else {
-							classifi.get(sendShard).add(tx);
-							classifi.get(reciShard).add(tx);
-						}
-					}
-					break;
-					case 2: {
-						if (sendShard.equals(this.pbftSealer.shardID) || reciShard.equals(this.pbftSealer.shardID))
-							classifi.get(this.pbftSealer.shardID).add(tx);
-					}
-				}
-//				MqSender mqSender = new MqSender(this.pbftSealer.txPoolName);
-				ArrayList<Transaction> thisShardTxs = classifi.get(this.pbftSealer.shardID);
-				if (thisShardTxs.size() != 0) {
-					for (Transaction thisShradTx : thisShardTxs) {
-						try {
-//							System.out.println("消费交易"+thisShradTx.encoder());
-							this.pbftSealer.mqSenderPool.sendMessage(this.pbftSealer.mqSenderPool.session, this.pbftSealer.mqSenderPool.producer, thisShradTx.encoder());
-						} catch (Exception e) {
-							this.pbftSealer.logger.error(e.getMessage());
-							e.printStackTrace();
-						}
-					}
-				}
-				for (String shard : classifi.keySet()) {
-					if (shard.equals(this.pbftSealer.shardID)) {
-						continue;
-					} else {
-						ArrayList<Transaction> txs = classifi.get(shard);
-						this.pbftSealer.sendToOtherShard(txs, shard);
-					}
-				}
-			} catch (Exception e) {
-				e.printStackTrace();
-				this.pbftSealer.logger.error(e.getMessage());
-			}
-		}
-	}
-}
+//class ConsumerTx implements Runnable {
+//	public PBFTSealer pbftSealer;
+//	public ConsumerTx(PBFTSealer pbftSealer) {
+//		this.pbftSealer = pbftSealer;
+//	}
+//
+//	@Override
+//	public void run() {
+//		this.pbftSealer.logger.info("[method]=ConsumerTx, begin running");
+//		MqListener mqListener = new MqListener(this.pbftSealer.txPoolBuffName);
+//		while (true) {
+//			try {
+//				TextMessage message = (TextMessage) mqListener.consumer.receive(0);
+//				Transaction tx = null;
+//				if (null != message) {
+//					tx = new Gson().fromJson(message.getText(), Transaction.class);
+//				} else {
+//					continue;
+//				}
+//				ArrayList<String> shardIDs = this.pbftSealer.queryShardIDs(tx);
+//				if (shardIDs.size() == 0) {
+//					System.out.println("Error!!, 交易没查到分片id");
+//					this.pbftSealer.logger.error("Error!!, 交易没查到分片id" + tx.encoder());
+//				}
+//				String sendShard = shardIDs.get(0);
+//				String reciShard = shardIDs.get(1);
+//				ArrayList<String> shard_to_send = new ArrayList<>();
+//				switch (tx.getRelayFlag()) {
+//					case 0: {
+//						if (sendShard.equals(reciShard)) {
+//							shard_to_send.add(sendShard);
+//						} else {
+//						    shard_to_send.add(sendShard);
+//						    shard_to_send.add(reciShard);
+//						}
+//					}
+//					break;
+//					case 2: {
+//						if (sendShard.equals(this.pbftSealer.shardID) || reciShard.equals(this.pbftSealer.shardID))
+//							shard_to_send.add(this.pbftSealer.shardID);
+//					}
+//				}
+//				tx.setRelayFlag(2);
+//				ArrayList<Transaction> forwardTx = new ArrayList<>();
+//				forwardTx.add(tx);
+//				for (int i = 0; i < shard_to_send.size(); i ++ ) {
+//					String shard_send = shard_to_send.get(i);
+//					if (shard_send.equals(this.pbftSealer.shardID)) {
+//						try {
+//							this.pbftSealer.mqSenderPool.sendMessage(this.pbftSealer.mqSenderPool.session, this.pbftSealer.mqSenderPool.producer, tx.encoder());
+//						} catch (Exception e) {
+//							this.pbftSealer.logger.error(e);
+//						}
+//					} else {
+//						this.pbftSealer.sendToOtherShard(forwardTx, shard_send);
+//					}
+//				}
+//			} catch (Exception e) {
+//				// e.printStackTrace();
+//				this.pbftSealer.logger.error(e);
+//			}
+//		}
+//	}
+//}
 

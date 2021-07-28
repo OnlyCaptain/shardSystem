@@ -267,10 +267,10 @@ public class Collector {
 		boss=new NioEventLoopGroup();
 		worker=new NioEventLoopGroup();
 		ServerBootstrap bootstrap=new ServerBootstrap();
-		bootstrap.group(boss,worker);
-		bootstrap.channel(NioServerSocketChannel.class);
-		bootstrap.option(ChannelOption.SO_BACKLOG, 128);
-		bootstrap.option(ChannelOption.TCP_NODELAY, true);
+		bootstrap.group(boss,worker)
+				 .channel(NioServerSocketChannel.class);
+		bootstrap.childOption(ChannelOption.SO_BACKLOG, 128);
+		bootstrap.childOption(ChannelOption.TCP_NODELAY, true);
 		bootstrap.childOption(ChannelOption.SO_KEEPALIVE, true);
 		bootstrap.childHandler(new ChannelInitializer<SocketChannel>() {
 			@Override
@@ -282,7 +282,7 @@ public class Collector {
 			}
 		});
 		ChannelFuture f= bootstrap.bind(this.port).sync();
-		f.channel().closeFuture().sync();
+		//f.channel().closeFuture().sync();
 		if(f.isSuccess()){
 			System.out.println("Collector server start---------------");
 			System.out.println(String.format("%s listen in port %d, IP %s", this.name, this.port, this.IP));

@@ -31,6 +31,7 @@ public class configprod {
 		String content = new String(Files.readAllBytes(Paths.get(template)));
 		JsonObject jsconfig = new JsonParser().parse(content).getAsJsonObject();
 		ArrayList<String> IPs = new ArrayList<>();
+		ArrayList<String> dataBaseIPs = new ArrayList<>();
 		try {
 			BufferedReader reader = new BufferedReader(new FileReader(filepath));//换成你的文件名
 			reader.readLine();//第一行信息，为标题信息，不用，如果需要，注释掉
@@ -45,6 +46,7 @@ public class configprod {
 			for (int i = 0; i < config.SHARDNODENUM*config.SHARDNUM; i ++) {
 				if (id % config.SHARDNODENUM == 0) {
 					id = 0;
+					dataBaseIPs.add(IPs.get(i));
 					shardId ++;
 				}
 				String SID = String.valueOf(shardId);
@@ -66,6 +68,14 @@ public class configprod {
 
 		System.out.println(jsconfig.toString());
 
+		for (String ip:IPs) {
+			System.out.print(String.format("\"%s\" ", ip));
+		}
+		System.out.println();
+		for (String ip:dataBaseIPs) {
+			System.out.print(String.format("\"%s\" ", ip));
+		}
+		System.out.println();
 		try (FileOutputStream fos = new FileOutputStream(output);
 			 OutputStreamWriter isr = new OutputStreamWriter(fos,
 					 StandardCharsets.UTF_8)) {

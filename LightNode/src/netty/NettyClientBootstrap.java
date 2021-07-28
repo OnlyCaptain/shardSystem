@@ -2,6 +2,8 @@ package netty;
 
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -9,9 +11,13 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.DelimiterBasedFrameDecoder;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
+import io.netty.handler.codec.string.StringDecoder;
+import io.netty.handler.codec.string.StringEncoder;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
@@ -43,27 +49,26 @@ public class NettyClientBootstrap {
             start();
         } catch (InterruptedException e) {
             e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
-    /**
-     * Client 开启的核心代码。
-     * 其中 NettyClientHandler Client “接收消息”的代码。
-     * @throws InterruptedException
-     */
-    private void start() throws InterruptedException {
+    private void start() throws Exception {
         eventLoopGroup=new NioEventLoopGroup();
         Bootstrap bootstrap=new Bootstrap();
         bootstrap.channel(NioSocketChannel.class);
-        bootstrap.option(ChannelOption.SO_KEEPALIVE,true);
         bootstrap.group(eventLoopGroup);
+        bootstrap.option(ChannelOption.SO_KEEPALIVE,false);
         bootstrap.remoteAddress(host,port);
         bootstrap.handler(new ChannelInitializer<SocketChannel>() {
             @Override
             protected void initChannel(SocketChannel socketChannel) throws Exception {
-                socketChannel.pipeline().addLast(new IdleStateHandler(20,10,0));
-                socketChannel.pipeline().addLast(new ObjectEncoder());
-                socketChannel.pipeline().addLast(new ObjectDecoder(ClassResolvers.cacheDisabled(null)));
+                ByteBuf delimiter = Unpooled.copiedBuffer("\t".getBytes());
+                socketChannel.pipeline().addLast("framer", new DelimiterBasedFrameDecoder(500*2048,delimiter));
+                socketChannel.pipeline().addLast("decoder", new StringEncoder());
+                socketChannel.pipeline().addLast("encoder", new StringDecoder());
+//                socketChannel.pipeline().addLast(new LengthFieldBasedFrameDecoder(1024*500,0,4,0,4));
                 socketChannel.pipeline().addLast(new NettyClientHandler());
             }
         });
@@ -71,6 +76,7 @@ public class NettyClientBootstrap {
         if (future.isSuccess()) {
             socketChannel = (SocketChannel)future.channel();
             logger.info("connect server  成功---------");
+            System.out.println("连接成功");
         }
     }
 };

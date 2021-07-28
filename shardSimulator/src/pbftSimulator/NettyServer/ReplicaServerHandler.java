@@ -10,25 +10,20 @@ import io.netty.util.ReferenceCountUtil;
 import pbftSimulator.message.*;
 import pbftSimulator.replica.Replica;
 
+import java.net.InetSocketAddress;
+
 public class ReplicaServerHandler extends SimpleChannelInboundHandler<String> {
     private Replica replica;
-	
-    public ReplicaServerHandler() {
-		super();
-	}
 
     public ReplicaServerHandler(Replica replica) {
 		super();
         this.replica = replica;
 	}
-    
-	@Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        NettyChannelMap.remove((SocketChannel)ctx.channel());
-    }
+
     @Override
-    protected void messageReceived(ChannelHandlerContext channelHandlerContext, String jsbuff) throws Exception {
-        Message baseMsg = null; 
+    protected void channelRead0(ChannelHandlerContext ctx, String jsbuff) throws Exception {
+        Message baseMsg = null;
+        this.replica.logger.info("receive:" + jsbuff);
         try {
             JsonObject js = new JsonParser().parse(jsbuff).getAsJsonObject();
             int type = js.get("type").getAsInt();
@@ -66,12 +61,34 @@ public class ReplicaServerHandler extends SimpleChannelInboundHandler<String> {
                 this.replica.logger.debug("这里是Replica后端"+jsbuff);
                 return;
             }
+            ReferenceCountUtil.release(baseMsg);
+            ctx.close();
             replica.msgProcess(baseMsg);
         } catch (Exception e) {
             e.printStackTrace();
             System.out.println("ShardNode exit.");
-        } finally {
-            ReferenceCountUtil.release(baseMsg);
         }
+    }
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) { // (4)
+        // Close the connection when an exception is raised.
+        cause.printStackTrace();
+        ctx.close();
+    }
+
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        super.channelActive(ctx);
+        InetSocketAddress insocket = (InetSocketAddress) ctx.channel().remoteAddress();
+        String clientIP = insocket.getAddress().getHostAddress();
+        this.replica.logger.info(String.format("一个客户端已连接: %s", clientIP));
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        super.channelInactive(ctx);
+        InetSocketAddress insocket = (InetSocketAddress) ctx.channel().remoteAddress();
+        String clientIP = insocket.getAddress().getHostAddress();
+        this.replica.logger.info(String.format("一个客户端已断开连接: %s", clientIP));
     }
 }

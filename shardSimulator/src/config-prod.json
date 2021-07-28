@@ -7,7 +7,7 @@
     "RELAY_TX_FORWARD": false,
     "RN": 7,
     "SHARDNODENUM": 7,
-    "SHARDNUM": 3,
+    "SHARDNUM": 16,
     "FN": 2,
     "CN": 1,
     "INFLIGHT": 2000,

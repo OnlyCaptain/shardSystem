@@ -25,7 +25,7 @@ public class NettyClientHandler extends SimpleChannelInboundHandler<String> {
     //     }
     // }
     @Override
-    protected void messageReceived(ChannelHandlerContext channelHandlerContext, String baseMsg) throws Exception {
+    protected void channelRead0(ChannelHandlerContext channelHandlerContext, String baseMsg) throws Exception {
         // MsgType msgType=baseMsg.getType();
         System.out.println("Receive: "+baseMsg+ " after send.");
 

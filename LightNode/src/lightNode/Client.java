@@ -2,6 +2,7 @@ package lightNode;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+//import io.netty.channel.ChannelFuture;
 import netty.NettyClientBootstrap;
 import org.apache.log4j.*;
 import pbftSimulator.message.Message;
@@ -10,11 +11,16 @@ import pbftSimulator.message.TimeMsg;
 import shardSystem.config;
 import shardSystem.transaction.Transaction;
 
+import javax.jms.TextMessage;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 
 /**
  * @author zhanjzh
@@ -24,7 +30,7 @@ import java.util.ArrayList;
 public class Client {
 
 	private static final Level LOGLEVEL = Level.INFO;
-	private static final int TPS_SECOND = 500;
+	private static final int TPS_SECOND = 1000;
 
 	public String IP;
 	public int port;
@@ -79,37 +85,110 @@ public class Client {
 			e.printStackTrace();  
 		}
 	}
-	
-	
-	public void sendRawTx(ArrayList<Transaction> txs) {
-		int message_size = config.MESSAGE_SIZE, start = 0;
-		String[] shardLists = config.topos.keySet().toArray(new String[config.SHARDNUM]);
 
-		for (start = 0; start < txs.size(); start += message_size) {
+	public ArrayList<String> queryShardIDs(Transaction tx) {
+		// 分片规则有三种： origin，monoxide，metis，proposed
+		ArrayList<String> result = new ArrayList<>();
+		String[] keys = config.topos.keySet().toArray(new String[config.SHARDNUM]);
+		int s1, s2;
+		switch (config.sharding_rule) {
+			case "origin":
+				String addr1 = tx.getSender();
+				String slice1 = addr1.substring(addr1.length()-config.SLICENUM, addr1.length());
+				result.add(config.addrShard.get(slice1));
+				String addr2 = tx.getRecipient();
+				String slice2 = addr2.substring(addr2.length()-config.SLICENUM, addr2.length());
+				result.add(config.addrShard.get(slice2));
+				break;
+			case "monoxide":
+				s1 = tx.getMonoxide_d1();
+				s2 = tx.getMonoxide_d2();
+				result.add(keys[s1 % config.SHARDNUM]);
+				result.add(keys[s2 % config.SHARDNUM]);
+				break;
+			case "metis":
+				s1 = tx.getMetis_d1();
+				s2 = tx.getMetis_d2();
+				result.add(keys[s1 % config.SHARDNUM]);
+				result.add(keys[s2 % config.SHARDNUM]);
+				break;
+			case "proposed":
+				s1 = tx.getProposed_d1();
+				s2 = tx.getProposed_d2();
+				result.add(keys[s1 % config.SHARDNUM]);
+				result.add(keys[s2 % config.SHARDNUM]);
+				break;
+			default:
+				System.out.println("Error!!, sharding rule is wrong");
+				logger.error("sharding rule is wrong");
+		}
+		return result;
+	}
+
+	public Map<String, ArrayList<Transaction>> classifyTx(ArrayList<Transaction> txs) {
+		// 本地调度器
+        Map<String, ArrayList<Transaction>> classify = new HashMap<>();
+		for (int ind = 0; ind < txs.size(); ind ++) {
+			Transaction tx = txs.get(ind);
+			ArrayList<String> shardIDs = queryShardIDs(tx);
+			if (shardIDs.size() == 0) {
+				System.out.println("Error!!, 交易没查到分片id");
+				this.logger.error("Error!!, 交易没查到分片id" + tx.encoder());
+			}
+			String sendShard = shardIDs.get(0);
+			String reciShard = shardIDs.get(1);
+
+			ArrayList<String> shard_to_send = new ArrayList<>();
+			if (sendShard.equals(reciShard)) {
+				shard_to_send.add(sendShard);
+			} else {
+				shard_to_send.add(sendShard);
+				shard_to_send.add(reciShard);
+			}
+			tx.setRelayFlag(2);
+			for (int i = 0; i < shard_to_send.size(); i++) {
+				String shard_send = shard_to_send.get(i);
+				if (!classify.containsKey(shard_send)) {
+					classify.put(shard_send, new ArrayList<>());
+				}
+				classify.get(shard_send).add(tx);
+			}
+		}
+		return classify;
+	}
+
+	public void sendRawTx(ArrayList<Transaction> txs) {
+		String[] shardLists = config.topos.keySet().toArray(new String[config.SHARDNUM]);
+		Map<String, ArrayList<Transaction>> classify = classifyTx(txs);
+		Iterator<String> keyIt = classify.keySet().iterator();
+		while (keyIt.hasNext()) {
+			String shard_send = keyIt.next();
+			if (classify.get(shard_send).size() == 0) {
+				System.out.println("Error size");
+			}
+			sendRawTx(classify.get(shard_send),shard_send);
+		}
+	}
+
+	private void sendRawTx(ArrayList<Transaction> txs, String shard_send) {
+		if (config.env.equals("dev")) {
+			this.priIP = "127.0.0.1";
+			this.priPort = config.PBFTSealer_ports.get(shard_send);
+		} else {
+			this.priIP = config.topos.get(shard_send).get(0).getIP();
+			this.priPort = config.PBFTSEALER_PORT;
+		}
+		System.out.println(String.format("正在发送给分片 %s %s:%d ", shard_send, this.priIP, this.priPort));
+		int message_size = 500;
+		for (int start = 0; start < txs.size(); start += message_size) {
 			ArrayList<Transaction> sub_tx = new ArrayList<>(txs.subList(start, Math.min(start+message_size, txs.size())));
 			RawTxMessage rt = new RawTxMessage(sub_tx);
 			try { //  负载均衡
-				String sendShard = shardLists[which_shard++];
-				if (config.env.equals("dev")) {
-					this.priIP = "127.0.0.1";
-					this.priPort = config.PBFTSealer_ports.get(sendShard);
-				} else {
-					this.priIP = config.topos.get(sendShard).get(0).getIP();
-					this.priPort = config.PBFTSEALER_PORT;
-				}
-				System.out.println(String.format("send to : %s:%d", this.priIP, this.priPort));
+				System.out.println(String.format("send to : %s:%d, txsize: %d", this.priIP, this.priPort, rt.getTxs().size()));
 				sendMsg(this.priIP, this.priPort, rt, sendTag, this.logger);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
-			TimeMsg tmsg = new TimeMsg(sub_tx, getTimeStamp(), TimeMsg.SendTag);
-			try {
-				System.out.println("正在发送记录时间的包");
-				sendTimer(config.COLLECTOR_IP, config.COLLECTOR_PORT, tmsg, this.logger);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-			which_shard = which_shard % shardLists.length;
 		}
 	}
 
@@ -138,12 +217,14 @@ public class Client {
 	 * @param logger
 	 */
 	public void sendMsg(String sIP, int sport, Message msg, String tag, Logger logger) {
-		String jsbuff = msg.encoder();
+		String jsbuff = msg.encoder() + "\t";
+		System.out.println(String.format("I send to %s %d", sIP, sport));
 		try {
 			NettyClientBootstrap bootstrap = new NettyClientBootstrap(sport, sIP, this.logger);
 			bootstrap.socketChannel.writeAndFlush(jsbuff);
 			bootstrap.eventLoopGroup.shutdownGracefully();
-		} catch (InterruptedException e) {
+		} catch (Exception e) {
+			this.logger.error(e);
 			e.printStackTrace();
 		}
 	}
@@ -219,11 +300,12 @@ public class Client {
 			start += TPS_SECOND;
 		}
 
+		long netWorkDelay = 0;
 		long waittime = 1000;   // 两次发送交易的间隔时间，默认是1000ms
 		long prev_timestamp = getTimeStamp(), cur_timestamp = prev_timestamp;
 		for (int i = 0; i < txs_tps.size(); i ++) {
 			client.sendRawTx(txs_tps.get(i));
-			while (cur_timestamp - prev_timestamp < waittime) {
+			while (cur_timestamp - prev_timestamp < waittime + netWorkDelay) {
 				cur_timestamp = getTimeStamp();
 				continue;
 			}

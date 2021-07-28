@@ -1,16 +1,13 @@
 package pbftSimulator.replica;
 
 import java.net.ConnectException;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.PriorityQueue;
-import java.util.Queue;
-import java.util.Set;
+import java.util.*;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.DelimiterBasedFrameDecoder;
+import io.netty.handler.codec.string.StringDecoder;
+import io.netty.handler.codec.string.StringEncoder;
 import org.apache.log4j.FileAppender;
 import org.apache.log4j.Layout;
 import org.apache.log4j.Logger;
@@ -28,6 +25,7 @@ import io.netty.handler.codec.serialization.ObjectEncoder;
 import java.io.File;
 import java.io.IOException;
 
+import pbftSimulator.NettyServer.PBFTSealerServerHandler;
 import pbftSimulator.PBFTSealer;
 import pbftSimulator.PairAddress;
 import pbftSimulator.Utils;
@@ -72,8 +70,10 @@ public class Replica implements Runnable {
 	public Map<Integer, Map<Integer, LastReply>> checkPoints;
 	
 	public Map<Message, Integer> reqStats;			//request请求状态
+	public Queue<Message> reqStats_ready_to_remove;  // 准备丢弃掉的request
 
 	public PBFTSealer pbftSealer;
+
 //	public Map<String, ArrayList<PairAddress>> topos;  // 这个东西，应该有如下的结构：
 	/** 
 	 * topos: {
@@ -100,6 +100,7 @@ public class Replica implements Runnable {
 		lastReplyMap = new HashMap<>();
 		checkPoints = new HashMap<>();
 		reqStats = new HashMap<>();
+		reqStats_ready_to_remove = new LinkedList<>();
 		checkPoints.put(0, lastReplyMap);
 
 		neighbors = new ArrayList<PairAddress>();
@@ -128,17 +129,14 @@ public class Replica implements Runnable {
 		curWorkspace = "./workspace/".concat(this.name).concat("/");
 		buildWorkspace();
 
-		if (isPrimary()) {
-			System.out.println(String.format("分片 %s 的打包器建立在端口 %d 上", shardID, sealerIPs.get(0).getPort()));
-			this.pbftSealer = new PBFTSealer(this.shardID, PBFTSealer.getCliId(0), sealerIPs.get(0).getIP(), sealerIPs.get(0).getPort());
-		}
+//		if (isPrimary()) {
+//			System.out.println(String.format("分片 %s 的打包器建立在端口 %d 上", shardID, sealerIPs.get(0).getPort()));
+//			this.pbftSealer = new PBFTSealer(this.shardID, PBFTSealer.getCliId(0), sealerIPs.get(0).getIP(), sealerIPs.get(0).getPort());
+//		}
 	}
 
 	@Override
 	public void run() {
-		if (isPrimary()) {
-			this.pbftSealer.start();
-		}
 		try {
 			bind();
 		} catch (InterruptedException e) { e.printStackTrace(); }
@@ -157,16 +155,18 @@ public class Replica implements Runnable {
         bootstrap.group(boss,worker);
         bootstrap.channel(NioServerSocketChannel.class);
         bootstrap.option(ChannelOption.SO_BACKLOG, 128);
-        bootstrap.option(ChannelOption.TCP_NODELAY, true);
-        bootstrap.childOption(ChannelOption.SO_KEEPALIVE, true);
+        bootstrap.childOption(ChannelOption.TCP_NODELAY, true);
+        bootstrap.childOption(ChannelOption.SO_KEEPALIVE, false);
         bootstrap.childHandler(new ChannelInitializer<SocketChannel>() {
 
 			@Override
             protected void initChannel(SocketChannel socketChannel) throws Exception {
-                ChannelPipeline p = socketChannel.pipeline();
-                p.addLast(new ObjectEncoder());
-                p.addLast(new ObjectDecoder(ClassResolvers.cacheDisabled(null)));
-                p.addLast(new ReplicaServerHandler(Replica.this));
+				ChannelPipeline p = socketChannel.pipeline();
+				ByteBuf delimiter = Unpooled.copiedBuffer("\t".getBytes());
+				p.addLast(new DelimiterBasedFrameDecoder(1000*2048,delimiter));
+				p.addLast(new StringEncoder());
+				p.addLast(new StringDecoder());
+				p.addLast(new ReplicaServerHandler(Replica.this));
             }
         });
         ChannelFuture f= bootstrap.bind(port).sync();
@@ -296,6 +296,13 @@ public class Replica implements Runnable {
 				}
 				llp.t = rem.t;
 				reqStats.put(rem, STABLE);
+				// 以后再添加数据库相关操作
+				reqStats_ready_to_remove.add(rem);
+				if (reqStats_ready_to_remove.size() > 10) {
+				    Message move = reqStats_ready_to_remove.poll();
+				    if (move != null)
+						reqStats.remove(move);
+				}
 			}
 			// 周期性发送checkpoint消息
 			if(mm.n % K == 0) {
@@ -787,23 +794,17 @@ public class Replica implements Runnable {
 	 * @param logger
 	 */
 	public void sendMsg(String sIP, int sport, Message msg, String tag, Logger logger) {
-		String jsbuff = msg.encoder();
-//		 System.out.println("after encoding " + jsbuff);
+		String jsbuff = msg.encoder()+"\t";
 		try {
 			NettyClientBootstrap bootstrap = new NettyClientBootstrap(sport, sIP, this.logger);
 			msg.print(tag, logger);
-			bootstrap.socketChannel.writeAndFlush(jsbuff);
-			// //通知server，即将关闭连接.(server需要从map中删除该client）
-			// String clo = "";
-			// bootstrap.socketChannel.writeAndFlush(clo);
-//			关闭连接
+			ChannelFuture future = bootstrap.socketChannel.writeAndFlush(jsbuff);
+			future.await();
 			bootstrap.eventLoopGroup.shutdownGracefully();
 		} catch (Exception e) {
-			e.printStackTrace();
-			System.out.println("发送失败");
+			logger.error(e);
+			System.out.println(String.format("分片 %s %d 节点 发送失败 + %s", this.shardID, this.id, e.getMessage()));
 		}
-		
-
 	}
 
 	/**
@@ -829,15 +830,16 @@ public class Replica implements Runnable {
 
 
 	public void sendTimer(String sIP, int sport, TimeMsg msg, Logger logger){
-		String jsbuff = msg.encoder();
+		String jsbuff = msg.encoder()+"\t";
 		try {
 			NettyClientBootstrap bootstrap = new NettyClientBootstrap(sport, sIP, this.logger);
 			bootstrap.socketChannel.writeAndFlush(jsbuff);
 			bootstrap.eventLoopGroup.shutdownGracefully();
 		} catch (InterruptedException e) {
 			System.out.println("打点信息发送失败 " + e.getMessage());
-			logger.error("打点信息发送失败 " + e.getMessage());
+			logger.error("打点信息发送失败 " + e);
 		} catch (Exception e) {
+		    logger.error(e);
 			System.out.println(String.format("链接失败 %s %d %s", sIP, sport, e.getMessage()));
 		}
 	}

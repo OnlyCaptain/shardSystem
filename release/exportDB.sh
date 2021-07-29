@@ -11,7 +11,7 @@ do
   expect "sqlite>"
   send ".mode csv\r"
   expect "sqlite>"
-  send ".output outputcsv/${filename:0:7}.csv\r"
+  send ".output outputcsv/${filename:0:8}.csv\r"
   expect "sqlite>"
   send "select * from transactions;\r"
   expect "sqlite>"

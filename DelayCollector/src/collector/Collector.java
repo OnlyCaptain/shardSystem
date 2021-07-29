@@ -198,8 +198,8 @@ public class Collector {
 						pstmt.setLong(9,tx.getBroadcast());
 						pstmt.setInt(10,tx.getMonoxide_d1());
 						pstmt.setInt(11,tx.getMonoxide_d2());
-						pstmt.setInt(12,tx.getMetis_d1());
-						pstmt.setInt(13,tx.getMetis_d2());
+						pstmt.setInt(12,tx.getLBF_d1());
+						pstmt.setInt(13,tx.getLBF_d1());
 						pstmt.setInt(14,tx.getProposed_d1());
 						pstmt.setInt(15,tx.getProposed_d2());
 						pstmt.executeUpdate();
@@ -240,8 +240,8 @@ public class Collector {
 						pstmt.setLong(9,tx.getBroadcast());
 						pstmt.setInt(10,tx.getMonoxide_d1());
 						pstmt.setInt(11,tx.getMonoxide_d2());
-						pstmt.setInt(12,tx.getMetis_d1());
-						pstmt.setInt(13,tx.getMetis_d2());
+						pstmt.setInt(12,tx.getLBF_d1());
+						pstmt.setInt(13,tx.getLBF_d2());
 						pstmt.setInt(14,tx.getProposed_d1());
 						pstmt.setInt(15,tx.getProposed_d2());
 						pstmt.executeUpdate();

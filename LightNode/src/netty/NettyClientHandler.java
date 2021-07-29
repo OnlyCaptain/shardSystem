@@ -10,7 +10,7 @@ import java.net.InetSocketAddress;
 
 public class NettyClientHandler extends SimpleChannelInboundHandler<String> {
     @Override
-    protected void messageReceived(ChannelHandlerContext channelHandlerContext, String baseMsg) throws Exception {
+    protected void channelRead0(ChannelHandlerContext channelHandlerContext, String baseMsg) throws Exception {
         System.out.println("Receive: "+baseMsg+ " after send.");
     }
 }

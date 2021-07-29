@@ -286,7 +286,10 @@ public class Client {
 			priPort = config.PBFTSealer_ports.get("0");
 		String txFilePath = args[0];
 //		String txFilePath = "data/systemdata.csv";
+        long start_reading = System.currentTimeMillis();
 		ArrayList<Transaction> txs = Client.getTxsFromFile(txFilePath);
+		long end_reading = System.currentTimeMillis();
+		System.out.println(String.format("读取文件用了 %d ms", end_reading - start_reading));
 		Client client = new Client(curIP, 61080, priIP, priPort);
 
 		System.out.println(String.format("总共有 %d 条交易", txs.size()));

@@ -1,5 +1,11 @@
 workspace/
 
+*.tar.gz
+
+*.zip
+
+data/
+
 target/
 
 META-INF/
@@ -18,3 +24,6 @@ bin/
 
 .vscode/
 
+*.db
+
+*.csv
